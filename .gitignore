@@ -1,0 +1,51 @@
+# Dependencies & Virtual Environments
+node_modules/
+.pnp
+.pnp.js
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Production build outputs
+dist/
+build/
+
+# .NET & C# build outputs
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Database & SQLite files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Logs & temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+scratch/
+scratch_check.txt
+
+# Editor / IDE directories
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+
+# Environment variables
+.env
+.env.local
+.env.*.local
