@@ -7,11 +7,16 @@ namespace WorkManagement.Api;
 
 public static class Database
 {
-    private const string DbFile = "work_management.db";
+    private static readonly string DbFile = Environment.GetEnvironmentVariable("DB_FILE") ?? "work_management.db";
     private static readonly string ConnectionString = $"Data Source={DbFile}";
 
     public static SqliteConnection GetConnection()
     {
+        var dir = Path.GetDirectoryName(DbFile);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
         var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         return conn;
