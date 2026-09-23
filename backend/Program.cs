@@ -128,12 +128,10 @@ app.MapPost("/api/users", (CreateUserRequest req, HttpContext ctx) =>
     }
 
     var pwHash = Database.HashPassword(req.password);
-    conn.Execute(@"
+    var newId = conn.ExecuteScalar<long>(@"
         INSERT INTO users (username, password_hash, full_name, email, phone, role, department)
-        VALUES (@u, @p, @fn, @e, @ph, @r, @d)",
+        VALUES (@u, @p, @fn, @e, @ph, @r, @d) RETURNING id;",
         new { u = req.username, p = pwHash, fn = req.full_name, e = req.email, ph = req.phone ?? "", r = req.role, d = req.department ?? "Bộ phận Vận hành" });
-
-    var newId = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
     return Results.Ok(new { message = "Tạo tài khoản thành công", user_id = newId });
 });
 
@@ -493,8 +491,7 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
     var sid = req.shift_id ?? 0;
     var id = conn.ExecuteScalar<long>(@"
         INSERT INTO shift_events (shift_id, work_date, title, description, event_type)
-        VALUES (@sid, @work_date, @title, @description, @event_type);
-        SELECT last_insert_rowid();",
+        VALUES (@sid, @work_date, @title, @description, @event_type) RETURNING id;",
         new {
             sid,
             work_date = req.work_date,
@@ -584,11 +581,9 @@ app.MapPost("/api/shifts/register", (ShiftRegistrationRequest req, HttpContext c
     if (existing > 0)
         return Results.BadRequest(new { detail = "Nhân sự này đã được đăng ký ca làm này rồi!" });
 
-    conn.Execute(
-        "INSERT INTO shift_registrations (user_id, shift_id, work_date, note, status) VALUES (@uid, @sid, @date, @note, 'registered')", 
+    var regId = conn.ExecuteScalar<long>(
+        "INSERT INTO shift_registrations (user_id, shift_id, work_date, note, status) VALUES (@uid, @sid, @date, @note, 'registered') RETURNING id;", 
         new { uid = targetUserId, sid = req.shift_id, date = req.work_date, note = req.note ?? "" });
-
-    var regId = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
     var noteText = !string.IsNullOrWhiteSpace(req.note)
         ? req.note
@@ -1174,9 +1169,9 @@ app.MapPost("/api/shift-notes", (CreateShiftNoteRequest req, HttpContext ctx) =>
     }
 
     using var conn = Database.GetConnection();
-    conn.Execute(@"
+    var noteId = conn.ExecuteScalar<long>(@"
         INSERT INTO shift_notes (user_id, shift_id, work_date, original_time, adjusted_time, reason, note_type, status)
-        VALUES (@uid, @sid, @date, @orig, @adj, @reason, @ntype, 'pending')",
+        VALUES (@uid, @sid, @date, @orig, @adj, @reason, @ntype, 'pending') RETURNING id;",
         new
         {
             uid = currentUser.id,
@@ -1187,8 +1182,6 @@ app.MapPost("/api/shift-notes", (CreateShiftNoteRequest req, HttpContext ctx) =>
             reason = req.reason,
             ntype = req.note_type ?? "adjusted_hours"
         });
-
-    var noteId = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
     // Gửi thông báo đến Admin
     var adminIds = conn.Query<long>("SELECT id FROM users WHERE role = 'admin'");
@@ -1259,12 +1252,10 @@ app.MapPost("/api/feedbacks", (CreateFeedbackRequest req, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var authorName = req.is_anonymous ? "Nhân viên ẩn danh" : currentUser.full_name;
-    conn.Execute(@"
+    var fbId = conn.ExecuteScalar<long>(@"
         INSERT INTO feedbacks (user_id, author_name, is_anonymous, category, title, content, likes_count, status)
-        VALUES (@uid, @author, @anon, @cat, @title, @content, 0, 'pending')",
+        VALUES (@uid, @author, @anon, @cat, @title, @content, 0, 'pending') RETURNING id;",
         new { uid = currentUser.id, author = authorName, anon = req.is_anonymous ? 1 : 0, cat = req.category, title = req.title, content = req.content });
-
-    var fbId = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
     return Results.Ok(new { message = "Đã gửi ý kiến đóng góp thành công", feedback_id = fbId });
 });
 

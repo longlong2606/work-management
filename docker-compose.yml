@@ -1,4 +1,24 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: work-management-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: work_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_secret_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d work_management"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - wm-network
+
   backend:
     build:
       context: ./backend
@@ -8,11 +28,13 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8000
       - ASPNETCORE_ENVIRONMENT=Production
-      - DB_FILE=/app/data/work_management.db
-    volumes:
-      - ./data:/app/data
+      - DB_TYPE=postgres
+      - CONNECTION_STRING=Host=db;Port=5432;Database=work_management;Username=postgres;Password=postgres_secret_2026
     ports:
       - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - wm-network
 
@@ -28,6 +50,10 @@ services:
       - backend
     networks:
       - wm-network
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   wm-network:
