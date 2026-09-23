@@ -341,12 +341,17 @@ export function SchedulePage() {
     });
   };
 
-  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo ca)
+  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo ca, chỉ lấy hiện tại và tương lai)
   const openCreateEventModal = (shiftId = 0, workDate = "") => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    let initialDate = workDate || mondayDate || todayStr;
+    if (initialDate < todayStr) {
+      initialDate = todayStr;
+    }
     setCreateEventModal({
       open: true,
       shift_id: shiftId !== undefined && shiftId !== null ? shiftId : 0,
-      work_date: workDate || mondayDate || new Date().toISOString().split("T")[0],
+      work_date: initialDate,
       title: "",
       description: "",
       event_type: "meeting",
@@ -358,6 +363,11 @@ export function SchedulePage() {
     e.preventDefault();
     if (!createEventModal.title.trim()) {
       showToast("Vui lòng nhập tên sự kiện!", "danger");
+      return;
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (createEventModal.work_date && createEventModal.work_date < todayStr) {
+      showToast("Không thể tạo sự kiện cho ngày trong quá khứ! Chỉ được chọn ngày hôm nay hoặc tương lai.", "danger");
       return;
     }
     try {
@@ -1194,7 +1204,7 @@ export function SchedulePage() {
                           >
                             {isExpanded ? "✦ Đang mở rộng" : "▼ Mở rộng"}
                           </span>
-                          {isAdmin && (
+                          {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1514,7 +1524,7 @@ export function SchedulePage() {
                                 <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                                   <Calendar size={11} color="#8b5cf6" /> SỰ KIỆN ({eventsInThisSlot.length})
                                 </span>
-                                {isAdmin && (
+                                {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
                                   <span
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1537,17 +1547,17 @@ export function SchedulePage() {
                               {eventsInThisSlot.length === 0 ? (
                                 <div
                                   onClick={() =>
-                                    isAdmin && openCreateEventModal(shift.id, day.dateStr)
+                                    isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && openCreateEventModal(shift.id, day.dateStr)
                                   }
                                   style={{
                                     fontSize: 10,
                                     color: "#94a3b8",
                                     fontStyle: "italic",
                                     padding: "2px 4px",
-                                    cursor: isAdmin ? "pointer" : "default",
+                                    cursor: isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) ? "pointer" : "default",
                                   }}
                                 >
-                                  {isAdmin ? "+ Thêm sự kiện" : "Không có sự kiện"}
+                                  {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) ? "+ Thêm sự kiện" : "Không có sự kiện"}
                                 </div>
                               ) : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -2680,6 +2690,7 @@ export function SchedulePage() {
                 <input
                   type="date"
                   required
+                  min={new Date().toISOString().split("T")[0]}
                   value={createEventModal.work_date || ""}
                   onChange={(e) =>
                     setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))
@@ -2687,6 +2698,9 @@ export function SchedulePage() {
                   className="form-control"
                   style={{ fontWeight: 600 }}
                 />
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  ℹ️ Hệ thống chỉ cho phép chọn ngày hôm nay hoặc các ngày trong tương lai.
+                </div>
               </div>
 
               <div style={{ marginBottom: 14 }}>

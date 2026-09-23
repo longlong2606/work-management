@@ -483,6 +483,12 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
     if (currentUser == null) return Results.Unauthorized();
     if (currentUser.role != "admin") return Results.StatusCode(403);
 
+    var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+    if (!string.IsNullOrEmpty(req.work_date) && string.Compare(req.work_date, today, StringComparison.Ordinal) < 0)
+    {
+        return Results.BadRequest(new { detail = "Không thể tạo sự kiện cho ngày trong quá khứ! Chỉ được chọn ngày hiện tại hoặc tương lai." });
+    }
+
     using var conn = Database.GetConnection();
     var sid = req.shift_id ?? 0;
     var id = conn.ExecuteScalar<long>(@"
