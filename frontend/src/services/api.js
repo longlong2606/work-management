@@ -47,6 +47,11 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   getProfile: () => request("/auth/me"),
+  forgotPassword: (identifier) =>
+    request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ identifier }),
+    }),
   changePassword: (oldPassword, newPassword) =>
     request("/auth/change-password", {
       method: "POST",

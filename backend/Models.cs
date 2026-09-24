@@ -107,3 +107,4 @@ public record ChangePasswordRequest(string old_password, string new_password);
 public record ResetPasswordRequest(string new_password);
 public record UpdateUserRequest(string full_name, string email, string? phone, string? department, string role, string status);
 public record UpdateProfileRequest(string full_name, string email, string? phone);
+public record ForgotPasswordRequest(string identifier);

@@ -62,6 +62,61 @@ if (!hasFrontend)
 }
 
 // ================= AUTH =================
+app.MapPost("/api/auth/forgot-password", (ForgotPasswordRequest req) =>
+{
+    if (string.IsNullOrWhiteSpace(req.identifier))
+    {
+        return Results.BadRequest(new { detail = "Vui lòng nhập tên đăng nhập hoặc email đã đăng ký!" });
+    }
+
+    using var conn = Database.GetConnection();
+    var user = conn.QueryFirstOrDefault<UserEntity>(
+        "SELECT id, username, full_name, email, phone, role FROM users WHERE LOWER(username) = LOWER(@id) OR LOWER(email) = LOWER(@id)",
+        new { id = req.identifier.Trim() });
+
+    if (user == null)
+    {
+        return Results.NotFound(new { detail = "Không tìm thấy tài khoản tương ứng với thông tin bạn cung cấp!" });
+    }
+
+    // Tạo mật khẩu tạm thời ngẫu nhiên 8 ký tự
+    var tempPassword = "WM" + Random.Shared.Next(100000, 999999).ToString();
+    var pwHash = Database.HashPassword(tempPassword);
+
+    conn.Execute("UPDATE users SET password_hash = @hash WHERE id = @id", new { hash = pwHash, id = user.id });
+
+    // Soạn email gửi thông báo
+    var emailHtml = $@"
+    <div style=""font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;"">
+        <h2 style=""color: #2563eb; margin-top: 0;"">Khôi Phục Mật Khẩu - WorkShiftPro</h2>
+        <p>Xin chào <strong>{user.full_name}</strong> (Tên đăng nhập: <code>{user.username}</code>),</p>
+        <p>Hệ thống vừa nhận được yêu cầu cấp lại mật khẩu đăng nhập cho tài khoản của bạn.</p>
+        <div style=""background: #eff6ff; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px dashed #3b82f6;"">
+            <p style=""margin: 0 0 6px 0; font-size: 13px; color: #475569;"">Mật khẩu đăng nhập tạm thời của bạn là:</p>
+            <span style=""font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #1d4ed8; font-family: monospace;"">{tempPassword}</span>
+        </div>
+        <p style=""font-size: 13px; color: #64748b;"">Vui lòng đăng nhập bằng mật khẩu này, sau đó bấm vào nút <strong>🔑 Đổi mật khẩu</strong> ở góc trên bên phải để đặt lại mật khẩu mới cho riêng mình.</p>
+        <hr style=""border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"" />
+        <p style=""font-size: 11px; color: #94a3b8; margin: 0;"">Hệ thống Quản lý Phân ca WorkShiftPro - Email gửi tự động.</p>
+    </div>";
+
+    // Gửi email
+    try
+    {
+        EmailService.SendRealEmail(user.email, user.full_name, "Cấp lại mật khẩu đăng nhập WorkShiftPro", emailHtml);
+    }
+    catch { }
+
+    return Results.Ok(new
+    {
+        message = $"Mật khẩu tạm thời đã được tạo thành công và gửi tới email: {user.email}",
+        email = user.email,
+        full_name = user.full_name,
+        username = user.username,
+        temp_password = tempPassword
+    });
+});
+
 app.MapPost("/api/auth/login", (LoginRequest req) =>
 {
     using var conn = Database.GetConnection();
