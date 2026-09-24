@@ -6,9 +6,6 @@ import {
   Lock, 
   User, 
   LogIn, 
-  Sparkles, 
-  ShieldCheck, 
-  UserCheck, 
   Key, 
   X, 
   CheckCircle2, 
@@ -52,11 +49,7 @@ export function LoginPage() {
     }
   };
 
-  const handleQuickFill = (u, p) => {
-    setUsername(u);
-    setPassword(p);
-    setError("");
-  };
+
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
@@ -229,45 +222,6 @@ export function LoginPage() {
             {loading ? "Đang xác thực..." : "Đăng Nhập Cổng Nội Bộ"}
           </button>
         </form>
-
-        {/* Quick Fill Test Accounts */}
-        <div style={{
-          marginTop: 26,
-          paddingTop: 20,
-          borderTop: "1px dashed var(--border)"
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 12,
-            color: "var(--text-muted)",
-            fontWeight: 600,
-            marginBottom: 10
-          }}>
-            <Sparkles size={14} color="#f59e0b" /> Tài khoản mẫu thử nghiệm nhanh:
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <button
-              type="button"
-              onClick={() => handleQuickFill("admin", "admin123")}
-              className="btn btn-secondary btn-sm"
-              style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <ShieldCheck size={14} color="#7c3aed" />
-              Admin (Quản lý)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill("nv_an", "123456")}
-              className="btn btn-secondary btn-sm"
-              style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <UserCheck size={14} color="#2563eb" />
-              Nhân viên (An)
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Forgot Password Modal */}
