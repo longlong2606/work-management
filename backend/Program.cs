@@ -103,6 +103,56 @@ app.MapGet("/api/auth/me", (HttpContext ctx) =>
     return Results.Ok(currentUser);
 });
 
+app.MapPost("/api/auth/change-password", (ChangePasswordRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(req.new_password) || req.new_password.Length < 6)
+    {
+        return Results.BadRequest(new { detail = "Mật khẩu mới phải có tối thiểu 6 ký tự!" });
+    }
+
+    using var conn = Database.GetConnection();
+    var user = conn.QueryFirstOrDefault<UserEntity>(
+        "SELECT id, password_hash FROM users WHERE id = @id", new { id = currentUser.id });
+
+    if (user == null || !Database.VerifyPassword(req.old_password, user.password_hash))
+    {
+        return Results.BadRequest(new { detail = "Mật khẩu hiện tại không chính xác!" });
+    }
+
+    var newHash = Database.HashPassword(req.new_password);
+    conn.Execute("UPDATE users SET password_hash = @hash WHERE id = @id", new { hash = newHash, id = currentUser.id });
+
+    return Results.Ok(new { message = "Đổi mật khẩu thành công!" });
+});
+
+app.MapPut("/api/auth/profile", (UpdateProfileRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(req.full_name) || string.IsNullOrWhiteSpace(req.email))
+    {
+        return Results.BadRequest(new { detail = "Họ và tên, Email không được để trống!" });
+    }
+
+    using var conn = Database.GetConnection();
+    conn.Execute(@"
+        UPDATE users 
+        SET full_name = @fn, email = @e, phone = @ph 
+        WHERE id = @id",
+        new { fn = req.full_name, e = req.email, ph = req.phone ?? "", id = currentUser.id });
+
+    var updated = conn.QueryFirstOrDefault<UserEntity>(
+        "SELECT id, username, full_name, email, phone, role, department, status FROM users WHERE id = @id",
+        new { id = currentUser.id });
+
+    return Results.Ok(new { message = "Cập nhật thông tin thành công!", user = updated });
+});
+
+
 // ================= USERS MANAGEMENT =================
 app.MapGet("/api/users", (HttpContext ctx) =>
 {
@@ -134,6 +184,45 @@ app.MapPost("/api/users", (CreateUserRequest req, HttpContext ctx) =>
         new { u = req.username, p = pwHash, fn = req.full_name, e = req.email, ph = req.phone ?? "", r = req.role, d = req.department ?? "Bộ phận Vận hành" });
     return Results.Ok(new { message = "Tạo tài khoản thành công", user_id = newId });
 });
+
+app.MapPost("/api/users/{id:long}/reset-password", (long id, ResetPasswordRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
+
+    if (string.IsNullOrWhiteSpace(req.new_password) || req.new_password.Length < 6)
+    {
+        return Results.BadRequest(new { detail = "Mật khẩu mới phải có tối thiểu 6 ký tự!" });
+    }
+
+    using var conn = Database.GetConnection();
+    var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @id", new { id });
+    if (exists == 0) return Results.NotFound(new { detail = "Không tìm thấy người dùng!" });
+
+    var newHash = Database.HashPassword(req.new_password);
+    conn.Execute("UPDATE users SET password_hash = @hash WHERE id = @id", new { hash = newHash, id });
+
+    return Results.Ok(new { message = "Đã đặt lại mật khẩu mới cho tài khoản thành công!" });
+});
+
+app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @id", new { id });
+    if (exists == 0) return Results.NotFound(new { detail = "Không tìm thấy người dùng!" });
+
+    conn.Execute(@"
+        UPDATE users 
+        SET full_name = @fn, email = @e, phone = @ph, department = @d, role = @r, status = @s
+        WHERE id = @id",
+        new { fn = req.full_name, e = req.email, ph = req.phone ?? "", d = req.department ?? "Bộ phận Vận hành", r = req.role, s = req.status ?? "active", id });
+
+    return Results.Ok(new { message = "Cập nhật thông tin nhân sự thành công!" });
+});
+
 
 // ================= SHIFTS & SCHEDULE =================
 app.MapGet("/api/shifts/templates", () =>

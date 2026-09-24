@@ -47,12 +47,32 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   getProfile: () => request("/auth/me"),
+  changePassword: (oldPassword, newPassword) =>
+    request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+  updateProfile: (profileData) =>
+    request("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    }),
 
   // Users
   getUsers: () => request("/users"),
   createUser: (userData) =>
     request("/users", {
       method: "POST",
+      body: JSON.stringify(userData),
+    }),
+  adminResetPassword: (userId, newPassword) =>
+    request(`/users/${userId}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({ new_password: newPassword }),
+    }),
+  updateUser: (userId, userData) =>
+    request(`/users/${userId}`, {
+      method: "PUT",
       body: JSON.stringify(userData),
     }),
 

@@ -47,10 +47,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateCurrentUser = (updatedUser) => {
+    const merged = { ...user, ...updatedUser };
+    setUser(merged);
+    localStorage.setItem("wm_user", JSON.stringify(merged));
+  };
+
   const isAdmin = user?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, isAdmin, loading, updateCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );

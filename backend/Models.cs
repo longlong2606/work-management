@@ -103,3 +103,7 @@ public record ReportAbsenceRequest(int shift_id, string work_date, string reason
 public record CancelAbsenceRequest(int shift_id, string work_date, long? user_id = null);
 
 public record ApproveAbsenceRequest(int shift_id, string work_date, long user_id, bool approved, string? note = null);
+public record ChangePasswordRequest(string old_password, string new_password);
+public record ResetPasswordRequest(string new_password);
+public record UpdateUserRequest(string full_name, string email, string? phone, string? department, string role, string status);
+public record UpdateProfileRequest(string full_name, string email, string? phone);

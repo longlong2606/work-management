@@ -1,4 +1,5 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
+import ProfileModal from "./ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import { 
@@ -13,12 +14,14 @@ import {
   ShieldCheck, 
   UserCheck, 
   Settings,
-  History
+  History,
+  Key
 } from "lucide-react";
 
 export function Navbar({ activeTab, setActiveTab }) {
   const { user, logout, isAdmin } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const navItems = [
     { id: "schedule", label: "Lịch Làm Việc (9 Ca)", icon: Calendar },
@@ -194,6 +197,17 @@ export function Navbar({ activeTab, setActiveTab }) {
             </div>
           </div>
 
+          {/* Change password button */}
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#1d4ed8", background: "#eff6ff", border: "1px solid #bfdbfe" }}
+            title="Đổi mật khẩu & Hồ sơ tài khoản"
+          >
+            <Key size={14} />
+            <span>Đổi mật khẩu</span>
+          </button>
+
           {/* Logout button */}
           <button
             onClick={logout}
@@ -205,6 +219,7 @@ export function Navbar({ activeTab, setActiveTab }) {
           </button>
         </div>
       </div>
+      <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
     </header>
   );
 }
