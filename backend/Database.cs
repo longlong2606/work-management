@@ -295,9 +295,11 @@ public static class Database
             // 3. System settings
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_host', 'smtp.gmail.com') ON CONFLICT (key) DO NOTHING");
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_port', '587') ON CONFLICT (key) DO NOTHING");
-            conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_user', '') ON CONFLICT (key) DO NOTHING");
-            conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_password', '') ON CONFLICT (key) DO NOTHING");
+            conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_user', 'longhvn2006@gmail.com') ON CONFLICT (key) DO NOTHING");
+            conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_password', 'wtew euaj zcuu bjtq') ON CONFLICT (key) DO NOTHING");
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_from_name', 'Hệ Thống Phân Ca WorkShiftPro') ON CONFLICT (key) DO NOTHING");
+            conn.Execute("UPDATE system_settings SET value = 'longhvn2006@gmail.com' WHERE key = 'smtp_user' AND (value IS NULL OR value = '')");
+            conn.Execute("UPDATE system_settings SET value = 'wtew euaj zcuu bjtq' WHERE key = 'smtp_password' AND (value IS NULL OR value = '')");
 
             // 4. Default shift events
             var eventCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_events");

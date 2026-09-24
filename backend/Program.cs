@@ -79,7 +79,12 @@ app.MapPost("/api/auth/forgot-password", (ForgotPasswordRequest req) =>
         return Results.NotFound(new { detail = "Không tìm thấy tài khoản tương ứng với thông tin bạn cung cấp!" });
     }
 
-    // Tạo mật khẩu tạm thời ngẫu nhiên 8 ký tự
+    if (string.IsNullOrWhiteSpace(user.email))
+    {
+        return Results.BadRequest(new { detail = "Tài khoản này chưa được cấu hình địa chỉ email nhận thư!" });
+    }
+
+    // Tạo mật khẩu mới ngẫu nhiên 8 ký tự
     var tempPassword = "WM" + Random.Shared.Next(100000, 999999).ToString();
     var pwHash = Database.HashPassword(tempPassword);
 
@@ -87,33 +92,41 @@ app.MapPost("/api/auth/forgot-password", (ForgotPasswordRequest req) =>
 
     // Soạn email gửi thông báo
     var emailHtml = $@"
-    <div style=""font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;"">
-        <h2 style=""color: #2563eb; margin-top: 0;"">Khôi Phục Mật Khẩu - WorkShiftPro</h2>
-        <p>Xin chào <strong>{user.full_name}</strong> (Tên đăng nhập: <code>{user.username}</code>),</p>
-        <p>Hệ thống vừa nhận được yêu cầu cấp lại mật khẩu đăng nhập cho tài khoản của bạn.</p>
-        <div style=""background: #eff6ff; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px dashed #3b82f6;"">
-            <p style=""margin: 0 0 6px 0; font-size: 13px; color: #475569;"">Mật khẩu đăng nhập tạm thời của bạn là:</p>
-            <span style=""font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #1d4ed8; font-family: monospace;"">{tempPassword}</span>
+    <div style=""font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;"">
+        <div style=""text-align: center; margin-bottom: 20px;"">
+            <h2 style=""color: #2563eb; margin: 0;"">Khôi Phục Mật Khẩu - WorkShiftPro</h2>
+            <p style=""font-size: 13px; color: #64748b; margin: 4px 0 0 0;"">Cổng Thông Tin & Quản Lý Phân Ca</p>
         </div>
-        <p style=""font-size: 13px; color: #64748b;"">Vui lòng đăng nhập bằng mật khẩu này, sau đó bấm vào nút <strong>🔑 Đổi mật khẩu</strong> ở góc trên bên phải để đặt lại mật khẩu mới cho riêng mình.</p>
+        <p>Xin chào <strong>{user.full_name}</strong> (Tên đăng nhập: <code>{user.username}</code>),</p>
+        <p>Hệ thống nhận được yêu cầu cấp lại mật khẩu đăng nhập cho tài khoản của bạn. Mật khẩu mới đã được khởi tạo và gửi riêng tới email này:</p>
+        <div style=""background: #eff6ff; padding: 18px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1.5px dashed #3b82f6;"">
+            <p style=""margin: 0 0 6px 0; font-size: 13px; color: #475569;"">Mật khẩu đăng nhập mới của bạn là:</p>
+            <span style=""font-size: 26px; font-weight: bold; letter-spacing: 2px; color: #1d4ed8; font-family: monospace;"">{tempPassword}</span>
+        </div>
+        <div style=""background: #f8fafc; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 4px; font-size: 12px; color: #78350f; margin-bottom: 16px;"">
+            <strong>Lưu ý bảo mật:</strong> Vui lòng dùng mật khẩu trên để đăng nhập. Sau khi vào hệ thống, bạn nên bấm vào nút <strong>🔑 Đổi mật khẩu</strong> ở thanh điều hướng để đổi sang mật khẩu riêng.
+        </div>
         <hr style=""border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"" />
-        <p style=""font-size: 11px; color: #94a3b8; margin: 0;"">Hệ thống Quản lý Phân ca WorkShiftPro - Email gửi tự động.</p>
+        <p style=""font-size: 11px; color: #94a3b8; margin: 0; text-align: center;"">WorkShiftPro - Email tự động từ hệ thống quản lý ca trực.</p>
     </div>";
 
-    // Gửi email
+    // Gửi email thật qua SMTP
     try
     {
-        EmailService.SendRealEmail(user.email, user.full_name, "Cấp lại mật khẩu đăng nhập WorkShiftPro", emailHtml);
+        EmailService.SendRealEmail(user.email, user.full_name, "Mật khẩu mới đăng nhập hệ thống WorkShiftPro", emailHtml);
     }
-    catch { }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Email Error] Lỗi gửi email: {ex.Message}");
+    }
 
     return Results.Ok(new
     {
-        message = $"Mật khẩu tạm thời đã được tạo thành công và gửi tới email: {user.email}",
+        success = true,
+        message = $"Mật khẩu mới đã được gửi thẳng tới email: {user.email}. Vui lòng kiểm tra hộp thư đến (hoặc hòm thư Spam) để nhận mật khẩu.",
         email = user.email,
         full_name = user.full_name,
-        username = user.username,
-        temp_password = tempPassword
+        username = user.username
     });
 });
 

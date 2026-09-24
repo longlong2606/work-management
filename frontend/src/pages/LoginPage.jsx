@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   Mail,
+  MailCheck,
   ArrowRight
 } from "lucide-react";
 
@@ -72,13 +73,14 @@ export function LoginPage() {
     }
   };
 
-  const handleUseTempPassword = () => {
-    if (forgotSuccess) {
+  const handleBackToLogin = () => {
+    if (forgotSuccess?.username) {
       setUsername(forgotSuccess.username);
-      setPassword(forgotSuccess.temp_password);
-      setShowForgotModal(false);
-      setError("");
     }
+    setPassword("");
+    setShowForgotModal(false);
+    setForgotSuccess(null);
+    setError("");
   };
 
   return (
@@ -311,58 +313,64 @@ export function LoginPage() {
 
             {/* Success state */}
             {forgotSuccess ? (
-              <div>
+              <div style={{ textAlign: "center", padding: "10px 0" }}>
                 <div style={{
-                  padding: "14px",
-                  borderRadius: 10,
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  color: "#166534",
-                  fontSize: 13,
-                  marginBottom: 16
+                  width: 58,
+                  height: 58,
+                  borderRadius: "50%",
+                  background: "#dcfce7",
+                  color: "#16a34a",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 16px auto",
+                  boxShadow: "0 4px 12px rgba(22, 163, 74, 0.15)"
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, marginBottom: 4 }}>
-                    <CheckCircle2 size={16} /> Đã cấp mật khẩu mới thành công!
-                  </div>
-                  <p style={{ margin: "4px 0", fontSize: 12, color: "#15803d" }}>
-                    Hệ thống đã gửi mật khẩu đăng nhập tạm thời tới email: <strong>{forgotSuccess.email}</strong>
-                  </p>
+                  <MailCheck size={30} />
                 </div>
+
+                <h4 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+                  Đã Gửi Mật Khẩu Mới Về Email!
+                </h4>
+
+                <p style={{ margin: "0 0 16px 0", fontSize: 14, color: "#475569", lineHeight: 1.6 }}>
+                  Mật khẩu đăng nhập mới đã được tạo và gửi thẳng đến hòm thư:
+                  <br />
+                  <span style={{ fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "3px 10px", borderRadius: 6, display: "inline-block", marginTop: 6, border: "1px solid #bfdbfe" }}>
+                    {forgotSuccess.email}
+                  </span>
+                </p>
 
                 <div style={{
                   background: "#f8fafc",
-                  border: "1.5px dashed #cbd5e1",
+                  border: "1px solid #e2e8f0",
                   borderRadius: 10,
-                  padding: "16px",
-                  textAlign: "center",
-                  marginBottom: 16
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  color: "#64748b",
+                  lineHeight: 1.6,
+                  textAlign: "left",
+                  marginBottom: 20
                 }}>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
-                    Mật khẩu tạm thời của bạn:
+                  <div style={{ fontWeight: 600, color: "#334155", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                    <CheckCircle2 size={16} color="#16a34a" /> Hướng dẫn lấy mật khẩu:
                   </div>
-                  <div style={{
-                    fontSize: 24,
-                    fontWeight: 800,
-                    letterSpacing: 2,
-                    fontFamily: "monospace",
-                    color: "#2563eb",
-                    userSelect: "all"
-                  }}>
-                    {forgotSuccess.temp_password}
+                  <div>1. Vui lòng mở hòm thư email của bạn (Gmail/Outlook...).</div>
+                  <div>2. Tìm email với tiêu đề <strong>"Mật khẩu mới đăng nhập hệ thống WorkShiftPro"</strong>.</div>
+                  <div style={{ color: "#d97706", fontSize: 12, marginTop: 2 }}>
+                    (Lưu ý: Nếu không thấy trong Hộp thư đến, vui lòng kiểm tra mục <strong>Thư rác / Spam</strong>).
                   </div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
-                    (Ghi chú: Sau khi đăng nhập, vui lòng bấm <strong>🔑 Đổi mật khẩu</strong> để tạo mật khẩu riêng)
-                  </div>
+                  <div style={{ marginTop: 4 }}>3. Dùng mật khẩu được cấp trong email để đăng nhập vào hệ thống.</div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleUseTempPassword}
+                  onClick={handleBackToLogin}
                   className="btn btn-primary"
-                  style={{ width: "100%", padding: "11px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                  style={{ width: "100%", padding: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 14, fontWeight: 600 }}
                 >
-                  <span>Tự động điền mật khẩu này & Đăng nhập</span>
                   <ArrowRight size={16} />
+                  <span>Quay Lại Đăng Nhập</span>
                 </button>
               </div>
             ) : (
@@ -378,7 +386,7 @@ export function LoginPage() {
                   marginBottom: 14,
                   lineHeight: 1.5
                 }}>
-                  Nhập <strong>Tên đăng nhập</strong> hoặc <strong>Email</strong> của bạn. Hệ thống sẽ tạo mật khẩu tạm thời và gửi email thông báo cho bạn ngay lập tức.
+                  Nhập <strong>Email</strong> hoặc <strong>Tên đăng nhập</strong> của bạn. Hệ thống sẽ tạo mật khẩu mới và gửi thẳng về hòm thư email của bạn ngay lập tức.
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 18 }}>
