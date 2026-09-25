@@ -331,7 +331,7 @@ app.MapGet("/api/shifts/schedule", (string start_date, string end_date, HttpCont
 // ==========================================
 
 // ==========================================
-// Shift Roster (13 Members) & Absence Reporting
+// Shift Roster & Absence Reporting
 // ==========================================
 app.MapGet("/api/shifts/roster", (int shift_id, string work_date, HttpContext ctx) =>
 {
@@ -1234,14 +1234,14 @@ app.MapPost("/api/shifts/publish", (PublishScheduleRequest req, HttpContext ctx)
         "INSERT INTO notifications (target_user_id, sender_id, title, message, type) VALUES (0, @sender, 'Lịch làm việc tuần mới đã được xuất bản!', @msg, 'schedule_published')",
         new { sender = currentUser.id, msg = req.announcement ?? "Quản lý đã xuất bản lịch làm việc." });
 
-    // 2. Gửi email cho toàn bộ 13 thành viên trong hệ thống
+    // 2. Gửi email cho toàn bộ thành viên trong hệ thống
     var totalProcessed = 0;
     var realSmtpSent = 0;
     string? emailNotice = null;
 
     if (req.send_email)
     {
-        // Lấy tất cả 13 thành viên (cả Quản lý và 12 nhân viên)
+        // Lấy tất cả thành viên trong hệ thống
         var users = conn.Query<(long id, string full_name, string email, string role)>(
             "SELECT id, full_name, email, role FROM users WHERE (status = 'active' OR status IS NULL) AND email != '' ORDER BY id ASC");
 
@@ -1281,11 +1281,11 @@ app.MapPost("/api/shifts/publish", (PublishScheduleRequest req, HttpContext ctx)
     var (smtpHost, smtpPort, smtpUser, smtpPass, _) = EmailService.GetSmtpConfig();
     if (req.send_email && realSmtpSent == 0)
     {
-        emailNotice = "Hệ thống đã gửi và lưu đủ 13 thư lịch trực vào Hòm Thư Đi (Outbox). (Để gửi trực tiếp ra Internet qua Gmail, vui lòng cấu hình Mật khẩu ứng dụng 16 ký tự tại Cài Đặt Email).";
+        emailNotice = $"Hệ thống đã gửi và lưu đủ {totalProcessed} thư lịch trực vào Hòm Thư Đi (Outbox). (Để gửi trực tiếp ra Internet qua Gmail, vui lòng cấu hình Mật khẩu ứng dụng 16 ký tự tại Cài Đặt Email).";
     }
 
     return Results.Ok(new {
-        message = $"Đã xuất bản lịch làm việc và xử lý 13 email thông báo cho toàn bộ 13 nhân sự thành công!",
+        message = $"Đã xuất bản lịch làm việc và xử lý {totalProcessed} email thông báo cho toàn bộ {totalProcessed} nhân sự thành công!",
         notification_created = true,
         emails_sent = totalProcessed,
         real_smtp_sent = realSmtpSent,

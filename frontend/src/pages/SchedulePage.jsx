@@ -62,13 +62,14 @@ export function SchedulePage() {
   const [events, setEvents] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [allMembers, setAllMembers] = useState([]);
 
   // Expanded Day state & Table Scroll
   const [expandedDay, setExpandedDay] = useState(null);
   const [isFullWidth, setIsFullWidth] = useState(false);
   const tableScrollRef = React.useRef(null);
 
-  // Roster Modal: Shows all 13 members for a clicked shift
+  // Roster Modal: Shows all members for a clicked shift
   const [rosterModal, setRosterModal] = useState({
     open: false,
     shift: null,
@@ -165,6 +166,15 @@ export function SchedulePage() {
     }
   }, []);
 
+  const fetchMembers = useCallback(async () => {
+    try {
+      const data = await api.getUsers();
+      setAllMembers(data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   const fetchEvents = useCallback(async () => {
     try {
       const data = await api.getShiftEvents();
@@ -175,11 +185,12 @@ export function SchedulePage() {
   }, []);
 
   useEffect(() => {
+    fetchMembers();
     if (isAdmin) {
       fetchPendingRequests();
     }
     fetchEvents();
-  }, [isAdmin, fetchPendingRequests, fetchEvents]);
+  }, [isAdmin, fetchPendingRequests, fetchEvents, fetchMembers]);
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -198,6 +209,7 @@ export function SchedulePage() {
       ]);
       setSchedule(data || []);
       setEvents(evData || []);
+      fetchMembers();
       if (isAdmin) {
         fetchPendingRequests();
       }
@@ -210,12 +222,14 @@ export function SchedulePage() {
     fetchSchedule();
   }, [fetchSchedule]);
 
+  const totalMembers = allMembers.length;
+
   const showToast = (text, type = "success") => {
     setActionMsg({ text, type });
     setTimeout(() => setActionMsg({ text: "", type: "success" }), 4000);
   };
 
-  // Open Roster Modal (13 Members)
+  // Open Roster Modal (All Members)
   const openRosterModal = async (shift, day) => {
     setRosterModal({
       open: true,
@@ -234,7 +248,7 @@ export function SchedulePage() {
         loading: false,
       });
     } catch (err) {
-      showToast("Lỗi khi tải danh sách 13 thành viên: " + (err.message || ""), "danger");
+      showToast("Lỗi khi tải danh sách thành viên: " + (err.message || ""), "danger");
       setRosterModal((prev) => ({ ...prev, loading: false }));
     }
   };
@@ -708,11 +722,11 @@ export function SchedulePage() {
                 color: "#1d4ed8",
               }}
             >
-              Đội Ngũ 13 Thành Viên
+              {totalMembers > 0 ? `Đội Ngũ ${totalMembers} Thành Viên` : "Đội Ngũ Thành Viên"}
             </span>
           </h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-            Ô ca hiển thị gọn <strong>13 người</strong> (nhấn vào để xem đầy đủ ai có mặt, ai vắng
+            Ô ca hiển thị gọn <strong>{totalMembers > 0 ? `${totalMembers} người` : "danh sách"}</strong> (nhấn vào để xem đầy đủ ai có mặt, ai vắng
             mặt kèm lý do). Nhân viên vắng phải báo vắng kèm lý do cho Quản lý.
           </p>
         </div>
@@ -792,7 +806,7 @@ export function SchedulePage() {
             Quy chuẩn đội ngũ
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#1e293b", marginTop: 4 }}>
-            13 <span style={{ fontSize: 14, fontWeight: 500 }}>thành viên cố định</span>
+            {totalMembers} <span style={{ fontSize: 14, fontWeight: 500 }}>thành viên</span>
           </div>
         </div>
 
@@ -820,7 +834,7 @@ export function SchedulePage() {
             Cơ chế Điểm danh & Báo vắng
           </div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#b45309", marginTop: 6 }}>
-            Bấm <strong>13 người</strong> để xem • Báo vắng kèm lý do
+            Bấm <strong>{totalMembers > 0 ? `${totalMembers} người` : "Xem"}</strong> để xem • Báo vắng kèm lý do
           </div>
         </div>
       </div>
@@ -1215,7 +1229,7 @@ export function SchedulePage() {
                           }}
                         >
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {/* ================= PHẦN TRÊN: 13 NGƯỜI (GỌN GÀNG, NHẤN ĐỂ MỞ) ================= */}
+                            {/* ================= PHẦN TRÊN: DANH SÁCH THÀNH VIÊN (GỌN GÀNG, NHẤN ĐỂ MỞ) ================= */}
                             <div>
                               <div
                                 onClick={() => openRosterModal(shift, day)}
@@ -1243,7 +1257,7 @@ export function SchedulePage() {
                                   ? "#fff1f2"
                                   : "#f1f5f9")
                                 }
-                                title="Bấm để xem đầy đủ danh sách 13 thành viên (ai có mặt, ai vắng mặt)"
+                                title={`Bấm để xem đầy đủ danh sách ${totalMembers} thành viên (ai có mặt, ai vắng mặt)`}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                                   <Users
@@ -1257,7 +1271,7 @@ export function SchedulePage() {
                                       color: hasAbsence ? "#9f1239" : hasPending ? "#92400e" : "#1e293b",
                                     }}
                                   >
-                                    13 người
+                                    {totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}
                                   </span>
                                   {hasAbsence && (
                                     <span
@@ -1508,7 +1522,7 @@ export function SchedulePage() {
                 Chi Tiết 9 Ca Làm Việc Ngày: {currentDate}
               </h2>
               <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Xem danh sách 13 thành viên trong từng ca trực, ai vắng mặt sẽ hiện màu đỏ kèm lý do.
+                Xem danh sách thành viên trong từng ca trực, ai vắng mặt sẽ hiện màu đỏ kèm lý do.
               </span>
             </div>
             <button
@@ -1602,7 +1616,7 @@ export function SchedulePage() {
                         className="btn btn-primary btn-sm"
                         style={{ display: "flex", alignItems: "center", gap: 6 }}
                       >
-                        <Users size={14} /> Xem 13 Người (Điểm danh)
+                        <Users size={14} /> {totalMembers > 0 ? `Xem ${totalMembers} Người (Điểm danh)` : "Điểm danh"}
                       </button>
                     </div>
                   </div>
@@ -1610,14 +1624,14 @@ export function SchedulePage() {
                   {/* Summary row */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
-                      👥 Đội ngũ: <strong>13 người</strong> •{" "}
+                      👥 Đội ngũ: <strong>{totalMembers} người</strong> •{" "}
                       {absentInShift.length > 0 ? (
                         <span style={{ color: "#dc2626", fontWeight: 700 }}>
                           🔴 {absentInShift.length} người vắng mặt
                         </span>
                       ) : (
                         <span style={{ color: "#16a34a", fontWeight: 700 }}>
-                          🟢 Đủ 13 người có mặt
+                          🟢 Đủ {totalMembers} người có mặt
                         </span>
                       )}
                     </div>
@@ -1768,7 +1782,7 @@ export function SchedulePage() {
         </div>
       )}
 
-      {/* ================= MODAL: DANH SÁCH TOÀN BỘ 13 NGƯỜI & ĐIỂM DANH (ROSTER MODAL) ================= */}
+      {/* ================= MODAL: DANH SÁCH TOÀN BỘ THÀNH VIÊN & ĐIỂM DANH (ROSTER MODAL) ================= */}
       {rosterModal.open && (
         <div
           style={{
@@ -1809,7 +1823,7 @@ export function SchedulePage() {
             >
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  Danh Sách 13 Thành Viên Ca Trực
+                  Danh Sách Thành Viên Ca Trực ({rosterModal.rosterList.length || totalMembers} Người)
                 </h3>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                   {rosterModal.shift?.name} ({rosterModal.shift?.label}) • Ngày:{" "}
@@ -1842,16 +1856,16 @@ export function SchedulePage() {
                 marginBottom: 16,
               }}
             >
-              💡 <strong>Quy chuẩn:</strong> Ca trực bao gồm đầy đủ <strong>13 thành viên</strong>.
+              💡 <strong>Quy chuẩn:</strong> Ca trực bao gồm đầy đủ <strong>{rosterModal.rosterList.length || totalMembers} thành viên</strong> trong hệ thống.
               Thành viên nào <strong>Vắng mặt</strong> sẽ hiển thị{" "}
               <span style={{ color: "#dc2626", fontWeight: 800 }}>MÀU ĐỎ</span> kèm lý do đã báo cho
               Quản lý.
             </div>
 
-            {/* List of 13 members */}
+            {/* List of members */}
             {rosterModal.loading ? (
               <div style={{ textAlign: "center", padding: "30px 10px", color: "#64748b" }}>
-                Đang tải danh sách 13 thành viên...
+                Đang tải danh sách thành viên...
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

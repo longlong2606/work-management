@@ -245,7 +245,7 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ attendance_status: attendanceStatus }),
     }),
-  // Shift Roster & Absence Reporting (13 members)
+  // Shift Roster & Absence Reporting
   getShiftRoster: (shiftId, workDate) =>
     request(`/shifts/roster?shift_id=${shiftId}&work_date=${workDate}`),
   reportAbsence: (data) =>
