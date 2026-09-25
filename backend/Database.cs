@@ -264,32 +264,12 @@ public static class Database
             if (userCount == 0)
             {
                 var adminPass = HashPassword("admin123");
-                var staffPass = HashPassword("123456");
 
-                var seedUsers = new[]
-                {
-                    new { u = "admin", p = adminPass, fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" },
-                    new { u = "nv_an", p = staffPass, fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", r = "staff", d = "Tổ Trực Kỹ Thuật" },
-                    new { u = "nv_binh", p = staffPass, fn = "Trần Thị Bình", e = "binh.tran@company.com", ph = "0912345678", r = "staff", d = "Tổ Dịch Vụ Sinh Viên" },
-                    new { u = "nv_cuong", p = staffPass, fn = "Đặng Quốc Cường", e = "cuong.dang@company.com", ph = "0923456789", r = "staff", d = "Hỗ Trợ Kỹ Thuật" },
-                    new { u = "longhvn", p = staffPass, fn = "Nguyễn Vũ Hoàng Long", e = "longhvn2006@gmail.com", ph = "0934567890", r = "staff", d = "Tổ Trực Vận Hành" },
-                    new { u = "nv_duc", p = staffPass, fn = "Phạm Minh Đức", e = "duc.pham@company.com", ph = "0945678901", r = "staff", d = "Kỹ Thuật Hạ Tầng" },
-                    new { u = "nv_nam", p = staffPass, fn = "Lê Hoàng Nam", e = "nam.le@company.com", ph = "0956789012", r = "staff", d = "Vận Hành Mạng" },
-                    new { u = "nv_mai", p = staffPass, fn = "Vũ Thị Mai", e = "mai.vu@company.com", ph = "0967890123", r = "staff", d = "Chăm Sóc Khách Hàng" },
-                    new { u = "nv_huy", p = staffPass, fn = "Đỗ Gia Huy", e = "huy.do@company.com", ph = "0978901234", r = "staff", d = "Giám Sát Ca Đêm" },
-                    new { u = "nv_linh", p = staffPass, fn = "Hoàng Khánh Linh", e = "linh.hoang@company.com", ph = "0989012345", r = "staff", d = "Trực Tổng Đài" },
-                    new { u = "nv_thao", p = staffPass, fn = "Bùi Phương Thảo", e = "thao.bui@company.com", ph = "0990123456", r = "staff", d = "Điều Phối Ca Trực" },
-                    new { u = "nv_tuan", p = staffPass, fn = "Ngô Quang Tuấn", e = "tuan.ngo@company.com", ph = "0902345678", r = "staff", d = "Hỗ Trợ Thiết Bị" },
-                    new { u = "nv_tung", p = staffPass, fn = "Trịnh Thanh Tùng", e = "tung.trinh@company.com", ph = "0913456789", r = "staff", d = "An Ninh Hệ Thống" }
-                };
-
-                foreach (var u in seedUsers)
-                {
-                    conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING", u);
-                }
+                conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING",
+                    new { u = "admin", p = adminPass, fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" });
 
                 conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type) VALUES (0, 1, @title, @msg, 'general')",
-                    new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đang vận hành trên nền tảng PostgreSQL với chuẩn 9 ca trường học. Chúc các bạn làm việc hiệu quả!" });
+                    new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đã sẵn sàng vận hành. Quản lý có thể thêm nhân sự tại mục Quản lý nhân viên và xếp lịch trực." });
             }
 
             // 3. System settings
