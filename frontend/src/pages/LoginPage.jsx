@@ -144,14 +144,14 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: 16 }}>
-            <label className="form-label">Tên tài khoản nội bộ</label>
+            <label className="form-label">Tài khoản</label>
             <div style={{ position: "relative" }}>
               <User size={18} color="#94a3b8" style={{ position: "absolute", left: 12, top: 12 }} />
               <input
                 type="text"
                 className="form-input"
                 style={{ paddingLeft: 38 }}
-                placeholder="VD: admin hoặc nv_an"
+                placeholder="Tài khoản"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -397,7 +397,7 @@ export function LoginPage() {
                       type="text"
                       className="form-input"
                       style={{ paddingLeft: 38 }}
-                      placeholder="VD: nv_an hoặc an.nguyen@company.com"
+                      placeholder="Nhập tài khoản hoặc email của bạn"
                       value={forgotInput}
                       onChange={(e) => setForgotInput(e.target.value)}
                       required
