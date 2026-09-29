@@ -1,35 +1,139 @@
-# WorkShiftPro - Hệ Thống Quản Lý Ca Trực & Điều Hành Công Việc
+# WorkShiftPro - Hệ Thống Quản Lý Ca Trực & Kiosk Smart TV (Dual-Screen)
 
-Hệ thống quản lý, phân ca trực, theo dõi chấm công và xét duyệt đổi ca / báo vắng chuyên nghiệp.
+**WorkShiftPro** là giải pháp phần mềm quản lý phân ca làm việc, điều phối nhân sự và trình chiếu thời gian thực trên màn hình Smart TV (Kiosk 50 inch). Hệ thống được thiết kế theo mô hình **Dual-Screen song song**: Một màn hình dành cho Quản lý / Nhân viên thao tác trên máy tính, và một màn hình Kiosk toàn màn hình trình chiếu lịch trực, đếm ngược ca và phân công tại phòng lab / nơi làm việc.
 
-## Công Nghệ Sử Dụng
+---
 
-- **Backend:** C# ASP.NET Core (.NET 10), SQLite (Dapper ORM), JWT Authentication, SMTP MailKit
-- **Frontend:** React 18, Vite, Vanilla CSS, Lucide React Icons
+## 🌟 Kiến Trúc Hệ Thống (3 Thành Phần)
 
-## Các Tính Năng Chính
+```
+                    ┌───────────────────────────────┐
+                    │    Backend API (.NET 10)      │
+                    │      Port: 8000 (0.0.0.0)     │
+                    │   SQLite + Dapper + MailKit   │
+                    └───────────────┬───────────────┘
+                                    │
+           ┌────────────────────────┴────────────────────────┐
+           ▼                                                 ▼
+┌─────────────────────────────┐           ┌─────────────────────────────────┐
+│     Web Quản Lý Máy Tính    │           │    Web Kiosk Smart TV 50 Inch   │
+│     (frontend / Port: 5173) │           │   (tv-display / Port: 5174)     │
+│   • Phân ca tuần (T2 - T7)  │           │   • Giao diện Dark Kiosk 4K/FHD │
+│   • Chọn nhiều ca sự kiện   │           │   • Đồng hồ & đếm ngược ca trực │
+│   • Bảng KPI 20h/tuần       │           │   • Lịch trực 9 ca trong ngày   │
+│   • Checklist nhiệm vụ ca   │           │   • Sự kiện & nhân sự trực ca   │
+│   • CSV Phân ca & Báo vắng  │           │   • Xem qua LAN: IP:5174        │
+└─────────────────────────────┘           └─────────────────────────────────┘
+```
 
-- **Ma trận lịch tuần 9 ca chuẩn:** Quản lý ca trực linh hoạt, mở rộng xem chi tiết từng ca.
-- **Quản lý danh sách 13 nhân sự:** Hiển thị gọn gàng, xem trạng thái có mặt / vắng mặt.
-- **Quy trình báo vắng & xét duyệt:** Nhân viên báo vắng kèm lý do bắt buộc; Quản lý xét duyệt hoặc từ chối.
-- **Khóa duyệt ca quá hạn:** Tự động phát hiện và khóa duyệt các ca đã qua ngày, hỗ trợ chuyển sang từ chối nhanh.
-- **Sự kiện linh hoạt (Ngày / Ca):** Tạo sự kiện kéo dài cả ngày hoặc theo từng ca làm việc cụ thể.
-- **Sổ ghi chú báo bận đột xuất:** Chỉ cho phép chọn ngày hiện tại hoặc tương lai.
-- **Hệ thống Email tự động:** Thông báo lịch tuần đến toàn bộ 13 nhân sự, hỗ trợ Hòm thư đi (Outbox).
+---
 
-## Hướng Dẫn Cài Đặt & Khởi Chạy
+## 🚀 Các Tính Năng Nổi Bật
 
-### 1. Khởi chạy Backend (.NET 10)
-`ash
+### 1. 🖥️ Web Quản Lý Máy Tính (`frontend`)
+- **Bảng ma trận phân ca 9 ca trực (Thứ 2 đến Thứ 7):** Hiển thị trực quan, hỗ trợ xem chi tiết phân công, nhân sự trực và sự kiện từng ca.
+- **Thêm sự kiện đa ca (Multi-Shift Event Selection):** Cho phép gắn sự kiện cho một ca, chọn nhiều ca cùng lúc (ví dụ: Ca 1, 2, 3 hoặc Ca 7, 8) hoặc áp dụng cho toàn bộ cả ngày. Có sẵn các nút chọn nhanh (Preset) tiện lợi.
+- **Bảng theo dõi KPI 20h/tuần:** Tự động thống kê số giờ đăng ký trong tuần của từng nhân sự, xếp hạng huy chương Vàng/Bạc/Đồng, cảnh báo ai chưa đủ chỉ tiêu 20 giờ.
+- **Nhiệm vụ theo ca (Shift Checklist):** Quản lý đầu việc cần bàn giao, checklist kiểm tra thiết bị / vệ sinh đầu ca và cuối ca.
+- **Phân ca hàng loạt & Báo vắng qua CSV:** Hỗ trợ tải file mẫu CSV chuẩn, upload phân ca nhanh cho cả tuần mà không cần nhập thủ công.
+- **Quy trình báo vắng & xét duyệt:** Nhân viên gửi lý do báo vắng; Quản lý xét duyệt hoặc từ chối có ghi chú. Khóa duyệt tự động các ca trong quá khứ.
+- **Hệ thống Email tự động:** Thông báo lịch trực tuần, thông báo đổi ca / báo vắng qua hòm thư Outbox.
+
+### 2. 📺 Màn Hình Kiosk Smart TV (`tv-display`)
+- Thiết kế giao diện chuyên dụng tối ưu hiển thị trên màn hình lớn (50 - 65 inch) ở chế độ Full Screen (`F11`).
+- Đồng hồ thời gian thực và đồng hồ đếm ngược trực quan đến ca trực tiếp theo.
+- Tự động nhận diện ca đang diễn ra (highlight vàng rực rỡ) và danh sách nhân sự đang trực.
+- Tự động lấy địa chỉ IP mạng Wi-Fi nội bộ để các thiết bị Smart TV có thể truy cập qua trình duyệt mà không cần cài đặt ứng dụng.
+
+---
+
+## 🛠️ Công Nghệ Sử Dụng
+
+- **Backend:** C# ASP.NET Core Minimal APIs (.NET 10), Dapper ORM, SQLite, JWT Authentication, MailKit SMTP.
+- **Frontend (Web Quản lý):** React 19, Vite, Vanilla CSS hiện đại, Lucide React Icons.
+- **TV Display (Kiosk):** React 19, Vite, tối ưu hóa CSS cho màn hình Smart TV độ phân giải lớn.
+
+---
+
+## ⚡ Hướng Dẫn Khởi Chạy Nhanh (1-Click)
+
+### Cách 1: Chạy tự động toàn bộ bằng file Batch (Khuyên Dùng trên Windows)
+Chỉ cần nhấp đúp vào file:
+```bash
+run_all.bat
+```
+Script sẽ tự động:
+1. Lấy địa chỉ IP Wi-Fi/LAN của máy tính.
+2. Giải phóng các cổng `8000`, `5173`, `5174` nếu đang bị chiếm.
+3. Khởi chạy song song Backend API, Web Quản lý và Web TV Kiosk.
+4. Mở sẵn 2 tab trình duyệt trên máy tính và in ra đường dẫn để gõ trên TV (`http://<IP_MAY_TINH>:5174`).
+
+Khi muốn dừng toàn bộ server, nhấp đúp vào:
+```bash
+stop_all.bat
+```
+
+---
+
+### Cách 2: Khởi chạy thủ công từng phần
+
+#### 1. Khởi chạy Backend (.NET 10)
+```bash
 cd backend
 dotnet run
-`
-Backend sẽ khởi chạy tại: http://localhost:8000
+```
+> API lắng nghe tại: `http://localhost:8000` (hỗ trợ `0.0.0.0:8000` cho mạng nội bộ).
 
-### 2. Khởi chạy Frontend (React + Vite)
-`ash
+#### 2. Khởi chạy Web Quản Lý (Frontend)
+```bash
 cd frontend
 npm install
 npm run dev
-`
-Frontend sẽ khởi chạy tại: http://localhost:5173
+```
+> Giao diện quản lý tại: `http://localhost:5173`
+
+#### 3. Khởi chạy Màn Hình Kiosk TV
+```bash
+cd tv-display
+npm install
+npm run dev
+```
+> Màn hình TV Kiosk tại: `http://localhost:5174` (hoặc `http://<IP_LAN>:5174`)
+
+---
+
+## 🔑 Tài Khoản Đăng Nhập Mặc Định
+
+| Vai trò | Tên đăng nhập | Mật khẩu |
+| :--- | :--- | :--- |
+| **Quản trị viên (Admin)** | `admin` | `Admin@123` |
+| **Nhân viên (Staff)** | `longlong` | `User@123` |
+
+---
+
+## 📁 Cấu Trúc Thư Mục
+
+```
+work-management/
+├── backend/                  # Mã nguồn C# ASP.NET Core 10 Web API
+│   ├── Controllers / Endpoints
+│   ├── Database.cs           # Khởi tạo SQLite DB & Seed dữ liệu
+│   └── Program.cs            # Cấu hình CORS, DI, Routing
+├── frontend/                 # Ứng dụng Web Quản lý ca trực (React + Vite)
+│   ├── src/
+│   │   ├── components/       # Navbar, CsvModal, KpiLeaderboard, ShiftChecklist...
+│   │   ├── pages/            # SchedulePage, AdminPage, LoginPage...
+│   │   └── services/         # Axios API client
+│   └── package.json
+├── tv-display/               # Ứng dụng Kiosk Smart TV 50 inch (React + Vite)
+│   ├── src/                  # App trình chiếu toàn màn hình, đếm ngược ca
+│   └── package.json
+├── data/                     # Thư mục chứa cơ sở dữ liệu SQLite
+├── run_all.bat               # Script khởi động tự động toàn bộ hệ thống
+├── run_dual_screen.bat       # Script khởi động song song 2 màn hình
+├── stop_all.bat              # Script giải phóng cổng & dừng server an toàn
+└── README.md                 # Tài liệu hướng dẫn sử dụng
+```
+
+---
+*Phát triển bởi longlong2606*

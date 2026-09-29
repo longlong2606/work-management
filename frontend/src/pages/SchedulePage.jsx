@@ -1,3 +1,6 @@
+import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
+import { ShiftChecklistModal } from "../components/ShiftChecklistModal";
+import { CsvScheduleModal } from "../components/CsvScheduleModal";
 import React, { useState, useEffect, useCallback } from "react";
 import { SHIFTS } from "../constants/shifts";
 import { api } from "../services/api";
@@ -8,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, LayoutGrid, CalendarRange, UserCheck,
   UserPlus, ArrowLeftRight, Hourglass, Check, X, ShieldAlert, Calendar, ArrowRight,
   Users, Plus, ChevronDown, ChevronUp, Sparkles, Tag, Eye, Info, UserX,
-  Lock, AlertTriangle
+  Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare
 } from "lucide-react";
 
 function getMonday(d) {
@@ -28,12 +31,11 @@ function getDaysOfWeek(mondayStr) {
     "Thứ 4",
     "Thứ 5",
     "Thứ 6",
-    "Thứ 7",
-    "Chủ Nhật"
+    "Thứ 7"
   ];
   const todayStr = new Date().toISOString().split("T")[0];
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const dateStr = d.toISOString().split("T")[0];
@@ -98,14 +100,15 @@ export function SchedulePage() {
     eventList: [],
   });
 
-  // Create Event Modal
+  // Create Event Modal (Hỗ trợ chọn nhiều shift cùng lúc hoặc Cả ngày)
   const [createEventModal, setCreateEventModal] = useState({
     open: false,
-    shift_id: 1,
+    selected_shifts: [0], // [0] = cả ngày, hoặc [1, 2, 3], hoặc [7, 8]...
+    shift_id: 0,
     work_date: "",
     title: "",
     description: "",
-    event_type: "general",
+    event_type: "meeting",
   });
 
   // Cancel Request Modal
@@ -147,6 +150,11 @@ export function SchedulePage() {
   const [actionMsg, setActionMsg] = useState({ text: "", type: "success" });
 
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
+  const [activeChecklistShift, setActiveChecklistShift] = useState({ id: 1, date: "" });
+  const LAB_KPI_TARGET = 20.0;
   const [announcement, setAnnouncement] = useState(
     "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ."
   );
@@ -201,7 +209,7 @@ export function SchedulePage() {
       } else {
         const days = getDaysOfWeek(mondayDate);
         start = days[0].dateStr;
-        end = days[6].dateStr;
+        end = days[days.length - 1].dateStr;
       }
       const [data, evData] = await Promise.all([
         api.getSchedule(start, end),
@@ -355,16 +363,21 @@ export function SchedulePage() {
     });
   };
 
-  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo ca, chỉ lấy hiện tại và tương lai)
+  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo nhiều ca, chỉ lấy hiện tại và tương lai)
   const openCreateEventModal = (shiftId = 0, workDate = "") => {
     const todayStr = new Date().toISOString().split("T")[0];
     let initialDate = workDate || mondayDate || todayStr;
     if (initialDate < todayStr) {
       initialDate = todayStr;
     }
+    const initialShifts = (shiftId !== undefined && shiftId !== null && Number(shiftId) > 0)
+      ? [Number(shiftId)]
+      : [0];
+
     setCreateEventModal({
       open: true,
-      shift_id: shiftId !== undefined && shiftId !== null ? shiftId : 0,
+      selected_shifts: initialShifts,
+      shift_id: initialShifts[0],
       work_date: initialDate,
       title: "",
       description: "",
@@ -372,7 +385,39 @@ export function SchedulePage() {
     });
   };
 
-  // Handle Create Event Submit
+  // Toggle shift selection for event modal
+  const handleToggleShiftSelection = (sId) => {
+    setCreateEventModal((prev) => {
+      let current = [...(prev.selected_shifts || [])];
+      if (sId === 0) {
+        return { ...prev, selected_shifts: [0], shift_id: 0 };
+      }
+      if (current.includes(0)) {
+        return { ...prev, selected_shifts: [sId], shift_id: sId };
+      }
+      if (current.includes(sId)) {
+        const next = current.filter((id) => id !== sId);
+        return {
+          ...prev,
+          selected_shifts: next.length > 0 ? next : [],
+          shift_id: next.length > 0 ? next[0] : 0,
+        };
+      } else {
+        const next = [...current, sId].sort((a, b) => a - b);
+        return { ...prev, selected_shifts: next, shift_id: next[0] };
+      }
+    });
+  };
+
+  const handleSelectShiftPreset = (presetShifts) => {
+    setCreateEventModal((prev) => ({
+      ...prev,
+      selected_shifts: presetShifts,
+      shift_id: presetShifts[0] || 0,
+    }));
+  };
+
+  // Handle Create Event Submit (Hỗ trợ tạo nhiều ca cùng lúc hoặc Cả ngày)
   const handleCreateEventSubmit = async (e) => {
     e.preventDefault();
     if (!createEventModal.title.trim()) {
@@ -384,21 +429,48 @@ export function SchedulePage() {
       showToast("Không thể tạo sự kiện cho ngày trong quá khứ! Chỉ được chọn ngày hôm nay hoặc tương lai.", "danger");
       return;
     }
+
+    const shifts = (createEventModal.selected_shifts && createEventModal.selected_shifts.length > 0)
+      ? createEventModal.selected_shifts
+      : (createEventModal.shift_id !== undefined ? [createEventModal.shift_id] : [0]);
+
+    if (!shifts || shifts.length === 0) {
+      showToast("Vui lòng chọn ít nhất một ca làm việc hoặc chọn Cả ngày!", "danger");
+      return;
+    }
+
     try {
-      await api.createShiftEvent({
-        shift_id: createEventModal.shift_id,
-        work_date: createEventModal.work_date || null,
-        title: createEventModal.title.trim(),
-        description: createEventModal.description?.trim() || "",
-        event_type: createEventModal.event_type || "general",
-      });
-      showToast(
-        createEventModal.shift_id === 0
-          ? "Thêm sự kiện cả ngày thành công!"
-          : "Thêm sự kiện cho ca làm việc thành công!"
-      );
+      if (shifts.includes(0)) {
+        await api.createShiftEvent({
+          shift_id: 0,
+          work_date: createEventModal.work_date || null,
+          title: createEventModal.title.trim(),
+          description: createEventModal.description?.trim() || "",
+          event_type: createEventModal.event_type || "general",
+        });
+        showToast("Thêm sự kiện cả ngày thành công!");
+      } else {
+        await Promise.all(
+          shifts.map((sId) =>
+            api.createShiftEvent({
+              shift_id: sId,
+              work_date: createEventModal.work_date || null,
+              title: createEventModal.title.trim(),
+              description: createEventModal.description?.trim() || "",
+              event_type: createEventModal.event_type || "general",
+            })
+          )
+        );
+        showToast(
+          shifts.length === 1
+            ? `Thêm sự kiện cho Ca ${shifts[0]} thành công!`
+            : `Thêm sự kiện thành công cho ${shifts.length} ca (${shifts.map((id) => `Ca ${id}`).join(", ")})!`
+        );
+      }
+
       setCreateEventModal({
         open: false,
+        selected_shifts: [0],
         shift_id: 0,
         work_date: "",
         title: "",
@@ -781,6 +853,77 @@ export function SchedulePage() {
 
           {isAdmin && (
             <button
+              onClick={() => setShowCsvModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#ecfdf5",
+                border: "1.5px solid #a7f3d0",
+                color: "#059669",
+                padding: "8px 16px",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(5, 150, 105, 0.1)",
+              }}
+              title="Quản lý ca trực & báo vắng qua file CSV/Excel"
+            >
+              <FileSpreadsheet size={16} />
+              <span>CSV Phân Ca & Báo Vắng</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowKpiModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#f0fdf4",
+              border: "1.5px solid #86efac",
+              color: "#15803d",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(21, 128, 61, 0.1)",
+            }}
+            title="Xem bảng xếp hạng và tiến độ chỉ tiêu 20 giờ/tuần của từng nhân sự"
+          >
+            <Trophy size={16} />
+            <span>Bảng KPI 20h</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveChecklistShift({ id: 1, date: weekDays[0]?.dateStr });
+              setShowChecklistModal(true);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              color: "#1d4ed8",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(29, 78, 216, 0.1)",
+            }}
+            title="Xem danh sách công việc cần làm của các ca trực"
+          >
+            <CheckSquare size={16} />
+            <span>Nhiệm Vụ Ca Trực</span>
+          </button>
+
+          {isAdmin && (
+            <button
               onClick={() => setShowPublishModal(true)}
               className="btn btn-primary"
               style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -829,12 +972,39 @@ export function SchedulePage() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: 16, borderLeft: "4px solid #f59e0b" }}>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
-            Cơ chế Điểm danh & Báo vắng
+        <div
+          className="card"
+          onClick={() => setShowKpiModal(true)}
+          style={{
+            padding: 16,
+            borderLeft: "4px solid #059669",
+            cursor: "pointer",
+            background: totalHours >= 20 ? "#f0fdf4" : "#ffffff",
+            transition: "all 0.15s"
+          }}
+          title="Click để xem chi tiết Bảng xếp hạng KPI của toàn bộ nhân sự"
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 13, color: "#059669", fontWeight: 700 }}>
+              🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
+            </div>
+            <span style={{ fontSize: 11, background: totalHours >= 20 ? "#dcfce7" : "#fef3c7", color: totalHours >= 20 ? "#15803d" : "#b45309", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+              {totalHours >= 20 ? "Đạt chuẩn" : `${Math.round((totalHours / 20) * 100)}%`}
+            </span>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#b45309", marginTop: 6 }}>
-            Bấm <strong>{totalMembers > 0 ? `${totalMembers} người` : "Xem"}</strong> để xem • Báo vắng kèm lý do
+
+          <div style={{ fontSize: 20, fontWeight: 800, color: totalHours >= 20 ? "#059669" : "#0f172a", marginTop: 4 }}>
+            {totalHours.toFixed(1)} <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
+          </div>
+
+          <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginTop: 6 }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.min(100, Math.round((totalHours / 20) * 100))}%`,
+                background: totalHours >= 20 ? "#10b981" : "#f59e0b"
+              }}
+            />
           </div>
         </div>
       </div>
@@ -891,7 +1061,7 @@ export function SchedulePage() {
                 <ChevronLeft size={16} />
               </button>
               <span style={{ fontWeight: 700, fontSize: 14, minWidth: 170, textAlign: "center" }}>
-                Tuần: {weekDays[0]?.displayDate} - {weekDays[6]?.displayDate}/2026
+                Tuần: {weekDays[0]?.displayDate} - {weekDays[weekDays.length - 1]?.displayDate}/2026
               </span>
               <button
                 onClick={() => handleWeekChange(1)}
@@ -1651,7 +1821,7 @@ export function SchedulePage() {
         <div className="card" style={{ padding: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
             Danh Sách Ca Làm Của Bạn Trong Tuần ({weekDays[0]?.displayDate} -{" "}
-            {weekDays[6]?.displayDate})
+            {weekDays[weekDays.length - 1]?.displayDate})
           </h2>
 
           {myShiftsInWeek.length === 0 ? (
@@ -2220,7 +2390,7 @@ export function SchedulePage() {
               background: "#ffffff",
               borderRadius: 16,
               border: "1px solid #e2e8f0",
-              maxWidth: 500,
+              maxWidth: 560,
               width: "100%",
               padding: 24,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
@@ -2572,37 +2742,198 @@ export function SchedulePage() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <label className="form-label" style={{ fontWeight: 700 }}>Phạm vi sự kiện (Theo Ngày hoặc Shift):</label>
-                <select
-                  value={createEventModal.shift_id}
-                  onChange={(e) =>
-                    setCreateEventModal((prev) => ({
-                      ...prev,
-                      shift_id: Number(e.target.value),
-                    }))
-                  }
-                  className="form-control"
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
+                    Phạm vi sự kiện (Chọn một hoặc nhiều Ca):
+                  </label>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>
+                    Click ca để bật/tắt (chọn nhiều ca)
+                  </span>
+                </div>
+
+                {/* Quick Presets Buttons */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleShiftSelection(0)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: (createEventModal.selected_shifts || []).includes(0) ? "#7e22ce" : "#e2e8f0",
+                      background: (createEventModal.selected_shifts || []).includes(0) ? "#f3e8ff" : "#f8fafc",
+                      color: (createEventModal.selected_shifts || []).includes(0) ? "#6b21a8" : "#475569",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    🌟 Cả ngày (Toàn bộ 9 ca)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectShiftPreset([1, 2, 3])}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "#2563eb" : "#e2e8f0",
+                      background: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "#eff6ff" : "#f8fafc",
+                      color: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "#1d4ed8" : "#475569",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    🌅 Sáng (Ca 1, 2, 3)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectShiftPreset([4, 5, 6])}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "#ea580c" : "#e2e8f0",
+                      background: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "#fff7ed" : "#f8fafc",
+                      color: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "#c2410c" : "#475569",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    ☀️ Chiều (Ca 4, 5, 6)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectShiftPreset([7, 8, 9])}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "#4f46e5" : "#e2e8f0",
+                      background: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "#eef2ff" : "#f8fafc",
+                      color: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "#4338ca" : "#475569",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    🌙 Tối (Ca 7, 8, 9)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectShiftPreset([7, 8])}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8]) ? "#9333ea" : "#e2e8f0",
+                      background: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8]) ? "#faf5ff" : "#f8fafc",
+                      color: JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8]) ? "#7e22ce" : "#475569",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    ⚡ Ca 7 & 8
+                  </button>
+                </div>
+
+                {/* 9 Shifts Grid Selection */}
+                <div
                   style={{
-                    fontWeight: createEventModal.shift_id === 0 ? 700 : 500,
-                    color: createEventModal.shift_id === 0 ? "#7e22ce" : "#0f172a",
-                    background: createEventModal.shift_id === 0 ? "#faf5ff" : "#ffffff",
-                    borderColor: createEventModal.shift_id === 0 ? "#c084fc" : "#cbd5e1",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: 6,
+                    padding: 8,
+                    borderRadius: 10,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
                   }}
                 >
-                  <option value={0}>🌟 CẢ NGÀY (Sự kiện diễn ra cả ngày / Toàn bộ các ca)</option>
-                  <optgroup label="── Hoặc chọn ca làm cụ thể ──">
-                    {SHIFTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.label})
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
-                  {createEventModal.shift_id === 0
-                    ? "✨ Sự kiện cả ngày sẽ hiển thị xuyên suốt toàn bộ 9 ca và hiện banner ở đầu ngày."
-                    : "📌 Sự kiện này sẽ chỉ áp dụng riêng cho ca làm việc đã chọn."}
+                  {SHIFTS.map((s) => {
+                    const isSelected =
+                      (createEventModal.selected_shifts || []).includes(s.id);
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => handleToggleShiftSelection(s.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          border: isSelected ? "1.5px solid #2563eb" : "1px solid #cbd5e1",
+                          background: isSelected ? "#eff6ff" : "#ffffff",
+                          transition: "all 0.15s ease",
+                          userSelect: "none",
+                        }}
+                      >
+                        <div style={{ overflow: "hidden" }}>
+                          <div style={{
+                            fontSize: 12,
+                            fontWeight: isSelected ? 700 : 600,
+                            color: isSelected ? "#1d4ed8" : "#1e293b",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            overflow: "hidden",
+                          }}>
+                            {s.name.split(" ")[0]} {s.name.split(" ")[1]}
+                          </div>
+                          <div style={{ fontSize: 10, color: isSelected ? "#3b82f6" : "#64748b" }}>
+                            {s.startTime} - {s.endTime}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 4,
+                            border: isSelected ? "none" : "1.5px solid #94a3b8",
+                            background: isSelected ? "#2563eb" : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#ffffff",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            flexShrink: 0,
+                            marginLeft: 4,
+                          }}
+                        >
+                          {isSelected && "✓"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Summary bar */}
+                <div style={{ marginTop: 6, fontSize: 11 }}>
+                  {(createEventModal.selected_shifts || []).includes(0) ? (
+                    <span style={{ color: "#7e22ce", fontWeight: 600 }}>
+                      🌟 Đang chọn: Cả ngày (Hiển thị banner chung và áp dụng toàn bộ 9 ca).
+                    </span>
+                  ) : (createEventModal.selected_shifts || []).length > 0 ? (
+                    <span style={{ color: "#2563eb", fontWeight: 600 }}>
+                      📌 Đang chọn {(createEventModal.selected_shifts || []).length} ca:{" "}
+                      {(createEventModal.selected_shifts || []).map((id) => `Ca ${id}`).join(", ")}{" "}
+                      (Sự kiện sẽ được tạo riêng và gắn vào các ca này).
+                    </span>
+                  ) : (
+                    <span style={{ color: "#ef4444", fontWeight: 600 }}>
+                      ⚠️ Vui lòng chọn ít nhất 1 ca hoặc bấm &apos;Cả ngày&apos;.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -3378,7 +3709,7 @@ export function SchedulePage() {
 
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
               Hệ thống sẽ gửi email tổng hợp lịch trực 9 ca của tuần (từ {weekDays[0]?.displayDate}{" "}
-              đến {weekDays[6]?.displayDate}) đến từng nhân sự.
+              đến {weekDays[weekDays.length - 1]?.displayDate}) đến từng nhân sự.
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -3444,6 +3775,38 @@ export function SchedulePage() {
           </div>
         </div>
       )}
+    
+      {/* CSV SCHEDULE MODAL */}
+      <CsvScheduleModal
+        isOpen={showCsvModal}
+        onClose={() => setShowCsvModal(false)}
+        allMembers={allMembers}
+        currentSchedule={schedule}
+        weekDays={weekDays}
+        onImportSuccess={() => fetchSchedule()}
+        showToast={showToast}
+      />
+
+      {/* KPI LEADERBOARD MODAL */}
+      <KpiLeaderboardModal
+        isOpen={showKpiModal}
+        onClose={() => setShowKpiModal(false)}
+        allMembers={allMembers}
+        schedule={schedule}
+        weekDays={weekDays}
+        kpiTarget={20.0}
+      />
+
+      {/* SHIFT CHECKLIST MODAL */}
+      <ShiftChecklistModal
+        isOpen={showChecklistModal}
+        onClose={() => setShowChecklistModal(false)}
+        initialShiftId={activeChecklistShift.id}
+        initialDate={activeChecklistShift.date || weekDays[0]?.dateStr}
+        showToast={showToast}
+      />
+
+
     </div>
   );
 }

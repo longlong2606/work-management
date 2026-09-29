@@ -282,8 +282,9 @@ public static class Database
             conn.Execute("UPDATE system_settings SET value = 'wtew euaj zcuu bjtq' WHERE key = 'smtp_password' AND (value IS NULL OR value = '')");
 
             // 4. Default shift events
-            var eventCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_events");
-            if (eventCount == 0)
+            // Disabled auto-seed for shift_events as requested by user
+            // var eventCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_events");
+            if (false)
             {
                 var seedEvents = new[]
                 {

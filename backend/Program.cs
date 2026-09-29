@@ -1,9 +1,10 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Dapper;
 using Microsoft.Extensions.FileProviders;
 using WorkManagement.Api;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://0.0.0.0:8000");
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -60,6 +61,46 @@ if (!hasFrontend)
         status = "running"
     }));
 }
+
+// ================= TV DISPLAY (KIOSK MODE) =================
+app.MapGet("/api/tv/today", (string? date) =>
+{
+    var targetDate = string.IsNullOrWhiteSpace(date) ? DateTime.Now.ToString("yyyy-MM-dd") : date;
+    using var conn = Database.GetConnection();
+
+    var regQuery = @"
+        SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date, sr.status, sr.note,
+               COALESCE(sr.attendance_status, 'present') as attendance_status,
+               sr.absence_reason,
+               u.full_name, u.username, u.email, u.phone,
+               st.name as shift_name, st.start_time, st.end_time, st.label as shift_label
+        FROM shift_registrations sr
+        JOIN users u ON sr.user_id = u.id
+        JOIN shift_templates st ON sr.shift_id = st.id
+        WHERE sr.work_date = @date
+        ORDER BY sr.shift_id ASC, u.full_name ASC";
+    var regs = conn.Query(regQuery, new { date = targetDate });
+
+    var eventQuery = @"
+        SELECT se.id, se.shift_id, se.work_date, se.title, se.description, se.event_type, se.created_at,
+               st.name as shift_name, st.label as shift_label
+        FROM shift_events se
+        LEFT JOIN shift_templates st ON se.shift_id = st.id
+        WHERE se.work_date IS NULL OR se.work_date = @date
+        ORDER BY se.shift_id ASC, se.id ASC";
+    var events = conn.Query(eventQuery, new { date = targetDate });
+
+    var templates = conn.Query("SELECT id, name, start_time, end_time, label, description FROM shift_templates WHERE id > 0 ORDER BY id ASC");
+
+    return Results.Ok(new
+    {
+        date = targetDate,
+        server_time = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+        shifts = templates,
+        registrations = regs,
+        events = events
+    });
+});
 
 // ================= AUTH =================
 app.MapPost("/api/auth/forgot-password", (ForgotPasswordRequest req) =>
@@ -1573,3 +1614,4 @@ if (hasFrontend)
 }
 
 app.Run();
+
