@@ -17,7 +17,8 @@ import {
   Settings,
   History,
   Key,
-  ChevronDown
+  ChevronDown,
+  Tv
 } from "lucide-react";
 
 export function Navbar({ activeTab, setActiveTab }) {
@@ -266,6 +267,29 @@ export function Navbar({ activeTab, setActiveTab }) {
 
         {/* RIGHT SIDE: THÔNG BÁO & USER PROFILE GỌN GÀNG */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Nút xem Màn hình TV */}
+          <button
+            onClick={() => setActiveTab("tv")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 12px",
+              borderRadius: 8,
+              border: "1.5px solid #bfdbfe",
+              background: "#eff6ff",
+              color: "#1d4ed8",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.15s ease"
+            }}
+            title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn / hoặc /tv)"
+          >
+            <Tv size={15} color="#2563eb" />
+            <span>Màn hình TV</span>
+          </button>
+
           {/* Notification Button */}
           <button
             onClick={() => setIsOpen(true)}

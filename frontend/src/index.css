@@ -262,3 +262,109 @@ body {
   border: 1px solid var(--border, #e2e8f0);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
+
+
+/* ========================================================
+   TV DISPLAY ANIMATIONS & STYLES (PORTED FOR / AND /TV)
+   ======================================================== */
+@keyframes pulseLive {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes slideTimer {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes fadeInCard {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pulse-badge {
+  animation: pulseLive 1.8s infinite ease-in-out;
+}
+
+.card-transition {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes autoScrollMembers2 {
+  0%, 40% {
+    transform: translateY(0);
+  }
+  50%, 90% {
+    transform: translateY(-30px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes autoScrollMembers3 {
+  0%, 25% {
+    transform: translateY(0);
+  }
+  33%, 58% {
+    transform: translateY(-30px);
+  }
+  66%, 91% {
+    transform: translateY(-60px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes autoScrollMembersMany {
+  0%, 18% {
+    transform: translateY(0);
+  }
+  25%, 43% {
+    transform: translateY(-30px);
+  }
+  50%, 68% {
+    transform: translateY(-60px);
+  }
+  75%, 93% {
+    transform: translateY(-90px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.auto-scroll-members-2 {
+  animation: autoScrollMembers2 6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auto-scroll-members-3 {
+  animation: autoScrollMembers3 9s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auto-scroll-members-many {
+  animation: autoScrollMembersMany 12s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auto-scroll-members-2:hover,
+.auto-scroll-members-3:hover,
+.auto-scroll-members-many:hover {
+  animation-play-state: paused;
+}

@@ -14,10 +14,11 @@ import {
   EyeOff,
   Mail,
   MailCheck,
-  ArrowRight
+  ArrowRight,
+  Tv
 } from "lucide-react";
 
-export function LoginPage() {
+export function LoginPage({ onBackToTv }) {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -224,6 +225,40 @@ export function LoginPage() {
             {loading ? "Đang xác thực..." : "Đăng Nhập Cổng Nội Bộ"}
           </button>
         </form>
+
+        {onBackToTv && (
+          <div style={{ marginTop: 16, textAlign: "center", borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+            <button
+              type="button"
+              onClick={onBackToTv}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#475569",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#2563eb";
+                e.currentTarget.style.background = "#eff6ff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#475569";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <Tv size={15} color="#2563eb" />
+              <span>Chuyển sang màn hình Kiosk TV (/)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Forgot Password Modal */}

@@ -12,22 +12,30 @@ import { TasksPage } from "./pages/TasksPage";
 import { StaffManagementPage } from "./pages/StaffManagementPage";
 import { EmailOutboxPage } from "./pages/EmailOutboxPage";
 import { EmailSettingsPage } from "./pages/EmailSettingsPage";
+import { TvDisplayPage } from "./pages/TvDisplayPage";
 
 const VALID_TABS = ["schedule", "tasks", "history", "notes", "feedback", "staff", "emails", "smtp"];
 
 function getTabFromUrl() {
-  if (typeof window === "undefined") return "schedule";
+  if (typeof window === "undefined") return "tv";
   // 1. Pathname check (e.g. /notes, /feedback, /schedule)
   const path = window.location.pathname.replace(/^\/+/, "").split("/")[0].toLowerCase();
+  if (path === "" || path === "tv") {
+    return "tv";
+  }
   if (VALID_TABS.includes(path)) {
     return path;
   }
   // 2. Hash check (e.g. #notes, #feedback, /schedule#feedback)
   const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  if (hash === "tv" || hash === "") {
+    return "tv";
+  }
   if (VALID_TABS.includes(hash)) {
     return hash;
   }
-  return "schedule";
+  // Khi không có tiền tố nào (ví dụ http://localhost:5173/ bỏ schedule) -> mặc định là TV
+  return "tv";
 }
 
 function MainContent() {
@@ -36,9 +44,8 @@ function MainContent() {
 
   // Navigate to tab and push clean HTML5 state to browser history
   const navigateToTab = useCallback((newTab) => {
-    if (!VALID_TABS.includes(newTab)) newTab = "schedule";
     setActiveTabState(newTab);
-    const targetPath = `/${newTab}`;
+    const targetPath = newTab === "tv" ? "/" : `/${newTab}`;
     if (window.location.pathname !== targetPath || window.location.hash) {
       window.history.pushState({ tab: newTab }, "", targetPath);
     }
@@ -48,21 +55,25 @@ function MainContent() {
   useEffect(() => {
     const initial = getTabFromUrl();
     setActiveTabState(initial);
-    // Replace current browser URL with clean HTML5 route without reloading
-    window.history.replaceState({ tab: initial }, "", `/${initial}`);
+    const targetPath = initial === "tv" ? "/" : `/${initial}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({ tab: initial }, "", targetPath);
+    }
 
     const handlePopState = (e) => {
       const tab = e.state?.tab || getTabFromUrl();
-      if (VALID_TABS.includes(tab)) {
-        setActiveTabState(tab);
-      } else {
-        setActiveTabState("schedule");
-      }
+      setActiveTabState(tab);
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  // Nếu tab là "tv" (hoặc truy cập root / không có /schedule):
+  // Hiển thị trực tiếp màn hình Kiosk TV mà KHÔNG yêu cầu đăng nhập!
+  if (activeTab === "tv") {
+    return <TvDisplayPage onNavigateToManagement={() => navigateToTab("schedule")} />;
+  }
 
   if (loading) {
     return (
@@ -81,7 +92,7 @@ function MainContent() {
   }
 
   if (!user) {
-    return <LoginPage />;
+    return <LoginPage onBackToTv={() => navigateToTab("tv")} />;
   }
 
   return (

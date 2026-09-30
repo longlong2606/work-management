@@ -55,6 +55,18 @@
 
 ---
 
+### 🌟 Tính Năng Hợp Nhất Đường Dẫn (Unified TV & PC Dashboard)
+
+Hệ thống hỗ trợ truy cập song song 2 giao diện trên cùng **1 địa chỉ / 1 cổng duy nhất** (`:5173` khi chạy dev, hoặc `:3000` khi chạy Docker):
+- 📺 **Khi truy cập root (hoặc bỏ `/schedule`):** `http://localhost:5173/` (hoặc `http://<IP_LAN>:5173/`)
+  - Tự động hiển thị **Màn hình Kiosk TV 50 Inch** chuẩn trình chiếu, không yêu cầu đăng nhập.
+  - Có sẵn nút **"Vào Quản Lý"** trên thanh tiêu đề để nhân sự quản lý nhanh.
+- 💻 **Khi truy cập `/schedule`:** `http://localhost:5173/schedule`
+  - Hiển thị **Giao diện Web Quản lý máy tính** đầy đủ tính năng.
+  - Thanh Navbar có sẵn nút **"Màn hình TV"** để chuyển tức thì sang giao diện TV toàn màn hình.
+
+---
+
 ## ⚡ Hướng Dẫn Khởi Chạy Nhanh (1-Click)
 
 ### Cách 1: Chạy tự động toàn bộ bằng file Batch (Khuyên Dùng trên Windows)
