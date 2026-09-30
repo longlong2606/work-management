@@ -119,3 +119,21 @@ public record ResetPasswordRequest(string new_password);
 public record UpdateUserRequest(string full_name, string email, string? phone, string? department, string role, string status);
 public record UpdateProfileRequest(string full_name, string email, string? phone);
 public record ForgotPasswordRequest(string identifier);
+
+public record ClassScheduleItem(
+    long? id,
+    long user_id,
+    string? course_code,
+    string class_name,
+    string work_date,
+    string start_time,
+    string end_time,
+    string? room,
+    string? source_batch_id = null,
+    string? user_name = null
+);
+
+public record ImportClassScheduleRequest(
+    long? target_user_id,
+    List<ClassScheduleItem> entries
+);

@@ -158,6 +158,21 @@ public static class Database
                 FOREIGN KEY (shift_id) REFERENCES shift_templates(id)
             );
 
+            CREATE TABLE IF NOT EXISTS class_schedules (
+                id {pk},
+                user_id INTEGER NOT NULL,
+                course_code TEXT,
+                class_name TEXT NOT NULL,
+                work_date TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                room TEXT,
+                source_batch_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_class_schedules_user_date ON class_schedules (user_id, work_date);
+
             CREATE TABLE IF NOT EXISTS feedbacks (
                 id {pk},
                 user_id INTEGER NOT NULL,

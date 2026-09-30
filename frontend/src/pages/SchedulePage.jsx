@@ -2,13 +2,14 @@ import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
 import { ShiftChecklistModal } from "../components/ShiftChecklistModal";
 import { CsvScheduleModal } from "../components/CsvScheduleModal";
 import { BulkAbsenceModal } from "../components/BulkAbsenceModal";
+import { ClassScheduleModal } from "../components/ClassScheduleModal";
 import React, { useState, useEffect, useCallback } from "react";
 import { SHIFTS } from "../constants/shifts";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import {
-  Clock, CalendarX2, Send, Mail, CheckCircle2, AlertCircle, PlusCircle, Trash2,
+  Clock, CalendarX2, GraduationCap, Send, Mail, CheckCircle2, AlertCircle, PlusCircle, Trash2,
   ChevronLeft, ChevronRight, LayoutGrid, CalendarRange, UserCheck,
   UserPlus, ArrowLeftRight, Hourglass, Check, X, ShieldAlert, Calendar, ArrowRight,
   Users, Plus, ChevronDown, ChevronUp, Sparkles, Tag, Eye, Info, UserX,
@@ -164,6 +165,8 @@ export function SchedulePage() {
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showBulkAbsenceModal, setShowBulkAbsenceModal] = useState(false);
+  const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
+  const [classConflicts, setClassConflicts] = useState([]);
   const [showChecklistModal, setShowChecklistModal] = useState(false);
   const [activeChecklistShift, setActiveChecklistShift] = useState({ id: 1, date: "" });
   const LAB_KPI_TARGET = 20.0;
@@ -223,12 +226,14 @@ export function SchedulePage() {
         start = days[0].dateStr;
         end = days[days.length - 1].dateStr;
       }
-      const [data, evData] = await Promise.all([
+      const [data, evData, conflictData] = await Promise.all([
         api.getSchedule(start, end),
         api.getShiftEvents(),
+        api.getClassScheduleConflicts(start, end).catch(() => []),
       ]);
       setSchedule(data || []);
       setEvents(evData || []);
+      setClassConflicts(conflictData || []);
       fetchMembers();
       if (isAdmin) {
         fetchPendingRequests();
@@ -968,6 +973,29 @@ export function SchedulePage() {
           </button>
 
           <button
+            onClick={() => setShowClassScheduleModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#f0fdf4",
+              border: "1.5px solid #bbf7d0",
+              color: "#166534",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(22, 101, 52, 0.08)",
+              transition: "all 0.2s ease"
+            }}
+            title="Nhập và quản lý thời khóa biểu học tập (CSV/Excel) để cảnh báo trùng lịch trực"
+          >
+            <GraduationCap size={16} />
+            <span>TKB Học Tập (CSV)</span>
+          </button>
+
+          <button
             onClick={() => setShowBulkAbsenceModal(true)}
             style={{
               display: "flex",
@@ -1462,6 +1490,9 @@ export function SchedulePage() {
                           s.work_date === day.dateStr &&
                           s.attendance_status === "pending_absence"
                       );
+                      const conflictsInSlot = classConflicts.filter(
+                        (c) => c.shift_id === shift.id && c.work_date === day.dateStr
+                      );
                       const hasAbsence = absentInSlot.length > 0;
                       const hasPending = pendingInSlot.length > 0;
                       const eventsInThisSlot = events.filter(
@@ -1564,6 +1595,24 @@ export function SchedulePage() {
                                       🟡 {pendingInSlot.length} chờ duyệt
                                     </span>
                                   )}
+                                  {conflictsInSlot.length > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: 800,
+                                        background: "#fef3c7",
+                                        color: "#b45309",
+                                        border: "1px solid #fde68a",
+                                        padding: "1px 5px",
+                                        borderRadius: 10,
+                                      }}
+                                      title={conflictsInSlot
+                                        .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
+                                        .join("\n")}
+                                    >
+                                      🎓 {conflictsInSlot.length} trùng TKB
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div
@@ -1626,6 +1675,35 @@ export function SchedulePage() {
                                       <span>🔴 {a.full_name || a.username}</span>
                                       <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>
                                         {a.absence_reason || "Vắng mặt"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Hiển thị chi tiết cảnh báo trùng lịch học khi mở rộng */}
+                              {isExpanded && conflictsInSlot.length > 0 && (
+                                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fde68a", paddingTop: 4 }}>
+                                  {conflictsInSlot.map((c, cIdx) => (
+                                    <div
+                                      key={`cf-${c.user_id}-${cIdx}`}
+                                      style={{
+                                        fontSize: 10,
+                                        color: "#92400e",
+                                        background: "#fffbeb",
+                                        padding: "2px 6px",
+                                        borderRadius: 4,
+                                        fontWeight: 600,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 4,
+                                        border: "1px solid #fde68a",
+                                      }}
+                                      title={`Lớp: ${c.class_name || c.course_name || c.subject_name} (${c.class_time || `${c.start_time} - ${c.end_time}`})`}
+                                    >
+                                      <span>🎓 {c.user_name || c.full_name}</span>
+                                      <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.9 }}>
+                                        {c.course_code || "Lớp"}: {c.class_time || `${c.start_time}-${c.end_time}`}
                                       </span>
                                     </div>
                                   ))}
@@ -2137,6 +2215,12 @@ export function SchedulePage() {
                   const isPending = m.attendance_status === "pending_absence";
                   const isAbsent = m.attendance_status === "absent";
                   const isPresent = !isPending && !isAbsent;
+                  const memberConflict = classConflicts.find(
+                    (c) =>
+                      c.shift_id === rosterModal.shift?.id &&
+                      c.work_date === rosterModal.day?.dateStr &&
+                      c.user_id === m.user_id
+                  );
 
                   let cardBg = "#f8fafc";
                   let cardBorder = "1px solid #e2e8f0";
@@ -2222,6 +2306,22 @@ export function SchedulePage() {
                                   }}
                                 >
                                   🟡 ĐƠN CHỜ QUẢN LÝ DUYỆT
+                                </span>
+                              )}
+                              {memberConflict && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    background: "#fffbeb",
+                                    color: "#b45309",
+                                    border: "1px solid #fde68a",
+                                    padding: "2px 8px",
+                                    borderRadius: 4,
+                                  }}
+                                  title={`Trùng TKB: ${memberConflict.course_code || memberConflict.class_name || memberConflict.subject_name} (${memberConflict.class_time || `${memberConflict.start_time} - ${memberConflict.end_time}`})`}
+                                >
+                                  🎓 TRÙNG TKB ({memberConflict.course_code || "LỚP"}: {memberConflict.class_time || `${memberConflict.start_time} - ${memberConflict.end_time}`})
                                 </span>
                               )}
                               {isAbsent && (
@@ -4098,7 +4198,19 @@ export function SchedulePage() {
         showToast={showToast}
       />
 
-            {/* BULK ABSENCE MODAL */}
+            {/* CLASS SCHEDULE MODAL (TKB SINH VIÊN & CẢNH BÁO TRÙNG LỊCH) */}
+      <ClassScheduleModal
+        isOpen={showClassScheduleModal}
+        onClose={() => setShowClassScheduleModal(false)}
+        currentUser={user}
+        allMembers={allMembers}
+        onSuccess={() => {
+          fetchSchedule();
+        }}
+        showToast={showToast}
+      />
+
+      {/* BULK ABSENCE MODAL */}
       <BulkAbsenceModal
         isOpen={showBulkAbsenceModal}
         onClose={() => setShowBulkAbsenceModal(false)}

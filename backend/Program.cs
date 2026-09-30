@@ -1753,6 +1753,191 @@ app.MapDelete("/api/shift-notes/clear-all", (HttpContext ctx) =>
     return Results.Ok(new { message = $"Đã xóa sạch {count} ghi chú ca làm việc thành công" });
 });
 
+// ================= CLASS SCHEDULES (THỜI KHÓA BIỂU HỌC TẬP) =================
+app.MapGet("/api/class-schedules", (long? user_id, string? start_date, string? end_date, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (currentUser.role != "admin" && user_id.HasValue && user_id.Value != currentUser.id)
+    {
+        return Results.StatusCode(403);
+    }
+
+    long? targetUserId = (currentUser.role == "admin" && !user_id.HasValue) ? null : (user_id ?? currentUser.id);
+
+    using var conn = Database.GetConnection();
+    var query = @"
+        SELECT cs.id, cs.user_id, cs.course_code, cs.class_name, cs.work_date,
+               cs.start_time, cs.end_time, cs.room, cs.source_batch_id, cs.created_at,
+               u.full_name as user_name, u.username, u.email
+        FROM class_schedules cs
+        JOIN users u ON cs.user_id = u.id
+        WHERE (@targetUserId IS NULL OR cs.user_id = @targetUserId)
+          AND (@startDate IS NULL OR cs.work_date >= @startDate)
+          AND (@endDate IS NULL OR cs.work_date <= @endDate)
+        ORDER BY cs.work_date ASC, cs.start_time ASC";
+
+    var list = conn.Query(query, new { targetUserId, startDate = start_date, endDate = end_date });
+    return Results.Ok(list);
+});
+
+app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (req.entries == null || req.entries.Count == 0)
+    {
+        return Results.BadRequest(new { detail = "Danh sách buổi học nhập vào trống." });
+    }
+
+    long effectiveUserId = (currentUser.role == "admin" && req.target_user_id.HasValue)
+        ? req.target_user_id.Value
+        : currentUser.id;
+
+    var batchId = DateTime.UtcNow.Ticks.ToString();
+
+    using var conn = Database.GetConnection();
+    int count = 0;
+    foreach (var e in req.entries)
+    {
+        if (string.IsNullOrWhiteSpace(e.class_name) || string.IsNullOrWhiteSpace(e.work_date) ||
+            string.IsNullOrWhiteSpace(e.start_time) || string.IsNullOrWhiteSpace(e.end_time))
+        {
+            continue;
+        }
+
+        conn.Execute(@"
+            INSERT INTO class_schedules (user_id, course_code, class_name, work_date, start_time, end_time, room, source_batch_id)
+            VALUES (@uid, @code, @name, @date, @stime, @etime, @room, @batchId)",
+            new
+            {
+                uid = effectiveUserId,
+                code = e.course_code?.Trim(),
+                name = e.class_name.Trim(),
+                date = e.work_date.Trim(),
+                stime = e.start_time.Trim(),
+                etime = e.end_time.Trim(),
+                room = e.room?.Trim(),
+                batchId
+            });
+        count++;
+    }
+
+    return Results.Ok(new { message = $"Đã nhập thành công {count} buổi học vào Thời Khóa Biểu!", count, batch_id = batchId });
+});
+
+app.MapDelete("/api/class-schedules/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var item = conn.QueryFirstOrDefault<(long id, long user_id)>("SELECT id, user_id FROM class_schedules WHERE id = @id", new { id });
+    if (item.id == 0) return Results.NotFound(new { detail = "Không tìm thấy buổi học này" });
+
+    if (currentUser.role != "admin" && currentUser.id != item.user_id)
+    {
+        return Results.StatusCode(403);
+    }
+
+    conn.Execute("DELETE FROM class_schedules WHERE id = @id", new { id });
+    return Results.Ok(new { message = "Đã xóa buổi học thành công" });
+});
+
+app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    int deleted = 0;
+    if (currentUser.role == "admin")
+    {
+        if (user_id.HasValue)
+        {
+            deleted = conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid = user_id.Value });
+        }
+        else
+        {
+            deleted = conn.Execute("DELETE FROM class_schedules");
+        }
+    }
+    else
+    {
+        deleted = conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid = currentUser.id });
+    }
+
+    return Results.Ok(new { message = $"Đã xóa sạch {deleted} buổi học trong thời khóa biểu thành công!", count = deleted });
+});
+
+app.MapGet("/api/class-schedules/conflicts", (string start_date, string end_date, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var assignmentsQuery = @"
+        SELECT sr.id as reg_id, sr.shift_id, sr.user_id, sr.work_date, sr.status, sr.attendance_status,
+               u.full_name as user_name,
+               st.name as shift_name, st.start_time as shift_start_time, st.end_time as shift_end_time
+        FROM shift_registrations sr
+        JOIN users u ON sr.user_id = u.id
+        JOIN shift_templates st ON sr.shift_id = st.id
+        WHERE sr.work_date >= @start_date AND sr.work_date <= @end_date
+          AND sr.attendance_status != 'absent'";
+
+    var assignments = conn.Query<dynamic>(assignmentsQuery, new { start_date, end_date }).ToList();
+
+    var classesQuery = @"
+        SELECT cs.id, cs.user_id, cs.course_code, cs.class_name, cs.work_date, cs.start_time, cs.end_time, cs.room
+        FROM class_schedules cs
+        WHERE cs.work_date >= @start_date AND cs.work_date <= @end_date";
+
+    var classes = conn.Query<dynamic>(classesQuery, new { start_date, end_date }).ToList();
+
+    var conflicts = new List<dynamic>();
+
+    foreach (var a in assignments)
+    {
+        long uid = (long)a.user_id;
+        string date = (string)a.work_date;
+        string sStart = (string)a.shift_start_time;
+        string sEnd = (string)a.shift_end_time;
+
+        var userClassesOnDate = classes.Where(c => (long)c.user_id == uid && (string)c.work_date == date);
+        foreach (var c in userClassesOnDate)
+        {
+            string cStart = (string)c.start_time;
+            string cEnd = (string)c.end_time;
+
+            string maxStart = string.Compare(sStart, cStart, StringComparison.Ordinal) > 0 ? sStart : cStart;
+            string minEnd = string.Compare(sEnd, cEnd, StringComparison.Ordinal) < 0 ? sEnd : cEnd;
+
+            if (string.Compare(maxStart, minEnd, StringComparison.Ordinal) < 0)
+            {
+                conflicts.Add(new
+                {
+                    reg_id = (long)a.reg_id,
+                    user_id = uid,
+                    user_name = (string)a.user_name,
+                    shift_id = (int)a.shift_id,
+                    shift_name = (string)a.shift_name,
+                    shift_time = $"{sStart} - {sEnd}",
+                    work_date = date,
+                    course_code = (string)(c.course_code ?? ""),
+                    class_name = (string)c.class_name,
+                    class_time = $"{cStart} - {cEnd}",
+                    room = (string)(c.room ?? "")
+                });
+            }
+        }
+    }
+
+    return Results.Ok(conflicts);
+});
+
 // ================= FEEDBACKS =================
 app.MapGet("/api/feedbacks", (HttpContext ctx) =>
 {

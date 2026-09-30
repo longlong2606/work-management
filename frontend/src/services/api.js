@@ -187,6 +187,29 @@ export const api = {
       method: "DELETE",
     }),
 
+  // Class Schedules (Thời khóa biểu học tập & Đối chiếu trùng lịch)
+  getClassSchedules: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/class-schedules${qs ? `?${qs}` : ""}`);
+  },
+  importClassSchedules: (data) =>
+    request("/class-schedules/import", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteClassSchedule: (id) =>
+    request(`/class-schedules/${id}`, {
+      method: "DELETE",
+    }),
+  clearClassSchedules: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/class-schedules/clear${qs ? `?${qs}` : ""}`, {
+      method: "DELETE",
+    });
+  },
+  getClassScheduleConflicts: (startDate, endDate) =>
+    request(`/class-schedules/conflicts?start_date=${startDate}&end_date=${endDate}`),
+
   // Feedbacks
   getFeedbacks: () => request("/feedbacks"),
   createFeedback: (data) =>
