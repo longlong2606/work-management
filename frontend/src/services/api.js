@@ -178,6 +178,14 @@ export const api = {
         sync_to_schedule: syncToSchedule,
       }),
     }),
+  deleteShiftNote: (noteId) =>
+    request(`/shift-notes/${noteId}`, {
+      method: "DELETE",
+    }),
+  clearAllShiftNotes: () =>
+    request("/shift-notes/clear-all", {
+      method: "DELETE",
+    }),
 
   // Feedbacks
   getFeedbacks: () => request("/feedbacks"),

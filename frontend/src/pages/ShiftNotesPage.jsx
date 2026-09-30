@@ -12,10 +12,11 @@ import {
   PlusCircle, 
   ArrowRight,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 
 export function ShiftNotesPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const { fetchNotifications } = useNotifications();
 
   const [notes, setNotes] = useState([]);
@@ -170,6 +171,32 @@ export function ShiftNotesPage() {
     }
   };
 
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa ghi chú này không?")) return;
+    try {
+      await api.deleteShiftNote(noteId);
+      showToastMsg("Đã xóa ghi chú ca làm thành công!");
+      fetchNotes();
+      fetchNotifications();
+    } catch (err) {
+      showToastMsg(err.message, "danger");
+    }
+  };
+
+  const handleClearAllNotes = async () => {
+    if (!window.confirm("⚠️ CẢNH BÁO QUẢN TRỊ VIÊN:\n\nBạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu ghi chú ca làm việc không?\nThao tác này sẽ dọn sạch toàn bộ danh sách ghi chú và không thể hoàn tác!")) {
+      return;
+    }
+    try {
+      const res = await api.clearAllShiftNotes();
+      showToastMsg(res.message || "Đã xóa sạch dữ liệu ghi chú!");
+      fetchNotes();
+      fetchNotifications();
+    } catch (err) {
+      showToastMsg(err.message, "danger");
+    }
+  };
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   const getStatusBadge = (status, workDate) => {
@@ -230,17 +257,41 @@ export function ShiftNotesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            const nowStr = new Date().toISOString().split("T")[0];
-            setWorkDate((prev) => (prev < nowStr ? nowStr : prev));
-            setShowModal(true);
-          }}
-          className="btn btn-primary"
-          style={{ boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)" }}
-        >
-          <PlusCircle size={16} /> Tạo Ghi Chú Báo Bận Mới
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {isAdmin && notes.length > 0 && (
+            <button
+              onClick={handleClearAllNotes}
+              className="btn btn-secondary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                color: "#dc2626",
+                borderColor: "#fecaca",
+                background: "#fef2f2",
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: "pointer",
+                padding: "8px 14px"
+              }}
+              title="Xóa toàn bộ dữ liệu ghi chú ca làm việc"
+            >
+              <Trash2 size={15} /> Xóa Sạch Dữ Liệu
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              const nowStr = new Date().toISOString().split("T")[0];
+              setWorkDate((prev) => (prev < nowStr ? nowStr : prev));
+              setShowModal(true);
+            }}
+            className="btn btn-primary"
+            style={{ boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)" }}
+          >
+            <PlusCircle size={16} /> Tạo Ghi Chú Báo Bận Mới
+          </button>
+        </div>
       </div>
 
       {/* Info helper banner */}
@@ -385,10 +436,31 @@ export function ShiftNotesPage() {
                 </div>
               )}
 
-              {/* Admin Action Button */}
-              {isAdmin && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-                  {note.work_date && note.work_date < todayStr && note.status === "pending" ? (
+              {/* Action Buttons */}
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 14 }}>
+                {(isAdmin || (user && user.id === note.user_id && note.status === "pending")) && (
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      color: "#dc2626",
+                      borderColor: "#fee2e2",
+                      background: "#fff1f2",
+                      padding: "6px 12px",
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                    title="Xóa ghi chú này"
+                  >
+                    <Trash2 size={13} /> Xóa
+                  </button>
+                )}
+
+                {isAdmin && (
+                  note.work_date && note.work_date < todayStr && note.status === "pending" ? (
                     <button
                       onClick={() => openReplyModal(note, "rejected")}
                       className="btn btn-danger btn-sm"
@@ -403,9 +475,9 @@ export function ShiftNotesPage() {
                     >
                       <ShieldCheck size={14} color="#2563eb" /> Phản hồi ghi chú này
                     </button>
-                  )}
-                </div>
-              )}
+                  )
+                )}
+              </div>
             </div>
           ))
         )}

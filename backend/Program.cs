@@ -1722,6 +1722,37 @@ app.MapPut("/api/shift-notes/{id:long}/status", (long id, UpdateShiftNoteStatusR
     return Results.Ok(new { message = "Cập nhật trạng thái thành công", actual_hours = effectiveHours });
 });
 
+app.MapDelete("/api/shift-notes/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var note = conn.QueryFirstOrDefault<(long id, long user_id)>("SELECT id, user_id FROM shift_notes WHERE id = @id", new { id });
+    if (note.id == 0)
+        return Results.NotFound(new { detail = "Không tìm thấy ghi chú ca làm" });
+
+    if (currentUser.role != "admin" && currentUser.id != note.user_id)
+        return Results.StatusCode(403);
+
+    conn.Execute("DELETE FROM shift_notes WHERE id = @id", new { id });
+    conn.Execute("DELETE FROM notifications WHERE type = 'shift_note_status' AND related_id = @id", new { id });
+
+    return Results.Ok(new { message = "Đã xóa ghi chú ca làm thành công" });
+});
+
+app.MapDelete("/api/shift-notes/clear-all", (HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var count = conn.Execute("DELETE FROM shift_notes");
+    conn.Execute("DELETE FROM notifications WHERE type = 'shift_note_status'");
+
+    return Results.Ok(new { message = $"Đã xóa sạch {count} ghi chú ca làm việc thành công" });
+});
+
 // ================= FEEDBACKS =================
 app.MapGet("/api/feedbacks", (HttpContext ctx) =>
 {
