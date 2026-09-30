@@ -716,6 +716,43 @@ app.MapDelete("/api/shifts/events/{id:long}", (long id, HttpContext ctx) =>
     return Results.Ok(new { success = true, message = "Xóa sự kiện thành công!" });
 });
 
+app.MapPost("/api/shifts/attendance/toggle", (ToggleAttendanceRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var reg = conn.QueryFirstOrDefault(
+        "SELECT id, attendance_status FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+        new { uid = req.user_id, sid = req.shift_id, wdate = req.work_date }
+    );
+
+    var newStatus = req.attendance_status == "absent" ? "absent" : "present";
+    if (reg == null)
+    {
+        conn.Execute(@"
+            INSERT INTO shift_registrations (user_id, shift_id, work_date, attendance_status, status, note)
+            VALUES (@uid, @sid, @wdate, @status, 'confirmed', @note)",
+            new { 
+                uid = req.user_id, 
+                sid = req.shift_id, 
+                wdate = req.work_date, 
+                status = newStatus, 
+                note = $"Xác nhận điểm danh: {newStatus}" 
+            });
+    }
+    else
+    {
+        conn.Execute("UPDATE shift_registrations SET attendance_status = @status WHERE id = @id", new { status = newStatus, id = (long)reg.id });
+    }
+
+    return Results.Ok(new { 
+        success = true, 
+        attendance_status = newStatus, 
+        message = newStatus == "absent" ? "Đã đánh dấu vắng mặt / thiếu ca!" : "Đã xác nhận có mặt thành công!" 
+    });
+});
+
 app.MapPut("/api/shifts/registrations/{id:long}/attendance", (long id, UpdateAttendanceRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);

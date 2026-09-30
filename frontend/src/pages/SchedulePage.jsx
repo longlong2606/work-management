@@ -276,6 +276,27 @@ export function SchedulePage() {
   };
 
   // Handle Admin Approve or Reject Absence
+    // Admin đánh dấu nhân sự vắng mặt / bỏ ca trực tiếp
+  const handleAdminMarkAbsent = async (member) => {
+    if (!window.confirm(`Xác nhận đánh dấu ${member.full_name} VẮNG MẶT / BỎ CA trong ca này? Hành động này sẽ trừ giờ KPI của nhân sự.`)) {
+      return;
+    }
+    try {
+      await api.toggleAttendance({
+        user_id: member.user_id,
+        shift_id: rosterModal.shift.id,
+        work_date: rosterModal.day.dateStr,
+        attendance_status: "absent",
+      });
+      showToast(`Đã đánh dấu ${member.full_name} vắng mặt trong ca này!`);
+      const data = await api.getShiftRoster(rosterModal.shift.id, rosterModal.day.dateStr);
+      setRosterModal((prev) => ({ ...prev, rosterList: data || [] }));
+      fetchSchedule();
+    } catch (err) {
+      showToast("Lỗi khi cập nhật: " + (err.message || ""), "danger");
+    }
+  };
+
   const handleApproveAbsence = async (shiftId, workDate, targetUserId, approved, staffName, note) => {
     try {
       const res = await api.approveAbsence({
@@ -2186,6 +2207,26 @@ export function SchedulePage() {
                               }}
                             >
                               📝 Báo vắng ca này
+                            </button>
+                          )}
+
+                          {/* 1b. If Admin and user is PRESENT -> button to Mark Absent / Missed Shift */}
+                          {isAdmin && isPresent && (
+                            <button
+                              onClick={() => handleAdminMarkAbsent(m)}
+                              style={{
+                                background: "#fff1f2",
+                                border: "1px solid #fecaca",
+                                color: "#b91c1c",
+                                borderRadius: 6,
+                                padding: "5px 10px",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              title="Đánh dấu nhân viên này không đi làm / bỏ ca trực (sẽ trừ KPI)"
+                            >
+                              ❌ Đánh dấu vắng / Bỏ ca
                             </button>
                           )}
 

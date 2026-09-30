@@ -97,6 +97,7 @@ public record CreateShiftEventRequest(
 );
 
 public record UpdateAttendanceRequest(string attendance_status);
+public record ToggleAttendanceRequest(long user_id, int shift_id, string work_date, string attendance_status);
 
 
 public record ReportAbsenceRequest(int shift_id, string work_date, string reason, long? user_id = null);

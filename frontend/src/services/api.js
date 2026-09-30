@@ -240,6 +240,12 @@ export const api = {
     request(`/shifts/events/${id}`, {
       method: "DELETE",
     }),
+  toggleAttendance: (data) =>
+    request('/shifts/attendance/toggle', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   updateAttendance: (registrationId, attendanceStatus) =>
     request(`/shifts/registrations/${registrationId}/attendance`, {
       method: "PUT",
