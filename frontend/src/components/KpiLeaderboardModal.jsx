@@ -99,11 +99,14 @@ export function KpiLeaderboardModal({
           };
         });
 
+        const displayDate = day.displayDate || (day.dateStr ? day.dateStr.slice(5).replace("-", "/") : "");
+        const dayName = day.dayName || "";
+
         return {
           dateStr: day.dateStr,
-          dayName: day.dayName,
-          dateFormatted: day.dateFormatted,
-          isToday: day.isToday,
+          dayName: dayName,
+          displayDate: displayDate,
+          isToday: Boolean(day.isToday),
           shifts: analyzedShifts,
           totalShifts: dayShifts.length,
           completedCount: dayCompleted,
@@ -732,10 +735,10 @@ export function KpiLeaderboardModal({
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 4 }}>
                               <span style={{ fontSize: 11, fontWeight: 800, color: day.isToday ? "#1d4ed8" : "#1e293b" }}>
-                                {day.dayName.replace("Thứ ", "T")}
+                                {day.dayName ? day.dayName.replace("Thứ ", "T") : "T"}
                               </span>
                               <span style={{ fontSize: 10, color: "#64748b" }}>
-                                {day.dateFormatted.slice(0, 5)}
+                                {day.displayDate || day.dateStr || ""}
                               </span>
                             </div>
 
