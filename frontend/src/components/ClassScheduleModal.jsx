@@ -170,7 +170,7 @@ export function ClassScheduleModal({
     };
 
     if (colIndex.date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1) || (colIndex.shift === -1 && colIndex.start_time === -1)) {
-      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code (Mã môn), class_name (Tên môn), work_date (Ngày học), shift (Ca học: 1, 2, 3...) và room (Phòng).");
+      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code, class_name, work_date, ca_hoc (hoặc ca), room.");
       setParsedRows([]);
       return;
     }
@@ -272,11 +272,11 @@ export function ClassScheduleModal({
     d2.setDate(today.getDate() + 2);
     const dStr2 = d2.toISOString().split("T")[0];
 
-    const demoCsv = `course_code,class_name,work_date,shift,room
-COMP1752,Lập trình hướng đối tượng (Object Oriented Programming),${dStr1},1,Room 302
-COMP1841,Lập trình web 1 (Web Programming 1),${dStr1},4,Lab 01
-MATH1179,Toán cho Khoa học máy tính (Mathematics for Computing),${dStr2},2,Room 405
-COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},5,Room 201`;
+    const demoCsv = `course_code,class_name,work_date,ca_hoc,room
+COMP1752,Lập trình hướng đối tượng (Object Oriented Programming),${dStr1},Ca 1,Room 302
+COMP1841,Lập trình web 1 (Web Programming 1),${dStr1},Ca 4,Lab 01
+MATH1179,Toán cho Khoa học máy tính (Mathematics for Computing),${dStr2},Ca 2,Room 405
+COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},Ca 5,Room 201`;
 
     handleParseCsv(demoCsv, "demo_greenwich_schedule.csv");
   };
@@ -539,7 +539,7 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},5,Room 
                   Tải lên File Thời Khóa Biểu (Excel .xlsx hoặc .csv)
                 </h4>
                 <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 16px" }}>
-                  Chứa các cột gọn nhẹ: <code>course_code (Mã môn), class_name (Tên môn), work_date (Ngày học), shift (Ca học: 1, 2, 3...), room (Phòng)</code>
+                  Cấu trúc file gồm 5 cột: <code>course_code</code>, <code>class_name</code>, <code>work_date</code>, <strong><code>ca_hoc</code> (Ca 1, Ca 2, Ca 3...)</strong>, <code>room</code>
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -614,7 +614,7 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},5,Room 
                         <tr>
                           <th style={{ padding: "10px 12px" }}>Mã / Tên Môn Học</th>
                           <th style={{ padding: "10px 12px" }}>Ngày Học</th>
-                          <th style={{ padding: "10px 12px" }}>Ca Học (Shift)</th>
+                          <th style={{ padding: "10px 12px" }}>Ca Học</th>
                           <th style={{ padding: "10px 12px" }}>Phòng</th>
                           <th style={{ padding: "10px 12px" }}>Đối Chiếu Ca Trực Lab</th>
                           <th style={{ padding: "10px 12px" }}>Trạng Thái</th>
