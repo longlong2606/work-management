@@ -832,6 +832,7 @@ app.MapGet("/api/shifts/schedule", (string start_date, string end_date, HttpCont
         SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date, sr.status, sr.note,
                sr.target_shift_id, sr.target_work_date, sr.request_reason,
                COALESCE(sr.attendance_status, 'present') as attendance_status,
+               sr.actual_hours, sr.time_note,
                sr.absence_reason, sr.absence_reported_at, sr.absence_approved_by, sr.absence_approved_at,
                u.full_name, u.username, u.email, u.phone,
                st.name as shift_name, st.start_time, st.end_time, st.label as shift_label,
@@ -1341,15 +1342,18 @@ app.MapPost("/api/shifts/attendance/hours", (UpdateActualHoursRequest req, HttpC
         new { uid = req.user_id, sid = req.shift_id, wdate = req.work_date }
     );
 
+    var newStatus = (req.actual_hours.HasValue && req.actual_hours.Value <= 0) ? "absent" : "present";
+
     if (reg == null)
     {
         conn.Execute(@"
             INSERT INTO shift_registrations (user_id, shift_id, work_date, attendance_status, status, actual_hours, time_note, note)
-            VALUES (@uid, @sid, @wdate, 'present', 'confirmed', @hours, @time_note, @note)",
+            VALUES (@uid, @sid, @wdate, @newStatus, 'confirmed', @hours, @time_note, @note)",
             new { 
                 uid = req.user_id, 
                 sid = req.shift_id, 
                 wdate = req.work_date, 
+                newStatus,
                 hours = req.actual_hours,
                 time_note = req.time_note,
                 note = $"Ghi nhận giờ thực tế: {req.actual_hours}h" 
@@ -1359,9 +1363,9 @@ app.MapPost("/api/shifts/attendance/hours", (UpdateActualHoursRequest req, HttpC
     {
         conn.Execute(@"
             UPDATE shift_registrations 
-            SET actual_hours = @hours, time_note = @time_note 
+            SET actual_hours = @hours, time_note = @time_note, attendance_status = @newStatus
             WHERE id = @id", 
-            new { hours = req.actual_hours, time_note = req.time_note, id = (long)reg.id });
+            new { hours = req.actual_hours, time_note = req.time_note, newStatus, id = (long)reg.id });
     }
 
     return Results.Ok(new { 

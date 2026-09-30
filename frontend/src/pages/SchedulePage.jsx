@@ -311,17 +311,37 @@ export function SchedulePage() {
   const handleSaveActualHours = async (e) => {
     e.preventDefault();
     try {
+      const newHours = editingHoursModal.actual_hours !== "" ? Number(editingHoursModal.actual_hours) : null;
+      const newNote = editingHoursModal.time_note?.trim() || null;
       await api.updateActualHours({
         user_id: editingHoursModal.member.user_id,
         shift_id: editingHoursModal.shift.id,
         work_date: editingHoursModal.day.dateStr,
-        actual_hours: editingHoursModal.actual_hours !== "" ? Number(editingHoursModal.actual_hours) : null,
-        time_note: editingHoursModal.time_note?.trim() || null,
+        actual_hours: newHours,
+        time_note: newNote,
       });
       showToast(`Đã lưu số giờ thực tế (${editingHoursModal.actual_hours}h) cho ${editingHoursModal.member.full_name}!`);
       setEditingHoursModal((prev) => ({ ...prev, open: false }));
+
+      // Cập nhật tức thời vào roster modal
+      setRosterModal((prev) => ({
+        ...prev,
+        rosterList: (prev.rosterList || []).map((m) =>
+          m.user_id === editingHoursModal.member.user_id
+            ? {
+                ...m,
+                actual_hours: newHours,
+                time_note: newNote,
+                attendance_status: (newHours !== null && newHours <= 0) ? "absent" : "present",
+              }
+            : m
+        ),
+      }));
+
       const data = await api.getShiftRoster(editingHoursModal.shift.id, editingHoursModal.day.dateStr);
-      setRosterModal((prev) => ({ ...prev, rosterList: data || [] }));
+      if (data) {
+        setRosterModal((prev) => ({ ...prev, rosterList: data }));
+      }
       fetchSchedule();
     } catch (err) {
       showToast("Lỗi khi lưu giờ làm: " + (err.message || ""), "danger");
@@ -1465,6 +1485,13 @@ export function SchedulePage() {
                       const conflictsInSlot = classConflicts.filter(
                         (c) => c.shift_id === shift.id && c.work_date === day.dateStr
                       );
+                      const customizedInSlot = schedule.filter(
+                        (s) =>
+                          s.shift_id === shift.id &&
+                          s.work_date === day.dateStr &&
+                          s.actual_hours !== null &&
+                          s.actual_hours !== undefined
+                      );
                       const hasAbsence = absentInSlot.length > 0;
                       const hasPending = pendingInSlot.length > 0;
                       const eventsInThisSlot = events.filter(
@@ -1583,6 +1610,24 @@ export function SchedulePage() {
                                         .join("\n")}
                                     >
                                       🎓 {conflictsInSlot.length} trùng TKB
+                                    </span>
+                                  )}
+                                  {customizedInSlot.length > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: 800,
+                                        background: "#f0fdf4",
+                                        color: "#15803d",
+                                        border: "1px solid #86efac",
+                                        padding: "1px 5px",
+                                        borderRadius: 10,
+                                      }}
+                                      title={customizedInSlot
+                                        .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
+                                        .join("\n")}
+                                    >
+                                      ⏱️ {customizedInSlot.length} chỉnh giờ
                                     </span>
                                   )}
                                 </div>
@@ -2324,9 +2369,34 @@ export function SchedulePage() {
                                   🟢 Có mặt
                                 </span>
                               )}
+                              {isPresent && m.actual_hours !== null && m.actual_hours !== undefined && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    background: Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#fff7ed" : "#f0fdf4",
+                                    color: Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#c2410c" : "#15803d",
+                                    border: `1.5px solid ${Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#fdba74" : "#86efac"}`,
+                                    padding: "2px 8px",
+                                    borderRadius: 4,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4
+                                  }}
+                                  title={m.time_note ? `Ghi chú: ${m.time_note}` : ""}
+                                >
+                                  ⏱️ {Number(m.actual_hours)}h / {rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"}
+                                  {Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) && ` (Thiếu ${((rosterModal.shift?.id === 8 ? 0.5 : 1.5) - Number(m.actual_hours)).toFixed(1)}h)`}
+                                </span>
+                              )}
                             </div>
                             <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
                               {m.department || "Nhân viên"} • {m.phone || m.email}
+                              {m.time_note && (
+                                <div style={{ color: "#d97706", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                                  💬 <span>Ghi chú giờ: {m.time_note}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2487,27 +2557,46 @@ export function SchedulePage() {
                             <>
                               {/* Manager can restore presence */}
                               {isAdmin && (
-                                <button
-                                  onClick={() =>
-                                    handleCancelAbsence(
-                                      rosterModal.shift.id,
-                                      rosterModal.day.dateStr,
-                                      m.user_id
-                                    )
-                                  }
-                                  style={{
-                                    background: "#dcfce7",
-                                    border: "1px solid #86efac",
-                                    color: "#166534",
-                                    borderRadius: 6,
-                                    padding: "5px 12px",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  🔄 Khôi phục Có mặt
-                                </button>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button
+                                    onClick={() =>
+                                      handleCancelAbsence(
+                                        rosterModal.shift.id,
+                                        rosterModal.day.dateStr,
+                                        m.user_id
+                                      )
+                                    }
+                                    style={{
+                                      background: "#dcfce7",
+                                      border: "1px solid #86efac",
+                                      color: "#166534",
+                                      borderRadius: 6,
+                                      padding: "5px 12px",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    🔄 Khôi phục Có mặt
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditHours(m)}
+                                    style={{
+                                      background: "#eff6ff",
+                                      border: "1px solid #bfdbfe",
+                                      color: "#1d4ed8",
+                                      borderRadius: 6,
+                                      padding: "5px 10px",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                    title="Chỉnh sửa số giờ làm thực tế nếu nhân viên có đi làm một phần"
+                                  >
+                                    ⏱️ Chỉnh giờ
+                                  </button>
+                                </div>
                               )}
                             </>
                           )}
