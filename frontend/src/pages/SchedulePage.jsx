@@ -1,5 +1,4 @@
 import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
-import { ShiftChecklistModal } from "../components/ShiftChecklistModal";
 import { CsvScheduleModal } from "../components/CsvScheduleModal";
 import { BulkAbsenceModal } from "../components/BulkAbsenceModal";
 import { ClassScheduleModal } from "../components/ClassScheduleModal";
@@ -167,8 +166,6 @@ export function SchedulePage() {
   const [showBulkAbsenceModal, setShowBulkAbsenceModal] = useState(false);
   const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
   const [classConflicts, setClassConflicts] = useState([]);
-  const [showChecklistModal, setShowChecklistModal] = useState(false);
-  const [activeChecklistShift, setActiveChecklistShift] = useState({ id: 1, date: "" });
   const LAB_KPI_TARGET = 20.0;
   const [announcement, setAnnouncement] = useState(
     "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ."
@@ -1016,31 +1013,6 @@ export function SchedulePage() {
           >
             <CalendarX2 size={16} />
             <span>Báo Vắng Tuần / Nhiều Ca</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveChecklistShift({ id: 1, date: weekDays[0]?.dateStr });
-              setShowChecklistModal(true);
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              background: "#eff6ff",
-              border: "1.5px solid #bfdbfe",
-              color: "#1d4ed8",
-              padding: "8px 14px",
-              borderRadius: 8,
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(29, 78, 216, 0.1)",
-            }}
-            title="Xem danh sách công việc cần làm của các ca trực"
-          >
-            <CheckSquare size={16} />
-            <span>Nhiệm Vụ Ca Trực</span>
           </button>
 
           {isAdmin && (
@@ -4235,14 +4207,6 @@ export function SchedulePage() {
         kpiTarget={20.0}
       />
 
-      {/* SHIFT CHECKLIST MODAL */}
-      <ShiftChecklistModal
-        isOpen={showChecklistModal}
-        onClose={() => setShowChecklistModal(false)}
-        initialShiftId={activeChecklistShift.id}
-        initialDate={activeChecklistShift.date || weekDays[0]?.dateStr}
-        showToast={showToast}
-      />
 
 
     </div>
