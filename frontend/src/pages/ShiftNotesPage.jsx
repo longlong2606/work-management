@@ -11,11 +11,10 @@ import {
   XCircle, 
   PlusCircle, 
   ArrowRight,
-  ArrowLeft,
   ShieldCheck,
 } from "lucide-react";
 
-export function ShiftNotesPage({ onGoBack, previousTabLabel }) {
+export function ShiftNotesPage() {
   const { isAdmin } = useAuth();
   const { fetchNotifications } = useNotifications();
 
@@ -223,31 +222,6 @@ export function ShiftNotesPage({ onGoBack, previousTabLabel }) {
         marginBottom: 24
       }}>
         <div>
-          {onGoBack && (
-            <button
-              onClick={onGoBack}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                background: "#f1f5f9",
-                border: "1px solid #cbd5e1",
-                color: "#334155",
-                borderRadius: 8,
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: "pointer",
-                marginBottom: 10,
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#e2e8f0"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
-            >
-              <ArrowLeft size={15} />
-              <span>Quay lại {previousTabLabel || "Lịch làm việc"}</span>
-            </button>
-          )}
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
             Sổ Ghi Chú Ca Làm & Báo Bận Đột Xuất
           </h1>

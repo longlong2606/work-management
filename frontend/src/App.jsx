@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { Navbar } from "./components/Navbar";
@@ -12,78 +12,56 @@ import { StaffManagementPage } from "./pages/StaffManagementPage";
 import { EmailOutboxPage } from "./pages/EmailOutboxPage";
 import { EmailSettingsPage } from "./pages/EmailSettingsPage";
 
-const TAB_LABELS = {
-  schedule: "Lịch làm việc",
-  notes: "Ghi chú ca",
-  feedback: "Góp ý",
-  staff: "Nhân sự",
-  history: "Lịch sử ca",
-  emails: "Nhật ký Email",
-  smtp: "Cài đặt Email",
-};
+const VALID_TABS = ["schedule", "history", "notes", "feedback", "staff", "emails", "smtp"];
+
+function getTabFromUrl() {
+  if (typeof window === "undefined") return "schedule";
+  // 1. Pathname check (e.g. /notes, /feedback, /schedule)
+  const path = window.location.pathname.replace(/^\/+/, "").split("/")[0].toLowerCase();
+  if (VALID_TABS.includes(path)) {
+    return path;
+  }
+  // 2. Hash check (e.g. #notes, #feedback, /schedule#feedback)
+  const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  if (VALID_TABS.includes(hash)) {
+    return hash;
+  }
+  return "schedule";
+}
 
 function MainContent() {
   const { user, loading, isAdmin } = useAuth();
+  const [activeTab, setActiveTabState] = useState(getTabFromUrl);
 
-  const getInitialTab = () => {
-    const hash = window.location.hash.replace("#", "");
-    const validTabs = ["schedule", "history", "notes", "feedback", "staff", "emails", "smtp"];
-    return validTabs.includes(hash) ? hash : "schedule";
-  };
-
-  const [activeTab, setActiveTabState] = useState(getInitialTab);
-  const [tabHistory, setTabHistory] = useState(() => [getInitialTab()]);
-
-  // Navigate to tab and update history
-  const navigateToTab = React.useCallback((newTab) => {
-    setActiveTabState((prevTab) => {
-      if (prevTab !== newTab) {
-        setTabHistory((prevHistory) => [...prevHistory, newTab]);
-        window.history.pushState({ tab: newTab }, "", `#${newTab}`);
-      }
-      return newTab;
-    });
-  }, []);
-
-  // Go back to previous tab
-  const handleGoBack = React.useCallback(() => {
-    setTabHistory((prevHistory) => {
-      if (prevHistory.length > 1) {
-        const nextHistory = [...prevHistory];
-        nextHistory.pop(); // Remove current tab
-        const prevTab = nextHistory[nextHistory.length - 1];
-        setActiveTabState(prevTab);
-        window.history.replaceState({ tab: prevTab }, "", `#${prevTab}`);
-        return nextHistory;
-      } else {
-        // Fallback to schedule
-        setActiveTabState("schedule");
-        window.history.replaceState({ tab: "schedule" }, "", `#schedule`);
-        return ["schedule"];
-      }
-    });
+  // Navigate to tab and push clean HTML5 state to browser history
+  const navigateToTab = useCallback((newTab) => {
+    if (!VALID_TABS.includes(newTab)) newTab = "schedule";
+    setActiveTabState(newTab);
+    const targetPath = `/${newTab}`;
+    if (window.location.pathname !== targetPath || window.location.hash) {
+      window.history.pushState({ tab: newTab }, "", targetPath);
+    }
   }, []);
 
   // Listen to browser Back / Forward buttons (popstate)
-  React.useEffect(() => {
+  useEffect(() => {
+    const initial = getTabFromUrl();
+    setActiveTabState(initial);
+    // Replace current browser URL with clean HTML5 route without reloading
+    window.history.replaceState({ tab: initial }, "", `/${initial}`);
+
     const handlePopState = (e) => {
-      const targetTab = e.state?.tab || window.location.hash.replace("#", "") || "schedule";
-      setActiveTabState(targetTab);
-      setTabHistory((prev) => {
-        if (prev.length > 1 && prev[prev.length - 2] === targetTab) {
-          return prev.slice(0, -1);
-        }
-        return [...prev, targetTab];
-      });
+      const tab = e.state?.tab || getTabFromUrl();
+      if (VALID_TABS.includes(tab)) {
+        setActiveTabState(tab);
+      } else {
+        setActiveTabState("schedule");
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
-  const previousTab = tabHistory.length > 1 ? tabHistory[tabHistory.length - 2] : "schedule";
-  const previousTabLabel = TAB_LABELS[previousTab] || "Lịch làm việc";
-  const canGoBack = activeTab !== "schedule" || tabHistory.length > 1;
 
   if (loading) {
     return (
@@ -107,23 +85,17 @@ function MainContent() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={navigateToTab}
-        onGoBack={handleGoBack}
-        canGoBack={canGoBack}
-        previousTabLabel={previousTabLabel}
-      />
+      <Navbar activeTab={activeTab} setActiveTab={navigateToTab} />
       <NotificationModal />
 
       <main style={{ flex: 1, paddingBottom: 40 }}>
         {activeTab === "schedule" && <SchedulePage />}
-        {activeTab === "history" && <ShiftHistoryPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
-        {activeTab === "notes" && <ShiftNotesPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
-        {activeTab === "feedback" && <FeedbackPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
-        {activeTab === "staff" && isAdmin && <StaffManagementPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
-        {activeTab === "emails" && isAdmin && <EmailOutboxPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
-        {activeTab === "smtp" && isAdmin && <EmailSettingsPage onGoBack={handleGoBack} previousTabLabel={previousTabLabel} />}
+        {activeTab === "history" && <ShiftHistoryPage />}
+        {activeTab === "notes" && <ShiftNotesPage />}
+        {activeTab === "feedback" && <FeedbackPage />}
+        {activeTab === "staff" && isAdmin && <StaffManagementPage />}
+        {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
+        {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
       </main>
 
       {/* Footer */}
