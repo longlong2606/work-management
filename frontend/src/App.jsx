@@ -8,11 +8,12 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { ShiftHistoryPage } from "./pages/ShiftHistoryPage";
 import { ShiftNotesPage } from "./pages/ShiftNotesPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
+import { TasksPage } from "./pages/TasksPage";
 import { StaffManagementPage } from "./pages/StaffManagementPage";
 import { EmailOutboxPage } from "./pages/EmailOutboxPage";
 import { EmailSettingsPage } from "./pages/EmailSettingsPage";
 
-const VALID_TABS = ["schedule", "history", "notes", "feedback", "staff", "emails", "smtp"];
+const VALID_TABS = ["schedule", "tasks", "history", "notes", "feedback", "staff", "emails", "smtp"];
 
 function getTabFromUrl() {
   if (typeof window === "undefined") return "schedule";
@@ -90,6 +91,7 @@ function MainContent() {
 
       <main style={{ flex: 1, paddingBottom: 40 }}>
         {activeTab === "schedule" && <SchedulePage />}
+        {activeTab === "tasks" && <TasksPage />}
         {activeTab === "history" && <ShiftHistoryPage />}
         {activeTab === "notes" && <ShiftNotesPage />}
         {activeTab === "feedback" && <FeedbackPage />}

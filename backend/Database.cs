@@ -173,6 +173,55 @@ public static class Database
             );
             CREATE INDEX IF NOT EXISTS idx_class_schedules_user_date ON class_schedules (user_id, work_date);
 
+            CREATE TABLE IF NOT EXISTS tasks (
+                id {pk},
+                title TEXT NOT NULL,
+                description TEXT,
+                task_type TEXT NOT NULL DEFAULT 'LAB_MAINTENANCE',
+                planned_date TEXT NOT NULL,
+                deadline TEXT NOT NULL,
+                location TEXT,
+                customer_info TEXT,
+                leader_id INTEGER NOT NULL,
+                created_by INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'OPEN',
+                postponed_reason TEXT,
+                finished_at TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (leader_id) REFERENCES users(id),
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);
+            CREATE INDEX IF NOT EXISTS idx_tasks_leader ON tasks (leader_id);
+
+            CREATE TABLE IF NOT EXISTS subtasks (
+                id {pk},
+                task_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                position INTEGER DEFAULT 1,
+                status TEXT NOT NULL DEFAULT 'PROCESSING',
+                due_at TEXT,
+                review_comment TEXT,
+                submitted_for_review_at TEXT,
+                finished_at TEXT,
+                created_by INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks (task_id);
+
+            CREATE TABLE IF NOT EXISTS subtask_assignees (
+                subtask_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                PRIMARY KEY (subtask_id, user_id),
+                FOREIGN KEY (subtask_id) REFERENCES subtasks(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS feedbacks (
                 id {pk},
                 user_id INTEGER NOT NULL,

@@ -35,6 +35,486 @@ var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 var frontendFolder = Directory.Exists(distPath) ? distPath : (Directory.Exists(wwwrootPath) ? wwwrootPath : null);
 bool hasFrontend = frontendFolder != null;
 
+// ================= TASKS & CHECKLIST WORKFLOW =================
+app.MapGet("/api/tasks", (
+    string? status,
+    string? task_type,
+    long? leader_id,
+    string? filter,
+    string? search,
+    HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var sql = @"
+        SELECT 
+            t.id, t.title, t.description, t.task_type, t.planned_date, t.deadline,
+            t.location, t.customer_info, t.leader_id, t.created_by, t.status,
+            t.postponed_reason, t.finished_at, t.created_at, t.updated_at,
+            u1.full_name AS leader_name,
+            u2.full_name AS creator_name,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id) AS subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id AND s.status = 'FINISHED') AS finished_subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id AND s.status = 'REVIEW') AS review_subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s JOIN subtask_assignees sa ON s.id = sa.subtask_id WHERE s.task_id = t.id AND sa.user_id = @userId) AS my_subtasks_count
+        FROM tasks t
+        LEFT JOIN users u1 ON t.leader_id = u1.id
+        LEFT JOIN users u2 ON t.created_by = u2.id
+        WHERE 1=1";
+
+    var p = new DynamicParameters();
+    p.Add("userId", currentUser.id);
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        sql += " AND t.status = @status";
+        p.Add("status", status);
+    }
+    if (!string.IsNullOrWhiteSpace(task_type))
+    {
+        sql += " AND t.task_type = @task_type";
+        p.Add("task_type", task_type);
+    }
+    if (leader_id.HasValue && leader_id.Value > 0)
+    {
+        sql += " AND t.leader_id = @leader_id";
+        p.Add("leader_id", leader_id.Value);
+    }
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        sql += " AND (LOWER(t.title) LIKE @search OR LOWER(t.description) LIKE @search OR LOWER(t.location) LIKE @search)";
+        p.Add("search", $"%{search.Trim().ToLower()}%");
+    }
+
+    if (filter == "my_tasks")
+    {
+        sql += " AND (t.leader_id = @userId OR (SELECT COUNT(1) FROM subtasks s JOIN subtask_assignees sa ON s.id = sa.subtask_id WHERE s.task_id = t.id AND sa.user_id = @userId) > 0)";
+    }
+    else if (filter == "my_led")
+    {
+        sql += " AND t.leader_id = @userId";
+    }
+    else if (filter == "needs_review")
+    {
+        sql += " AND (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id AND s.status = 'REVIEW') > 0";
+    }
+
+    sql += " ORDER BY CASE t.status WHEN 'IN_PROGRESS' THEN 1 WHEN 'OPEN' THEN 2 WHEN 'POSTPONED' THEN 4 ELSE 5 END, t.deadline ASC";
+
+    var tasks = conn.Query(sql, p).ToList();
+    return Results.Ok(tasks);
+});
+
+app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var task = conn.QueryFirstOrDefault(@"
+        SELECT 
+            t.id, t.title, t.description, t.task_type, t.planned_date, t.deadline,
+            t.location, t.customer_info, t.leader_id, t.created_by, t.status,
+            t.postponed_reason, t.finished_at, t.created_at, t.updated_at,
+            u1.full_name AS leader_name,
+            u2.full_name AS creator_name,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id) AS subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id AND s.status = 'FINISHED') AS finished_subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s WHERE s.task_id = t.id AND s.status = 'REVIEW') AS review_subtasks_count,
+            (SELECT COUNT(1) FROM subtasks s JOIN subtask_assignees sa ON s.id = sa.subtask_id WHERE s.task_id = t.id AND sa.user_id = @userId) AS my_subtasks_count
+        FROM tasks t
+        LEFT JOIN users u1 ON t.leader_id = u1.id
+        LEFT JOIN users u2 ON t.created_by = u2.id
+        WHERE t.id = @id", new { id, userId = currentUser.id });
+
+    if (task == null) return Results.NotFound(new { detail = "Không tìm thấy nhiệm vụ yêu cầu!" });
+
+    var subtasksRaw = conn.Query(@"
+        SELECT 
+            s.id, s.task_id, s.title, s.description, s.position, s.status,
+            s.due_at, s.review_comment, s.submitted_for_review_at, s.finished_at,
+            s.created_by, u.full_name AS creator_name, s.created_at, s.updated_at
+        FROM subtasks s
+        LEFT JOIN users u ON s.created_by = u.id
+        WHERE s.task_id = @id
+        ORDER BY s.position ASC, s.created_at ASC", new { id }).ToList();
+
+    var subtaskIds = subtasksRaw.Select(s => (long)s.id).ToList();
+    var assigneesDict = new Dictionary<long, List<dynamic>>();
+    if (subtaskIds.Any())
+    {
+        var assignees = conn.Query(@"
+            SELECT sa.subtask_id, u.id AS user_id, u.full_name, u.username, u.role
+            FROM subtask_assignees sa
+            JOIN users u ON sa.user_id = u.id
+            WHERE sa.subtask_id IN @subtaskIds", new { subtaskIds }).ToList();
+
+        foreach (var a in assignees)
+        {
+            long sId = (long)a.subtask_id;
+            if (!assigneesDict.ContainsKey(sId)) assigneesDict[sId] = new List<dynamic>();
+            assigneesDict[sId].Add(new { user_id = (long)a.user_id, full_name = (string)a.full_name, username = (string)a.username, role = (string)a.role });
+        }
+    }
+
+    var subtasks = subtasksRaw.Select(s => new
+    {
+        id = (long)s.id,
+        task_id = (long)s.task_id,
+        title = (string)s.title,
+        description = (string?)s.description,
+        position = (int)s.position,
+        status = (string)s.status,
+        due_at = (string?)s.due_at,
+        review_comment = (string?)s.review_comment,
+        submitted_for_review_at = (string?)s.submitted_for_review_at,
+        finished_at = (string?)s.finished_at,
+        created_by = (long)s.created_by,
+        creator_name = (string?)s.creator_name,
+        created_at = (string?)s.created_at?.ToString(),
+        updated_at = (string?)s.updated_at?.ToString(),
+        assignees = assigneesDict.ContainsKey((long)s.id) ? assigneesDict[(long)s.id] : new List<dynamic>()
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        task = task,
+        subtasks = subtasks
+    });
+});
+
+app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+    if (currentUser.role != "admin") return Results.StatusCode(403);
+
+    if (string.IsNullOrWhiteSpace(req.title))
+        return Results.BadRequest(new { detail = "Tiêu đề nhiệm vụ không được để trống!" });
+    if (string.IsNullOrWhiteSpace(req.deadline))
+        return Results.BadRequest(new { detail = "Hạn chót (Deadline) không được để trống!" });
+    if (req.leader_id <= 0)
+        return Results.BadRequest(new { detail = "Vui lòng chỉ định Trưởng nhóm (Leader) phụ trách!" });
+
+    using var conn = Database.GetConnection();
+    var taskId = conn.ExecuteScalar<long>(@"
+        INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, status, created_at, updated_at)
+        VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        SELECT last_insert_rowid();",
+        new
+        {
+            title = req.title.Trim(),
+            description = req.description?.Trim(),
+            task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+            planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
+            deadline = req.deadline.Trim(),
+            location = req.location?.Trim(),
+            customer_info = req.customer_info?.Trim(),
+            leader_id = req.leader_id,
+            created_by = currentUser.id
+        });
+
+    return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
+});
+
+app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var existing = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
+    if (existing == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+
+    if (currentUser.role != "admin" && (long)existing.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    conn.Execute(@"
+        UPDATE tasks SET 
+            title = @title, description = @description, task_type = @task_type,
+            planned_date = @planned_date, deadline = @deadline, location = @location,
+            customer_info = @customer_info, leader_id = @leader_id, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id",
+        new
+        {
+            id,
+            title = req.title.Trim(),
+            description = req.description?.Trim(),
+            task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+            planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
+            deadline = req.deadline.Trim(),
+            location = req.location?.Trim(),
+            customer_info = req.customer_info?.Trim(),
+            leader_id = req.leader_id
+        });
+
+    return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
+});
+
+app.MapPost("/api/tasks/{id:long}/postpone", (long id, PostponeTaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+    if (currentUser.role != "admin") return Results.StatusCode(403);
+
+    if (string.IsNullOrWhiteSpace(req.reason))
+        return Results.BadRequest(new { detail = "Vui lòng nhập lý do tạm hoãn nhiệm vụ!" });
+
+    using var conn = Database.GetConnection();
+    var rows = conn.Execute(@"
+        UPDATE tasks SET status = 'POSTPONED', postponed_reason = @reason, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new { id, reason = req.reason.Trim() });
+
+    if (rows == 0) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+    return Results.Ok(new { message = "Đã chuyển trạng thái nhiệm vụ sang Tạm hoãn!" });
+});
+
+app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
+    if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+
+    if (currentUser.role != "admin" && (long)task.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT 
+            COUNT(1) AS total,
+            SUM(CASE WHEN status = 'FINISHED' THEN 1 ELSE 0 END) AS finished
+        FROM subtasks WHERE task_id = @id", new { id });
+
+    int total = (int)(subtaskStats?.total ?? 0);
+    int finished = (int)(subtaskStats?.finished ?? 0);
+
+    if (total == 0)
+        return Results.BadRequest(new { detail = "Nhiệm vụ chưa có mục checklist nào. Cần tạo và hoàn thành các mục checklist trước khi kết thúc nhiệm vụ!" });
+
+    if (total != finished)
+        return Results.BadRequest(new { detail = $"Còn {total - finished} mục checklist chưa hoàn thành. Cần hoàn thành toàn bộ checklist để kết thúc nhiệm vụ!" });
+
+    conn.Execute(@"
+        UPDATE tasks SET status = 'FINISHED', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new { id });
+
+    return Results.Ok(new { message = "Chúc mừng! Nhiệm vụ đã hoàn thành xuất sắc toàn bộ mục checklist!" });
+});
+
+app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+    if (currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id });
+    conn.Execute("DELETE FROM subtasks WHERE task_id = @id", new { id });
+    int rows = conn.Execute("DELETE FROM tasks WHERE id = @id", new { id });
+
+    if (rows == 0) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+    return Results.Ok(new { message = "Đã xóa nhiệm vụ và toàn bộ checklist liên quan thành công!" });
+});
+
+// ================= SUBTASKS (CHECKLIST) =================
+app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
+    if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ cha không tồn tại!" });
+
+    if (currentUser.role != "admin" && (long)task.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    if (string.IsNullOrWhiteSpace(req.title))
+        return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
+
+    int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
+
+    long subtaskId = conn.ExecuteScalar<long>(@"
+        INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, created_at, updated_at)
+        VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @due_at, @createdBy, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        SELECT last_insert_rowid();",
+        new
+        {
+            taskId,
+            title = req.title.Trim(),
+            description = req.description?.Trim(),
+            pos,
+            due_at = req.due_at?.Trim(),
+            createdBy = currentUser.id
+        });
+
+    if (req.assignee_ids != null && req.assignee_ids.Any())
+    {
+        foreach (var uid in req.assignee_ids)
+        {
+            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id) VALUES (@subtaskId, @uid)", new { subtaskId, uid });
+        }
+    }
+
+    // Auto transition parent task from OPEN to IN_PROGRESS
+    if ((string)task.status == "OPEN")
+    {
+        conn.Execute("UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = @taskId", new { taskId });
+    }
+
+    return Results.Ok(new { message = "Đã thêm mục checklist mới vào nhiệm vụ!", subtask_id = subtaskId });
+});
+
+app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.task_id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    if (string.IsNullOrWhiteSpace(req.title))
+        return Results.BadRequest(new { detail = "Tiêu đề không được để trống!" });
+
+    conn.Execute(@"
+        UPDATE subtasks SET 
+            title = @title, description = @description, due_at = @due_at, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id",
+        new
+        {
+            id,
+            title = req.title.Trim(),
+            description = req.description?.Trim(),
+            due_at = req.due_at?.Trim()
+        });
+
+    if (req.assignee_ids != null)
+    {
+        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+        foreach (var uid in req.assignee_ids)
+        {
+            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id) VALUES (@id, @uid)", new { id, uid });
+        }
+    }
+
+    return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
+});
+
+app.MapPost("/api/subtasks/{id:long}/submit", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.status, s.task_id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+
+    bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (long)subtask.leader_id == currentUser.id;
+
+    if (!isAssigned && !isLeaderOrAdmin)
+        return Results.StatusCode(403);
+
+    if ((string)subtask.status != "PROCESSING")
+        return Results.BadRequest(new { detail = $"Chỉ có thể nộp duyệt khi trạng thái đang là Đang thực hiện. Hiện tại: {subtask.status}" });
+
+    conn.Execute(@"
+        UPDATE subtasks SET 
+            status = 'REVIEW', submitted_for_review_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new { id });
+
+    return Results.Ok(new { message = "Đã nộp duyệt mục checklist! Vui lòng chờ Trưởng nhóm nghiệm thu." });
+});
+
+app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.status, s.task_id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+
+    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    if ((string)subtask.status != "REVIEW")
+        return Results.BadRequest(new { detail = $"Chỉ có thể duyệt khi mục việc đang ở trạng thái Chờ duyệt (REVIEW). Hiện tại: {subtask.status}" });
+
+    if (req.approve)
+    {
+        conn.Execute(@"
+            UPDATE subtasks SET 
+                status = 'FINISHED', review_comment = @comment, finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = @id",
+            new
+            {
+                id,
+                comment = string.IsNullOrWhiteSpace(req.comment) ? "Đã nghiệm thu đạt chuẩn" : req.comment.Trim()
+            });
+
+        return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist thành công!" });
+    }
+    else
+    {
+        if (string.IsNullOrWhiteSpace(req.comment))
+            return Results.BadRequest(new { detail = "Vui lòng nhập nhận xét/lý do yêu cầu làm lại!" });
+
+        conn.Execute(@"
+            UPDATE subtasks SET 
+                status = 'PROCESSING', review_comment = @comment, updated_at = CURRENT_TIMESTAMP
+            WHERE id = @id",
+            new
+            {
+                id,
+                comment = req.comment.Trim()
+            });
+
+        return Results.Ok(new { message = "Đã yêu cầu thành viên chỉnh sửa lại theo nhận xét!" });
+    }
+});
+
+app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+
+    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
+        return Results.StatusCode(403);
+
+    conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+    conn.Execute("DELETE FROM subtasks WHERE id = @id", new { id });
+
+    return Results.Ok(new { message = "Đã xóa mục checklist thành công!" });
+});
+
 if (hasFrontend)
 {
     var fileProvider = new PhysicalFileProvider(frontendFolder!);

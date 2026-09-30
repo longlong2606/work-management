@@ -137,3 +137,98 @@ public record ImportClassScheduleRequest(
     long? target_user_id,
     List<ClassScheduleItem> entries
 );
+
+public record SubtaskAssigneeDto(
+    long user_id,
+    string full_name,
+    string username,
+    string? role
+);
+
+public record SubtaskDetailDto(
+    long id,
+    long task_id,
+    string title,
+    string? description,
+    int position,
+    string status, // PROCESSING, REVIEW, FINISHED
+    string? due_at,
+    string? review_comment,
+    string? submitted_for_review_at,
+    string? finished_at,
+    long created_by,
+    string? creator_name,
+    string? created_at,
+    string? updated_at,
+    List<SubtaskAssigneeDto>? assignees
+);
+
+public record TaskDetailDto(
+    long id,
+    string title,
+    string? description,
+    string task_type, // RESEARCH, INDUSTRY, LAB_MAINTENANCE, EVENT, OTHER
+    string planned_date,
+    string deadline,
+    string? location,
+    string? customer_info,
+    long leader_id,
+    string? leader_name,
+    long created_by,
+    string? creator_name,
+    string status, // OPEN, IN_PROGRESS, FINISHED, POSTPONED
+    string? postponed_reason,
+    string? finished_at,
+    string? created_at,
+    string? updated_at,
+    int subtasks_count,
+    int finished_subtasks_count,
+    int review_subtasks_count,
+    int my_subtasks_count,
+    List<SubtaskDetailDto>? subtasks
+);
+
+public record CreateTaskRequest(
+    string title,
+    string? description,
+    string? task_type,
+    string planned_date,
+    string deadline,
+    string? location,
+    string? customer_info,
+    long leader_id
+);
+
+public record UpdateTaskRequest(
+    string title,
+    string? description,
+    string? task_type,
+    string planned_date,
+    string deadline,
+    string? location,
+    string? customer_info,
+    long leader_id
+);
+
+public record PostponeTaskRequest(
+    string reason
+);
+
+public record CreateSubtaskRequest(
+    string title,
+    string? description,
+    string? due_at,
+    List<long>? assignee_ids
+);
+
+public record UpdateSubtaskRequest(
+    string title,
+    string? description,
+    string? due_at,
+    List<long>? assignee_ids
+);
+
+public record ReviewSubtaskRequest(
+    bool approve,
+    string? comment
+);

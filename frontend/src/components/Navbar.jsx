@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import {
   Calendar,
+  CheckSquare,
   Clock,
   FileText,
   MessageSquare,
@@ -40,6 +41,7 @@ export function Navbar({ activeTab, setActiveTab }) {
   // 1. Menu chính cốt lõi (Gọn gàng, 1 dòng)
   const mainNavItems = [
     { id: "schedule", label: "Lịch làm việc", icon: Calendar },
+    { id: "tasks", label: "Nhiệm vụ & Dự án", icon: CheckSquare },
     { id: "notes", label: "Ghi chú ca", icon: FileText },
     { id: "feedback", label: "Góp ý", icon: MessageSquare },
   ];

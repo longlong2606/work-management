@@ -313,4 +313,63 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  // Tasks & Checklist Workflow
+  getTasks: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.append("status", params.status);
+    if (params.task_type) query.append("task_type", params.task_type);
+    if (params.leader_id) query.append("leader_id", params.leader_id);
+    if (params.filter) query.append("filter", params.filter);
+    if (params.search) query.append("search", params.search);
+    const qs = query.toString();
+    return request(`/tasks${qs ? `?${qs}` : ""}`);
+  },
+  getTaskDetail: (id) => request(`/tasks/${id}`),
+  createTask: (data) =>
+    request("/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateTask: (id, data) =>
+    request(`/tasks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  postponeTask: (id, reason) =>
+    request(`/tasks/${id}/postpone`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  finishTask: (id) =>
+    request(`/tasks/${id}/finish`, {
+      method: "POST",
+    }),
+  deleteTask: (id) =>
+    request(`/tasks/${id}`, {
+      method: "DELETE",
+    }),
+  createSubtask: (taskId, data) =>
+    request(`/tasks/${taskId}/subtasks`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateSubtask: (id, data) =>
+    request(`/subtasks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  submitSubtask: (id) =>
+    request(`/subtasks/${id}/submit`, {
+      method: "POST",
+    }),
+  reviewSubtask: (id, approve, comment) =>
+    request(`/subtasks/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify({ approve, comment }),
+    }),
+  deleteSubtask: (id) =>
+    request(`/subtasks/${id}`, {
+      method: "DELETE",
+    }),
 };
