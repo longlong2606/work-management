@@ -965,20 +965,25 @@ export default function App() {
                         <Users size={11} /> {shiftMembers.length} người
                       </span>
 
-                      {/* Nút Báo vắng */}
-                      <span
-                        style={{
-                          background: "#fff1f2",
-                          border: "1px solid #fecdd3",
-                          color: "#e11d48",
-                          padding: "1px 6px",
-                          borderRadius: 6,
-                          fontSize: 10,
-                          fontWeight: 700
-                        }}
-                      >
-                        Báo vắng
-                      </span>
+                      {/* Huy hiệu vắng mặt nếu có */}
+                      {shiftMembers.some((m) => m.attendance_status === "absent") && (
+                        <span
+                          style={{
+                            background: "#fee2e2",
+                            border: "1px solid #fca5a5",
+                            color: "#b91c1c",
+                            padding: "1px 6px",
+                            borderRadius: 6,
+                            fontSize: 10,
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 2
+                          }}
+                        >
+                          🔴 {shiftMembers.filter((m) => m.attendance_status === "absent").length} vắng
+                        </span>
+                      )}
 
                       {/* Nút Xem chi tiết */}
                       <span
@@ -1027,9 +1032,17 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* 4. DANH SÁCH THÀNH VIÊN THAM GIA CA HÔM NAY */}
+                  {/* 4. DANH SÁCH THÀNH VIÊN THAM GIA CA HÔM NAY (CỐ ĐỊNH 1 DÒNG, KHÔNG BỊ KÉO XUỐNG) */}
                   <div style={{ marginTop: 4 }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        flexWrap: "nowrap",
+                        overflow: "hidden"
+                      }}
+                    >
                       {shiftMembers.length === 0 ? (
                         <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>
                           Chưa phân công
@@ -1041,20 +1054,44 @@ export default function App() {
                             <span
                               key={m.id || idx}
                               style={{
-                                background: isAbsent ? "#fef2f2" : "#f0fdf4",
-                                border: isAbsent ? "1px solid #fecaca" : "1px solid #bbf7d0",
-                                color: isAbsent ? "#dc2626" : "#15803d",
-                                padding: "1px 6px",
+                                background: isAbsent ? "#fee2e2" : "#f0fdf4",
+                                border: isAbsent ? "1.5px solid #fca5a5" : "1px solid #bbf7d0",
+                                color: isAbsent ? "#b91c1c" : "#15803d",
+                                padding: "2px 6px",
                                 borderRadius: 5,
                                 fontSize: 11,
                                 fontWeight: 700,
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 3
+                                gap: 3,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: 140,
+                                flexShrink: 1,
+                                textDecoration: isAbsent ? "line-through" : "none"
                               }}
+                              title={isAbsent ? `${m.full_name || m.username} (Vắng mặt)` : `${m.full_name || m.username} (Có mặt)`}
                             >
-                              {m.full_name || m.username}
-                              {isAbsent && <span style={{ fontSize: 9 }}>(Vắng)</span>}
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {m.full_name || m.username}
+                              </span>
+                              {isAbsent && (
+                                <span
+                                  style={{
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    background: "#ef4444",
+                                    color: "#ffffff",
+                                    padding: "0 3px",
+                                    borderRadius: 3,
+                                    textDecoration: "none",
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  Vắng
+                                </span>
+                              )}
                             </span>
                           );
                         })
