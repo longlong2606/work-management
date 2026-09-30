@@ -888,17 +888,17 @@ export function TasksPage() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Trưởng nhóm (Leader):</span>
+                        <span style={{ color: "#64748b" }}>Trưởng nhóm:</span>
                         <strong style={{ color: "#0f172a" }}>@{taskDetail.task.leader_name}</strong>
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Ngày dự kiến (Planned):</span>
+                        <span style={{ color: "#64748b" }}>Ngày dự kiến:</span>
                         <strong style={{ color: "#334155" }}>{taskDetail.task.planned_date || "Chưa đặt"}</strong>
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Hạn chót (Deadline):</span>
+                        <span style={{ color: "#64748b" }}>Hạn chót:</span>
                         <strong style={{ color: "#dc2626", fontWeight: 800 }}>{taskDetail.task.deadline || "Không có"}</strong>
                       </div>
 
@@ -1048,7 +1048,7 @@ export function TasksPage() {
                           }}
                         >
                           <Plus size={15} />
-                          <span>Thêm Mục Việc (Leader)</span>
+                          <span>Thêm Mục Việc</span>
                         </button>
                       )}
                     </div>
@@ -1204,10 +1204,10 @@ export function TasksPage() {
                                         fontWeight: 600,
                                         cursor: "pointer",
                                       }}
-                                      title="Submit for Review (Member)"
+                                      title="Nộp Duyệt (Thành Viên)"
                                     >
                                       <Send size={13} />
-                                      <span>Submit for Review (Member)</span>
+                                      <span>Nộp Duyệt (Thành Viên)</span>
                                     </button>
                                   )}
 
@@ -1234,7 +1234,7 @@ export function TasksPage() {
                                       }}
                                     >
                                       <Search size={13} />
-                                      <span>Review Subtask (Leader)</span>
+                                      <span>Nghiệm Thu (Trưởng Nhóm)</span>
                                     </button>
                                   )}
 
@@ -1327,7 +1327,7 @@ export function TasksPage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-                Review Subtask: {reviewModalSubtask.title}
+                Nghiệm Thu Mục Việc: {reviewModalSubtask.title}
               </h3>
               <button onClick={() => setReviewModalSubtask(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
@@ -1336,13 +1336,13 @@ export function TasksPage() {
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                Review Comment
+                Nhận xét / Góp ý nghiệm thu:
               </label>
               <textarea
                 rows={3}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Enter feedback or comment..."
+                placeholder="Nhập nhận xét hoặc nội dung hướng dẫn điều chỉnh..."
                 style={{
                   width: "100%",
                   padding: "9px 12px",
@@ -1370,7 +1370,7 @@ export function TasksPage() {
                   cursor: "pointer",
                 }}
               >
-                Request Changes
+                Yêu Cầu Sửa Lại
               </button>
               <button
                 type="button"
@@ -1386,7 +1386,7 @@ export function TasksPage() {
                   cursor: "pointer",
                 }}
               >
-                Approve & Finish
+                Duyệt Đạt & Hoàn Thành
               </button>
             </div>
           </div>
@@ -1422,7 +1422,7 @@ export function TasksPage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: "#dc2626", margin: 0 }}>
-                Postpone Task
+                Tạm Hoãn Nhiệm Vụ
               </h3>
               <button onClick={() => setPostponeModalTask(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
@@ -1431,14 +1431,14 @@ export function TasksPage() {
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                Postponed Reason (Required)
+                Lý do tạm hoãn (Bắt buộc):
               </label>
               <textarea
                 rows={3}
                 required
                 value={postponeReason}
                 onChange={(e) => setPostponeReason(e.target.value)}
-                placeholder="Explain why the task is postponed..."
+                placeholder="Nhập chi tiết lý do tạm hoãn nhiệm vụ này..."
                 style={{
                   width: "100%",
                   padding: "9px 12px",
@@ -1466,7 +1466,7 @@ export function TasksPage() {
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                Hủy bỏ
               </button>
               <button
                 type="button"
@@ -1482,7 +1482,7 @@ export function TasksPage() {
                   cursor: "pointer",
                 }}
               >
-                Confirm Postpone
+                Xác Nhận Tạm Hoãn
               </button>
             </div>
           </div>
@@ -1492,7 +1492,7 @@ export function TasksPage() {
   );
 }
 
-/* ================= MODAL COMPONENT: CREATE TASK (MATCHING LAB_MANAGEMENT) ================= */
+/* ================= MODAL COMPONENT: CREATE TASK (TIẾNG VIỆT CHUẨN) ================= */
 function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1508,7 +1508,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Vui lòng nhập Title!");
+      setError("Vui lòng nhập Tiêu đề nhiệm vụ!");
       return;
     }
 
@@ -1566,7 +1566,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-            Create Task (Admin)
+            Tạo Nhiệm Vụ Mới (Quản Trị)
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
@@ -1582,11 +1582,12 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Title:
+              Tiêu đề nhiệm vụ:
             </label>
             <input
               type="text"
               required
+              placeholder="VD: Nghiên cứu tối ưu mạng nơ-ron..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
@@ -1595,10 +1596,11 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Description:
+              Mô tả chi tiết:
             </label>
             <textarea
               rows={3}
+              placeholder="Nhập nội dung mô tả nhiệm vụ..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
@@ -1608,22 +1610,22 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Task type:
+                Loại nhiệm vụ:
               </label>
               <select
                 value={taskType}
                 onChange={(e) => setTaskType(e.target.value)}
                 style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
               >
-                <option value="RESEARCH">Research</option>
-                <option value="INDUSTRY">Industry</option>
-                <option value="OTHER">Other</option>
+                <option value="RESEARCH">Nghiên cứu (Research)</option>
+                <option value="INDUSTRY">Dự án doanh nghiệp (Industry)</option>
+                <option value="OTHER">Khác (Other)</option>
               </select>
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Leader:
+                Trưởng nhóm phụ trách:
               </label>
               <select
                 value={leaderId}
@@ -1642,7 +1644,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Planned date:
+                Ngày dự kiến:
               </label>
               <input
                 type="date"
@@ -1654,7 +1656,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Deadline:
+                Hạn chót:
               </label>
               <input
                 type="datetime-local"
@@ -1667,11 +1669,11 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Location:
+              Địa điểm / Phòng:
             </label>
             <input
               type="text"
-              placeholder="Vị trí / Phòng Lab..."
+              placeholder="VD: Phòng Lab 301..."
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
@@ -1680,11 +1682,11 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Customer info:
+              Đối tác / Đơn vị yêu cầu:
             </label>
             <input
               type="text"
-              placeholder="Thông tin đối tác / Đơn vị..."
+              placeholder="VD: Doanh nghiệp đối tác / Khoa CNTT..."
               value={customerInfo}
               onChange={(e) => setCustomerInfo(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
@@ -1697,14 +1699,14 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
               onClick={onClose}
               style={{ background: "#52525b", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
             >
-              Cancel
+              Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={loading}
               style={{ background: "#0d6efd", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
             >
-              {loading ? "Creating..." : "Save Task"}
+              {loading ? "Đang lưu..." : "Lưu Nhiệm Vụ"}
             </button>
           </div>
         </form>
@@ -1713,7 +1715,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   );
 }
 
-/* ================= MODAL COMPONENT: ADD SUBTASK (EXACT MATCH TO LAB_MANAGEMENT SCREENSHOT) ================= */
+/* ================= MODAL COMPONENT: ADD SUBTASK (BỐ CỤC CHUẨN TIẾNG VIỆT) ================= */
 function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1725,7 +1727,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Vui lòng nhập Title!");
+      setError("Vui lòng nhập Tiêu đề mục việc!");
       return;
     }
 
@@ -1741,7 +1743,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.message || "Lỗi khi thêm mục checklist.");
+      setError(err.message || "Lỗi khi thêm mục việc.");
     } finally {
       setLoading(false);
     }
@@ -1777,7 +1779,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-            Add Subtask (Leader)
+            Thêm Mục Việc (Trưởng Nhóm)
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
@@ -1793,11 +1795,12 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Title:
+              Tiêu đề:
             </label>
             <input
               type="text"
               required
+              placeholder="VD: Kiểm tra và cài đặt phần mềm..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               style={{
@@ -1814,10 +1817,11 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Description:
+              Mô tả chi tiết:
             </label>
             <textarea
               rows={3}
+              placeholder="Mô tả yêu cầu cần làm..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               style={{
@@ -1834,7 +1838,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Assignees:
+              Thành viên phụ trách:
             </label>
             <select
               multiple
@@ -1855,17 +1859,23 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
                 background: "#ffffff",
               }}
             >
-              {allMembers.map((m) => (
-                <option key={m.id} value={m.id} style={{ padding: "4px 8px", borderRadius: 4, margin: "1px 0" }}>
-                  @{m.username} [{m.role ? m.role.toUpperCase() : "MEMBER"}]
-                </option>
-              ))}
+              {allMembers.map((m) => {
+                const roleLabel = m.role === "admin" ? "Quản trị" : m.role === "leader" ? "Trưởng nhóm" : "Thành viên";
+                return (
+                  <option key={m.id} value={m.id} style={{ padding: "4px 8px", borderRadius: 4, margin: "1px 0" }}>
+                    @{m.username} [{roleLabel}] - {m.full_name}
+                  </option>
+                );
+              })}
             </select>
+            <small style={{ fontSize: 11, color: "#64748b", marginTop: 2, display: "block" }}>
+              (Giữ phím Ctrl để chọn nhiều thành viên)
+            </small>
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Due at:
+              Hạn chót:
             </label>
             <input
               type="datetime-local"
@@ -1898,7 +1908,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
                 cursor: "pointer",
               }}
             >
-              Cancel
+              Hủy bỏ
             </button>
             <button
               type="submit"
@@ -1914,7 +1924,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
                 cursor: "pointer",
               }}
             >
-              {loading ? "Adding..." : "Add Subtask"}
+              {loading ? "Đang thêm..." : "Thêm Mục Việc"}
             </button>
           </div>
         </form>
