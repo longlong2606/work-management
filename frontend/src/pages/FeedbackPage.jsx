@@ -13,9 +13,10 @@ import {
   Clock, 
   PlusCircle, 
   Filter,
+  ArrowLeft,
 } from "lucide-react";
 
-export function FeedbackPage() {
+export function FeedbackPage({ onGoBack, previousTabLabel }) {
   const { isAdmin } = useAuth();
   const { fetchNotifications } = useNotifications();
 
@@ -153,6 +154,31 @@ export function FeedbackPage() {
         marginBottom: 24
       }}>
         <div>
+          {onGoBack && (
+            <button
+              onClick={onGoBack}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                background: "#f1f5f9",
+                border: "1px solid #cbd5e1",
+                color: "#334155",
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: "pointer",
+                marginBottom: 10,
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#e2e8f0"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+            >
+              <ArrowLeft size={15} />
+              <span>Quay lại {previousTabLabel || "Lịch làm việc"}</span>
+            </button>
+          )}
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
             Hòm Thư & Bảng Góp Ý Toàn Công Ty
           </h1>

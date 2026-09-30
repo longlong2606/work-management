@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import {
   Calendar,
+  ArrowLeft,
   Clock,
   FileText,
   MessageSquare,
@@ -19,7 +20,7 @@ import {
   ChevronDown
 } from "lucide-react";
 
-export function Navbar({ activeTab, setActiveTab }) {
+export function Navbar({ activeTab, setActiveTab, onGoBack, canGoBack, previousTabLabel }) {
   const { user, logout, isAdmin } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -109,6 +110,40 @@ export function Navbar({ activeTab, setActiveTab }) {
             </div>
           </div>
         </div>
+
+        {/* BACK BUTTON */}
+        {canGoBack && onGoBack && (
+          <button
+            onClick={onGoBack}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 14px",
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              color: "#1d4ed8",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(37, 99, 235, 0.1)",
+              transition: "all 0.15s ease",
+            }}
+            title={`Quay lại ${previousTabLabel || "trang trước"}`}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#dbeafe";
+              e.currentTarget.style.borderColor = "#93c5fd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#eff6ff";
+              e.currentTarget.style.borderColor = "#bfdbfe";
+            }}
+          >
+            <ArrowLeft size={16} />
+            <span>Quay lại {previousTabLabel ? `(${previousTabLabel})` : ""}</span>
+          </button>
+        )}
 
         {/* NAVIGATION TABS (TINH GỌN, CHỮ 1 DÒNG) */}
         <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
