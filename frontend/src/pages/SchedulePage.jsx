@@ -1,5 +1,4 @@
 import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
-import { CsvScheduleModal } from "../components/CsvScheduleModal";
 import { BulkAbsenceModal } from "../components/BulkAbsenceModal";
 import { ClassScheduleModal } from "../components/ClassScheduleModal";
 import React, { useState, useEffect, useCallback } from "react";
@@ -983,29 +982,7 @@ export function SchedulePage() {
             </button>
           )}
 
-          {isAdmin && (
-            <button
-              onClick={() => setShowCsvModal(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: "#ecfdf5",
-                border: "1.5px solid #a7f3d0",
-                color: "#059669",
-                padding: "8px 16px",
-                borderRadius: 8,
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: "pointer",
-                boxShadow: "0 2px 4px rgba(5, 150, 105, 0.1)",
-              }}
-              title="Quản lý ca trực & báo vắng qua file CSV/Excel"
-            >
-              <FileSpreadsheet size={16} />
-              <span>CSV Phân Ca & Báo Vắng</span>
-            </button>
-          )}
+          
 
           <button
             onClick={() => setShowKpiModal(true)}
@@ -4423,16 +4400,7 @@ export function SchedulePage() {
         </div>
       )}
     
-      {/* CSV SCHEDULE MODAL */}
-      <CsvScheduleModal
-        isOpen={showCsvModal}
-        onClose={() => setShowCsvModal(false)}
-        allMembers={allMembers}
-        currentSchedule={schedule}
-        weekDays={weekDays}
-        onImportSuccess={() => fetchSchedule()}
-        showToast={showToast}
-      />
+      
 
             {/* CLASS SCHEDULE MODAL (TKB SINH VIÊN & CẢNH BÁO TRÙNG LỊCH) */}
       <ClassScheduleModal
