@@ -564,7 +564,7 @@ app.MapGet("/api/tv/today", (string? date) =>
 
     var eventQuery = @"
         SELECT se.id, se.shift_id, se.work_date, se.title, se.description, se.event_type, se.created_at,
-               st.name as shift_name, st.label as shift_label
+               st.name as shift_name, st.label as shift_label, st.start_time, st.end_time
         FROM shift_events se
         LEFT JOIN shift_templates st ON se.shift_id = st.id
         WHERE se.work_date IS NULL OR se.work_date = @date

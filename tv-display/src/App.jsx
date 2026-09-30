@@ -67,8 +67,82 @@ export default function App() {
     };
   }, [currentDateKey]);
 
-  // 3. Tự động lướt qua trang sự kiện tiếp theo mỗi 10 giây nếu có nhiều sự kiện
-  const totalEvents = scheduleData.events.length;
+  // 3. Gom nhóm các sự kiện trùng nhau (khi người dùng chọn áp dụng cho 1, 2 hoặc nhiều ca cùng lúc)
+  const groupedEvents = React.useMemo(() => {
+    if (!scheduleData.events || scheduleData.events.length === 0) return [];
+
+    const map = new Map();
+
+    scheduleData.events.forEach((ev) => {
+      const titleKey = (ev.title || "").trim();
+      const descKey = (ev.description || "").trim();
+      const typeKey = ev.event_type || "general";
+      const dateKey = ev.work_date || "";
+      const key = `${titleKey}___${descKey}___${typeKey}___${dateKey}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          ...ev,
+          all_shift_ids: [ev.shift_id],
+          items: [ev]
+        });
+      } else {
+        const item = map.get(key);
+        if (!item.all_shift_ids.includes(ev.shift_id)) {
+          item.all_shift_ids.push(ev.shift_id);
+          item.items.push(ev);
+        }
+      }
+    });
+
+    return Array.from(map.values()).map((item) => {
+      // Nếu có shift_id = 0 -> Áp dụng cả ngày
+      if (item.all_shift_ids.includes(0)) {
+        return {
+          ...item,
+          display_shift_label: item.shift_name
+            ? `${item.shift_name} (${item.shift_label || "08:00 - 22:00"})`
+            : "Cả ngày (All Day) (08:00 - 22:00)"
+        };
+      }
+
+      const validShiftIds = item.all_shift_ids.filter((id) => id > 0).sort((a, b) => a - b);
+
+      if (validShiftIds.length <= 1) {
+        return {
+          ...item,
+          display_shift_label: item.shift_name
+            ? `${item.shift_name} (${item.shift_label || ""})`
+            : "Áp dụng cả ngày"
+        };
+      }
+
+      // Khi chọn từ 2 ca trở lên (ví dụ: Ca 1, Ca 2 hoặc Ca 1, Ca 2, Ca 3)
+      const shiftObjs = validShiftIds.map(
+        (id) => scheduleData.shifts.find((s) => s.id === id) || { id, name: `Ca ${id}` }
+      );
+      const isConsecutive = validShiftIds.every((id, idx) => idx === 0 || id === validShiftIds[idx - 1] + 1);
+      const namesStr = validShiftIds.map((id) => `Ca ${id}`).join(", ");
+
+      const timesKnown = shiftObjs.filter((s) => s.start_time && s.end_time);
+      let timeRangeStr = "";
+      if (isConsecutive && timesKnown.length === validShiftIds.length && validShiftIds.length > 0) {
+        timeRangeStr = ` (${timesKnown[0].start_time} - ${timesKnown[timesKnown.length - 1].end_time})`;
+      } else if (!isConsecutive) {
+        const labels = shiftObjs.map((s) => (s.start_time ? `${s.start_time}-${s.end_time}` : "")).filter(Boolean);
+        if (labels.length > 0 && labels.length <= 2) {
+          timeRangeStr = ` (${labels.join(", ")})`;
+        }
+      }
+
+      return {
+        ...item,
+        display_shift_label: `${namesStr}${timeRangeStr}`
+      };
+    });
+  }, [scheduleData.events, scheduleData.shifts]);
+
+  const totalEvents = groupedEvents.length;
   const totalEventPages = Math.max(1, Math.ceil(totalEvents / EVENTS_PER_PAGE));
 
   useEffect(() => {
@@ -126,8 +200,8 @@ export default function App() {
 
   const activeShift = scheduleData.shifts.find((s) => getShiftStatus(s) === "current");
 
-  // Sự kiện đang hiển thị ở trang hiện tại
-  const visibleEvents = scheduleData.events.slice(
+  // Sự kiện đang hiển thị ở trang hiện tại (đã gộp các ca trùng)
+  const visibleEvents = groupedEvents.slice(
     eventPageIndex * EVENTS_PER_PAGE,
     (eventPageIndex + 1) * EVENTS_PER_PAGE
   );
@@ -679,7 +753,7 @@ export default function App() {
                       </span>
 
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
-                        {ev.shift_name ? `${ev.shift_name} (${ev.shift_label || ""})` : "Áp dụng cả ngày"}
+                        {ev.display_shift_label || (ev.shift_name ? `${ev.shift_name} (${ev.shift_label || ""})` : "Áp dụng cả ngày")}
                       </span>
                     </div>
 
