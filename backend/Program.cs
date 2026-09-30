@@ -415,6 +415,136 @@ app.MapGet("/api/shifts/roster", (int shift_id, string work_date, HttpContext ct
     return Results.Ok(rows);
 });
 
+app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(req.reason))
+    {
+        return Results.BadRequest(new { detail = "Vui lòng nhập lý do báo vắng!" });
+    }
+
+    var targetUserId = (currentUser.role == "admin" && req.user_id.HasValue) 
+        ? req.user_id.Value 
+        : currentUser.id;
+
+    using var conn = Database.GetConnection();
+    var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy thông tin nhân sự!" });
+
+    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+
+    // Gather dates
+    var targetDates = new HashSet<string>();
+    if (req.dates != null && req.dates.Count > 0)
+    {
+        foreach (var d in req.dates)
+        {
+            if (!string.IsNullOrWhiteSpace(d)) targetDates.Add(d.Trim());
+        }
+    }
+    else if (!string.IsNullOrWhiteSpace(req.start_date) && !string.IsNullOrWhiteSpace(req.end_date))
+    {
+        if (DateTime.TryParse(req.start_date, out var start) && DateTime.TryParse(req.end_date, out var end))
+        {
+            for (var d = start; d <= end; d = d.AddDays(1))
+            {
+                targetDates.Add(d.ToString("yyyy-MM-dd"));
+            }
+        }
+    }
+
+    if (targetDates.Count == 0)
+    {
+        return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày xin nghỉ!" });
+    }
+
+    // Target shift IDs (1-9)
+    var targetShifts = (req.shift_ids != null && req.shift_ids.Count > 0)
+        ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
+        : Enumerable.Range(1, 9).ToList();
+
+    int affectedCount = 0;
+
+    foreach (var date in targetDates.OrderBy(x => x))
+    {
+        // Don't allow reporting absence for past dates
+        if (string.Compare(date, todayStr, StringComparison.Ordinal) < 0) continue;
+
+        foreach (var sid in targetShifts)
+        {
+            var existingReg = conn.QueryFirstOrDefault(
+                "SELECT id, attendance_status FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+                new { uid = targetUserId, sid = sid, wdate = date }
+            );
+
+            if (existingReg == null)
+            {
+                conn.Execute(@"
+                    INSERT INTO shift_registrations 
+                        (user_id, shift_id, work_date, attendance_status, absence_reason, absence_reported_at, status, note)
+                    VALUES 
+                        (@uid, @sid, @wdate, 'pending_absence', @reason, CURRENT_TIMESTAMP, 'registered', @note)",
+                    new { 
+                        uid = targetUserId, 
+                        sid = sid, 
+                        wdate = date, 
+                        reason = req.reason.Trim(), 
+                        note = $"Đơn xin vắng ca nhiều ngày/tuần (Chờ duyệt). Lý do: {req.reason.Trim()}" 
+                    }
+                );
+                affectedCount++;
+            }
+            else
+            {
+                if (existingReg.attendance_status != "absent")
+                {
+                    conn.Execute(@"
+                        UPDATE shift_registrations 
+                        SET attendance_status = 'pending_absence', 
+                            absence_reason = @reason, 
+                            absence_reported_at = CURRENT_TIMESTAMP,
+                            absence_approved_by = NULL,
+                            absence_approved_at = NULL,
+                            note = @note
+                        WHERE id = @id",
+                        new { 
+                            reason = req.reason.Trim(), 
+                            note = $"Đơn xin vắng ca nhiều ngày/tuần (Chờ duyệt). Lý do: {req.reason.Trim()}", 
+                            id = existingReg.id 
+                        }
+                    );
+                    affectedCount++;
+                }
+            }
+        }
+    }
+
+    if (affectedCount == 0)
+    {
+        return Results.BadRequest(new { detail = "Không có ca trực hợp lệ trong tương lai để nộp đơn báo vắng (các ca trong quá khứ không thể báo vắng)." });
+    }
+
+    // Send single consolidated notification to managers
+    conn.Execute(@"
+        INSERT INTO notifications (target_user_id, sender_id, title, message, type)
+        VALUES (0, @sender, @title, @msg, 'absence_request')",
+        new {
+            sender = currentUser.id,
+            title = $"Đơn xin vắng hàng loạt ({affectedCount} ca) cần duyệt",
+            msg = $"{targetUser.full_name} vừa nộp đơn XIN VẮNG {affectedCount} ca làm việc ({targetDates.Min()} đến {targetDates.Max()}). Lý do: '{req.reason.Trim()}'. Vui lòng xem xét và phê duyệt."
+        }
+    );
+
+    return Results.Ok(new {
+        success = true,
+        affected_count = affectedCount,
+        dates_count = targetDates.Count,
+        message = $"Đã gửi đơn xin nghỉ thành công cho {affectedCount} ca làm việc!"
+    });
+});
+
 app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);

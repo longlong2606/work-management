@@ -101,6 +101,14 @@ public record UpdateActualHoursRequest(long user_id, int shift_id, string work_d
 public record ToggleAttendanceRequest(long user_id, int shift_id, string work_date, string attendance_status);
 
 
+public record BulkReportAbsenceRequest(
+    string reason, 
+    long? user_id = null, 
+    string? start_date = null, 
+    string? end_date = null, 
+    List<string>? dates = null, 
+    List<int>? shift_ids = null
+);
 public record ReportAbsenceRequest(int shift_id, string work_date, string reason, long? user_id = null);
 public record CancelAbsenceRequest(int shift_id, string work_date, long? user_id = null);
 

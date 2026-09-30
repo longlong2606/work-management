@@ -1,13 +1,14 @@
 import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
 import { ShiftChecklistModal } from "../components/ShiftChecklistModal";
 import { CsvScheduleModal } from "../components/CsvScheduleModal";
+import { BulkAbsenceModal } from "../components/BulkAbsenceModal";
 import React, { useState, useEffect, useCallback } from "react";
 import { SHIFTS } from "../constants/shifts";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import {
-  Clock, Send, Mail, CheckCircle2, AlertCircle, PlusCircle, Trash2,
+  Clock, CalendarX2, Send, Mail, CheckCircle2, AlertCircle, PlusCircle, Trash2,
   ChevronLeft, ChevronRight, LayoutGrid, CalendarRange, UserCheck,
   UserPlus, ArrowLeftRight, Hourglass, Check, X, ShieldAlert, Calendar, ArrowRight,
   Users, Plus, ChevronDown, ChevronUp, Sparkles, Tag, Eye, Info, UserX,
@@ -162,6 +163,7 @@ export function SchedulePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showKpiModal, setShowKpiModal] = useState(false);
+  const [showBulkAbsenceModal, setShowBulkAbsenceModal] = useState(false);
   const [showChecklistModal, setShowChecklistModal] = useState(false);
   const [activeChecklistShift, setActiveChecklistShift] = useState({ id: 1, date: "" });
   const LAB_KPI_TARGET = 20.0;
@@ -963,6 +965,29 @@ export function SchedulePage() {
           >
             <Trophy size={16} />
             <span>Bảng KPI 20h</span>
+          </button>
+
+          <button
+            onClick={() => setShowBulkAbsenceModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#fff1f2",
+              border: "1.5px solid #fecdd3",
+              color: "#e11d48",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(225, 29, 72, 0.1)",
+              transition: "all 0.2s ease"
+            }}
+            title="Báo vắng nhiều ca làm việc hoặc báo vắng cả tuần"
+          >
+            <CalendarX2 size={16} />
+            <span>Báo Vắng Tuần / Nhiều Ca</span>
           </button>
 
           <button
@@ -4071,6 +4096,21 @@ export function SchedulePage() {
         weekDays={weekDays}
         onImportSuccess={() => fetchSchedule()}
         showToast={showToast}
+      />
+
+            {/* BULK ABSENCE MODAL */}
+      <BulkAbsenceModal
+        isOpen={showBulkAbsenceModal}
+        onClose={() => setShowBulkAbsenceModal(false)}
+        currentUser={user}
+        allMembers={allMembers}
+        weekDays={weekDays}
+        schedule={schedule}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchSchedule();
+          if (isAdmin) fetchPendingRequests();
+        }}
       />
 
       {/* KPI LEADERBOARD MODAL */}

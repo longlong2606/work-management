@@ -265,6 +265,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  reportAbsenceBulk: (data) =>
+    request("/shifts/report-absence-bulk", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   cancelAbsence: (data) =>
     request("/shifts/cancel-absence", {
       method: "POST",
