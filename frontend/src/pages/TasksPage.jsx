@@ -1632,7 +1632,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>
-                Trưởng nhóm phụ trách (Chọn bất kỳ ai):
+                Trưởng nhóm phụ trách:
               </label>
               <select
                 value={leaderId}
