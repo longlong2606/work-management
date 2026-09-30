@@ -116,14 +116,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  approveShiftRequest: (registrationId, action, adminResponse = "") =>
-    request("/shifts/approve-request", {
+  approveShiftRequest: (registrationId, action, adminResponse = "") => {
+    let payload = {};
+    if (typeof registrationId === "object" && registrationId !== null) {
+      payload = registrationId;
+    } else {
+      payload = { registration_id: registrationId, action, admin_response: adminResponse };
+    }
+    return request("/shifts/approve-request", {
       method: "POST",
-      body: JSON.stringify({
-        registration_id: registrationId,
-        action,
-        admin_response: adminResponse,
-      }),
+      body: JSON.stringify(payload),
+    });
+  },
+  approveAllRequests: (registrationIds = null) =>
+    request("/shifts/requests/approve-all", {
+      method: "POST",
+      body: JSON.stringify(registrationIds ? { registration_ids: registrationIds } : {}),
     }),
   rejectExpiredRequests: () =>
     request("/shifts/reject-expired-requests", {

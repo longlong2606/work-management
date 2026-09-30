@@ -1779,6 +1779,159 @@ app.MapPost("/api/shifts/approve-request", (ApproveShiftActionModel req, HttpCon
     return Results.BadRequest(new { detail = "Hành động không hợp lệ" });
 });
 
+// Endpoint phê duyệt tất cả (hoặc hàng loạt) các yêu cầu chưa quá hạn (báo vắng, hủy ca, đổi ca)
+app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+    if (currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+
+    string query = @"
+        SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date, sr.status, sr.request_reason,
+               sr.attendance_status, sr.absence_reason, sr.target_shift_id, sr.target_work_date,
+               u.full_name, u.email,
+               st.name as shift_name, st.label as shift_label,
+               tgt.name as target_shift_name, tgt.label as target_shift_label
+        FROM shift_registrations sr
+        JOIN users u ON sr.user_id = u.id
+        JOIN shift_templates st ON sr.shift_id = st.id
+        LEFT JOIN shift_templates tgt ON sr.target_shift_id = tgt.id
+        WHERE (sr.status IN ('pending_cancel', 'pending_change') OR sr.attendance_status = 'pending_absence')
+          AND sr.work_date >= @today";
+
+    List<dynamic> items;
+    if (req?.registration_ids != null && req.registration_ids.Count > 0)
+    {
+        query += " AND sr.id IN @ids";
+        items = conn.Query<dynamic>(query, new { today, ids = req.registration_ids }).ToList();
+    }
+    else
+    {
+        items = conn.Query<dynamic>(query, new { today }).ToList();
+    }
+
+    int approvedCount = 0;
+    foreach (var item in items)
+    {
+        long regId = (long)item.id;
+        long userId = (long)item.user_id;
+        int shiftId = (int)item.shift_id;
+        string workDate = (string)item.work_date;
+        string status = (string)item.status;
+        string attStatus = (string)(item.attendance_status ?? "");
+        string staffName = (string)item.full_name;
+        string shiftName = (string)item.shift_name;
+        string shiftLabel = (string)(item.shift_label ?? "");
+
+        if (attStatus == "pending_absence")
+        {
+            conn.Execute(@"
+                UPDATE shift_registrations
+                SET attendance_status = 'absent',
+                    absence_approved_by = @approver,
+                    absence_approved_at = CURRENT_TIMESTAMP,
+                    note = @note
+                WHERE id = @id",
+                new {
+                    approver = currentUser.id,
+                    note = $"Quản lý {currentUser.full_name} đã PHÊ DUYỆT đơn nghỉ vắng.",
+                    id = regId
+                });
+
+            conn.Execute(@"
+                INSERT INTO notifications (target_user_id, sender_id, title, message, type)
+                VALUES (@target, @sender, @title, @msg, 'absence_approved')",
+                new {
+                    target = userId,
+                    sender = currentUser.id,
+                    title = "Đơn báo vắng đã được Quản lý phê duyệt",
+                    msg = $"Quản lý {currentUser.full_name} đã PHÊ DUYỆT đơn xin vắng ca {shiftName} ({shiftLabel}) ngày {workDate} của bạn."
+                });
+
+            conn.Execute(@"
+                INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+                VALUES (@uid, @sid, @wdate, 'APPROVE_ABSENCE', @note)",
+                new {
+                    uid = userId,
+                    sid = shiftId,
+                    wdate = workDate,
+                    note = $"Quản lý {currentUser.full_name} đã phê duyệt cho {staffName} vắng ca {shiftName}."
+                });
+            approvedCount++;
+        }
+        else if (status == "pending_cancel")
+        {
+            conn.Execute("DELETE FROM shift_registrations WHERE id = @id", new { id = regId });
+
+            conn.Execute(@"
+                INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+                VALUES (@uid, @sid, @date, 'APPROVED_CANCEL', @note)",
+                new {
+                    uid = userId,
+                    sid = shiftId,
+                    date = workDate,
+                    note = $"Quản lý ({currentUser.full_name}) đã DUYỆT hủy ca {shiftName} ({workDate})."
+                });
+
+            conn.Execute(@"
+                INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                VALUES (@target, @sender, 'Yêu cầu hủy ca đã được duyệt', @msg, 'shift_approved', @rel)",
+                new {
+                    target = userId,
+                    sender = currentUser.id,
+                    msg = $"Quản lý {currentUser.full_name} đã phê duyệt yêu cầu hủy {shiftName} ngày {workDate} của bạn.",
+                    rel = regId
+                });
+            approvedCount++;
+        }
+        else if (status == "pending_change")
+        {
+            int targetShiftId = (int)item.target_shift_id;
+            string targetWorkDate = (string)item.target_work_date;
+            string targetShiftName = (string)item.target_shift_name;
+
+            conn.Execute(@"
+                UPDATE shift_registrations
+                SET shift_id = @tsid, work_date = @tdate, status = 'registered',
+                    target_shift_id = NULL, target_work_date = NULL, request_reason = NULL
+                WHERE id = @id",
+                new { tsid = targetShiftId, tdate = targetWorkDate, id = regId });
+
+            conn.Execute(@"
+                INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+                VALUES (@uid, @sid, @date, 'APPROVED_CHANGE', @note)",
+                new {
+                    uid = userId,
+                    sid = targetShiftId,
+                    date = targetWorkDate,
+                    note = $"Quản lý ({currentUser.full_name}) đã DUYỆT đổi ca từ {shiftName} ({workDate}) sang {targetShiftName} ({targetWorkDate})."
+                });
+
+            conn.Execute(@"
+                INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                VALUES (@target, @sender, 'Yêu cầu đổi ca đã được duyệt', @msg, 'shift_approved', @rel)",
+                new {
+                    target = userId,
+                    sender = currentUser.id,
+                    msg = $"Quản lý {currentUser.full_name} đã duyệt yêu cầu đổi ca của bạn sang {targetShiftName} ngày {targetWorkDate}.",
+                    rel = regId
+                });
+            approvedCount++;
+        }
+    }
+
+    return Results.Ok(new {
+        success = true,
+        count = approvedCount,
+        message = approvedCount > 0
+            ? $"Đã phê duyệt thành công {approvedCount} yêu cầu!"
+            : "Không có yêu cầu hợp lệ nào cần phê duyệt."
+    });
+});
+
 // Endpoint tự động chuyển tất cả các yêu cầu quá hạn / quên duyệt sang TỪ CHỐI
 app.MapPost("/api/shifts/reject-expired-requests", (HttpContext ctx) =>
 {

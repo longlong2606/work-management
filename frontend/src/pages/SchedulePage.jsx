@@ -12,7 +12,7 @@ import {
   ChevronLeft, ChevronRight, LayoutGrid, CalendarRange, UserCheck,
   UserPlus, ArrowLeftRight, Hourglass, Check, X, ShieldAlert, Calendar, ArrowRight,
   Users, Plus, ChevronDown, ChevronUp, Sparkles, Tag, Eye, Info, UserX,
-  Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare
+  Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare, CheckCheck
 } from "lucide-react";
 
 function getMonday(d) {
@@ -65,6 +65,8 @@ export function SchedulePage() {
   const [events, setEvents] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [selectedPendingIds, setSelectedPendingIds] = useState([]);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [allMembers, setAllMembers] = useState([]);
 
   // Expanded Day state & Table Scroll
@@ -684,6 +686,44 @@ export function SchedulePage() {
       fetchPendingRequests();
     } catch (err) {
       showToast("Lỗi khi duyệt: " + (err.message || ""), "danger");
+    }
+  };
+
+  // Handle Approve All or Selected Pending Requests
+  const handleApproveAll = async (targetIds = null) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const validRequests = pendingRequests.filter(
+      (r) => !r.is_expired && (!r.work_date || r.work_date >= todayStr)
+    );
+    const countToApprove = targetIds && targetIds.length > 0 ? targetIds.length : validRequests.length;
+
+    if (countToApprove === 0) {
+      showToast("Không có yêu cầu hợp lệ nào để phê duyệt!", "warning");
+      return;
+    }
+
+    const confirmMsg =
+      targetIds && targetIds.length < validRequests.length
+        ? `Xác nhận phê duyệt ${targetIds.length} yêu cầu đã chọn?`
+        : `Xác nhận PHÊ DUYỆT TẤT CẢ ${validRequests.length} yêu cầu đang chờ xét duyệt?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsBulkApproving(true);
+    try {
+      const res = await api.approveAllRequests(targetIds && targetIds.length > 0 ? targetIds : null);
+      showToast(res.message || `Đã phê duyệt thành công ${countToApprove} yêu cầu!`);
+      setSelectedPendingIds([]);
+      fetchSchedule();
+      fetchPendingRequests();
+      if (rosterModal.open && rosterModal.shift) {
+        const data = await api.getShiftRoster(rosterModal.shift.id, rosterModal.day.dateStr);
+        setRosterModal((prev) => ({ ...prev, rosterList: data || [] }));
+      }
+    } catch (err) {
+      showToast("Lỗi khi phê duyệt hàng loạt: " + (err.message || ""), "danger");
+    } finally {
+      setIsBulkApproving(false);
     }
   };
 
@@ -3877,6 +3917,123 @@ export function SchedulePage() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* TOOLBAR PHÊ DUYỆT TẤT CẢ / CHỌN HÀNG LOẠT */}
+                {(() => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  const validRequests = pendingRequests.filter(r => !r.is_expired && (!r.work_date || r.work_date >= todayStr));
+                  const isAllSelected = validRequests.length > 0 && selectedPendingIds.length === validRequests.length;
+
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 12,
+                        padding: "12px 16px",
+                        background: "linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)",
+                        borderRadius: 10,
+                        border: "1.5px solid #86efac",
+                        boxShadow: "0 2px 6px rgba(16, 185, 129, 0.12)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        {validRequests.length > 0 && (
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              cursor: "pointer",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: "#0f172a",
+                              userSelect: "none",
+                              background: "#ffffff",
+                              padding: "4px 10px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isAllSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPendingIds(validRequests.map(r => r.id));
+                                } else {
+                                  setSelectedPendingIds([]);
+                                }
+                              }}
+                              style={{ width: 17, height: 17, cursor: "pointer", accentColor: "#10b981" }}
+                            />
+                            <span>Chọn tất cả ({validRequests.length})</span>
+                          </label>
+                        )}
+                        <span style={{ fontSize: 13, color: "#334155" }}>
+                          Đang chờ: <strong style={{ color: "#0f172a" }}>{pendingRequests.length}</strong> yêu cầu
+                          {validRequests.length > 0 && (
+                            <> (Hợp lệ: <strong style={{ color: "#16a34a" }}>{validRequests.length}</strong>)</>
+                          )}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {selectedPendingIds.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleApproveAll(selectedPendingIds)}
+                            disabled={isBulkApproving}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "#10b981",
+                              border: "none",
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: 13,
+                              padding: "8px 16px",
+                              borderRadius: 8,
+                              boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
+                              cursor: isBulkApproving ? "not-allowed" : "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <CheckCheck size={17} />
+                            {isBulkApproving ? "Đang phê duyệt..." : `Duyệt các mục đã chọn (${selectedPendingIds.length})`}
+                          </button>
+                        ) : validRequests.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleApproveAll(null)}
+                            disabled={isBulkApproving}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                              border: "none",
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: 13,
+                              padding: "8px 18px",
+                              borderRadius: 8,
+                              boxShadow: "0 3px 10px rgba(16, 185, 129, 0.4)",
+                              cursor: isBulkApproving ? "not-allowed" : "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            title="Phê duyệt nhanh toàn bộ danh sách yêu cầu đang chờ duyệt mà không cần bấm từng mục"
+                          >
+                            <CheckCheck size={18} />
+                            {isBulkApproving ? "Đang phê duyệt tất cả..." : `⚡ Phê Duyệt Tất Cả (${validRequests.length})`}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {(() => {
                   const todayStr = new Date().toISOString().split("T")[0];
                   const expiredCount = pendingRequests.filter(r => r.is_expired || (r.work_date && r.work_date < todayStr)).length;
@@ -3926,14 +4083,17 @@ export function SchedulePage() {
                   const isExpired = Boolean(req.is_expired || (req.work_date && req.work_date < todayStr));
                   const isCancel = req.status === "pending_cancel";
                   const isAbsence = req.attendance_status === "pending_absence";
+                  const isSelected = selectedPendingIds.includes(req.id);
                   return (
                     <div
                       key={req.id}
                       style={{
                         padding: 14,
                         borderRadius: 10,
-                        background: isCancel ? "#fef2f2" : "#fffbeb",
-                        border: isCancel ? "1px solid #fecaca" : "1px solid #fde68a",
+                        background: isSelected ? "#f0fdf4" : (isCancel ? "#fef2f2" : "#fffbeb"),
+                        border: isSelected ? "2px solid #10b981" : (isCancel ? "1px solid #fecaca" : "1px solid #fde68a"),
+                        boxShadow: isSelected ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "none",
+                        transition: "all 0.15s ease",
                       }}
                     >
                       <div
@@ -3945,7 +4105,22 @@ export function SchedulePage() {
                           gap: 8,
                         }}
                       >
-                        <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          {!isExpired && (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPendingIds(prev => [...prev, req.id]);
+                                } else {
+                                  setSelectedPendingIds(prev => prev.filter(id => id !== req.id));
+                                }
+                              }}
+                              style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#10b981" }}
+                              title="Chọn để duyệt theo lô"
+                            />
+                          )}
                           <span
                             style={{
                               fontSize: 11,
