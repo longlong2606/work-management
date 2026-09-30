@@ -1556,7 +1556,7 @@ app.MapGet("/api/shift-notes", (HttpContext ctx) =>
     using var conn = Database.GetConnection();
     var query = @"
         SELECT sn.id, sn.user_id, sn.shift_id, sn.work_date, sn.original_time, sn.adjusted_time,
-               sn.reason, sn.note_type, sn.status, sn.admin_response, sn.created_at,
+               sn.reason, sn.note_type, sn.status, sn.admin_response, sn.actual_hours, sn.created_at,
                u.full_name, u.username, u.email, u.role,
                u.full_name as author_name, u.email as author_email,
                st.name as shift_name, st.label as shift_label
@@ -1581,8 +1581,8 @@ app.MapPost("/api/shift-notes", (CreateShiftNoteRequest req, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var noteId = conn.ExecuteScalar<long>(@"
-        INSERT INTO shift_notes (user_id, shift_id, work_date, original_time, adjusted_time, reason, note_type, status)
-        VALUES (@uid, @sid, @date, @orig, @adj, @reason, @ntype, 'pending') RETURNING id;",
+        INSERT INTO shift_notes (user_id, shift_id, work_date, original_time, adjusted_time, reason, note_type, actual_hours, status)
+        VALUES (@uid, @sid, @date, @orig, @adj, @reason, @ntype, @actHours, 'pending') RETURNING id;",
         new
         {
             uid = currentUser.id,
@@ -1591,7 +1591,8 @@ app.MapPost("/api/shift-notes", (CreateShiftNoteRequest req, HttpContext ctx) =>
             orig = req.original_time,
             adj = req.adjusted_time,
             reason = req.reason,
-            ntype = req.note_type ?? "adjusted_hours"
+            ntype = req.note_type ?? "adjusted_hours",
+            actHours = req.actual_hours
         });
 
     // Gửi thông báo đến Admin
@@ -1619,24 +1620,106 @@ app.MapPut("/api/shift-notes/{id:long}/status", (long id, UpdateShiftNoteStatusR
     if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
-    var note = conn.QueryFirstOrDefault<(long user_id, string work_date)>(
-        "SELECT user_id, work_date FROM shift_notes WHERE id = @id", new { id });
+    var note = conn.QueryFirstOrDefault<dynamic>(
+        "SELECT id, user_id, shift_id, work_date, note_type, adjusted_time, actual_hours, reason FROM shift_notes WHERE id = @id", new { id });
 
-    if (note.user_id == 0)
+    if (note == null || note.user_id == 0)
         return Results.NotFound(new { detail = "Không tìm thấy ghi chú ca làm" });
 
+    long userId = (long)note.user_id;
+    int shiftId = (int)note.shift_id;
+    string workDate = (string)note.work_date;
+    string noteType = (string)(note.note_type ?? "adjusted_hours");
+    string adjustedTime = (string)(note.adjusted_time ?? "");
+    string reason = (string)(note.reason ?? "");
+
+    double? effectiveHours = req.actual_hours;
+    if (!effectiveHours.HasValue)
+    {
+        if (note.actual_hours != null)
+        {
+            effectiveHours = Convert.ToDouble(note.actual_hours);
+        }
+        else if (noteType == "emergency")
+        {
+            effectiveHours = 0.0;
+        }
+        else
+        {
+            effectiveHours = shiftId == 8 ? 0.5 : 1.5;
+        }
+    }
+
     conn.Execute(
-        "UPDATE shift_notes SET status = @st, admin_response = @resp WHERE id = @id",
-        new { st = req.status, resp = req.admin_response ?? "", id });
+        "UPDATE shift_notes SET status = @st, admin_response = @resp, actual_hours = @actHours WHERE id = @id",
+        new { st = req.status, resp = req.admin_response ?? "", actHours = effectiveHours, id });
+
+    // Tự động đồng bộ sang bảng lịch trực (shift_registrations) và KPI khi duyệt
+    if (req.status == "approved" && req.sync_to_schedule)
+    {
+        var existingReg = conn.QueryFirstOrDefault<dynamic>(
+            "SELECT id, attendance_status, actual_hours FROM shift_registrations WHERE user_id = @userId AND shift_id = @shiftId AND work_date = @workDate",
+            new { userId, shiftId, workDate });
+
+        if (noteType == "emergency")
+        {
+            // Nghỉ khẩn cấp: Đánh dấu vắng mặt (absent) và 0 giờ
+            var absenceReason = $"Nghỉ đột xuất (duyệt ghi chú): {reason}";
+            var timeNote = "Ghi chú ca: Nghỉ khẩn cấp";
+            if (existingReg != null)
+            {
+                conn.Execute(@"
+                    UPDATE shift_registrations 
+                    SET attendance_status = 'absent',
+                        actual_hours = 0.0,
+                        absence_reason = @absenceReason,
+                        absence_approved_by = @adminId,
+                        absence_approved_at = CURRENT_TIMESTAMP,
+                        time_note = @timeNote
+                    WHERE id = @regId",
+                    new { absenceReason, adminId = currentUser.id, timeNote, regId = (long)existingReg.id });
+            }
+            else
+            {
+                conn.Execute(@"
+                    INSERT INTO shift_registrations (shift_id, user_id, work_date, status, attendance_status, actual_hours, absence_reason, absence_approved_by, absence_approved_at, time_note)
+                    VALUES (@shiftId, @userId, @workDate, 'approved', 'absent', 0.0, @absenceReason, @adminId, CURRENT_TIMESTAMP, @timeNote)",
+                    new { shiftId, userId, workDate, absenceReason, adminId = currentUser.id, timeNote });
+            }
+        }
+        else
+        {
+            // Rút ngắn giờ trực / đi muộn / điều chỉnh giờ: Cập nhật actual_hours
+            var timeNote = $"Đã duyệt điều chỉnh ({adjustedTime}): {reason}";
+            if (existingReg != null)
+            {
+                conn.Execute(@"
+                    UPDATE shift_registrations 
+                    SET attendance_status = 'present',
+                        actual_hours = @actHours,
+                        time_note = @timeNote
+                    WHERE id = @regId",
+                    new { actHours = effectiveHours.Value, timeNote, regId = (long)existingReg.id });
+            }
+            else
+            {
+                conn.Execute(@"
+                    INSERT INTO shift_registrations (shift_id, user_id, work_date, status, attendance_status, actual_hours, time_note)
+                    VALUES (@shiftId, @userId, @workDate, 'approved', 'present', @actHours, @timeNote)",
+                    new { shiftId, userId, workDate, actHours = effectiveHours.Value, timeNote });
+            }
+        }
+    }
 
     var stText = req.status == "approved" ? "đã được DUYỆT" : "đã bị TỪ CHỐI";
-    var msg = $"Yêu cầu điều chỉnh ca làm việc ngày {note.work_date} của bạn {stText}. Phản hồi: {req.admin_response}";
+    var hourInfo = (req.status == "approved" && effectiveHours.HasValue) ? $" (Giờ KPI được tính: {effectiveHours.Value:0.#}h)" : "";
+    var msg = $"Yêu cầu điều chỉnh ca làm việc ngày {workDate} của bạn {stText}{hourInfo}. Phản hồi: {req.admin_response}";
 
     conn.Execute(
         "INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@target, @sender, @title, @msg, 'shift_note_status', @rel)",
-        new { target = note.user_id, sender = currentUser.id, title = "Kết quả xét duyệt điều chỉnh ca làm", msg, rel = id });
+        new { target = userId, sender = currentUser.id, title = "Kết quả xét duyệt điều chỉnh ca làm", msg, rel = id });
 
-    return Results.Ok(new { message = "Cập nhật trạng thái thành công" });
+    return Results.Ok(new { message = "Cập nhật trạng thái thành công", actual_hours = effectiveHours });
 });
 
 // ================= FEEDBACKS =================

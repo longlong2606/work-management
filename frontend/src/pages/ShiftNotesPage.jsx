@@ -29,12 +29,15 @@ export function ShiftNotesPage() {
   const [adjustedTime, setAdjustedTime] = useState("08:00 - 09:00");
   const [reason, setReason] = useState("");
   const [noteType, setNoteType] = useState("adjusted_hours");
+  const [actualHours, setActualHours] = useState(1.5);
   const [submitting, setSubmitting] = useState(false);
 
   // Admin response modal / inline state
   const [selectedNoteForReply, setSelectedNoteForReply] = useState(null);
   const [adminReplyText, setAdminReplyText] = useState("");
   const [adminActionStatus, setAdminActionStatus] = useState("approved");
+  const [adminActualHours, setAdminActualHours] = useState(1.5);
+  const [syncToSchedule, setSyncToSchedule] = useState(true);
 
   const fetchNotes = async () => {
     try {
@@ -62,9 +65,44 @@ export function ShiftNotesPage() {
     setSelectedShiftId(shiftId);
     const s = SHIFTS.find((item) => item.id === shiftId);
     if (s) {
-      // Default adjusted example: reduce 1 hour
       setAdjustedTime(`${s.startTime} - ${s.startTime.split(":")[0]}:50 hoặc thỏa thuận`);
+      if (noteType !== "emergency") {
+        setActualHours(shiftId === 8 ? 0.5 : 1.5);
+      }
     }
+  };
+
+  const handleNoteTypeChange = (e) => {
+    const val = e.target.value;
+    setNoteType(val);
+    if (val === "emergency") {
+      setActualHours(0);
+      setAdjustedTime("Xin nghỉ toàn bộ ca làm");
+    } else {
+      setActualHours(selectedShiftId === 8 ? 0.5 : 1.5);
+      if (adjustedTime === "Xin nghỉ toàn bộ ca làm") {
+        const s = SHIFTS.find((item) => item.id === selectedShiftId);
+        setAdjustedTime(s ? `${s.startTime} - ${s.startTime.split(":")[0]}:50 hoặc thỏa thuận` : "08:00 - 09:00");
+      }
+    }
+  };
+
+  const openReplyModal = (note, forceStatus = null) => {
+    setSelectedNoteForReply(note);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isPast = Boolean(note.work_date && note.work_date < todayStr);
+    const st = forceStatus || (isPast ? "rejected" : "approved");
+    setAdminActionStatus(st);
+    setAdminReplyText(note.admin_response || (isPast ? "Từ chối do quá hạn duyệt (đã qua ngày ca làm việc)" : ""));
+
+    if (note.actual_hours !== null && note.actual_hours !== undefined) {
+      setAdminActualHours(note.actual_hours);
+    } else if (note.note_type === "emergency") {
+      setAdminActualHours(0);
+    } else {
+      setAdminActualHours(note.shift_id === 8 ? 0.5 : 1.5);
+    }
+    setSyncToSchedule(true);
   };
 
   const handleSubmitNote = async (e) => {
@@ -92,6 +130,7 @@ export function ShiftNotesPage() {
         adjusted_time: adjustedTime,
         reason: reason.trim(),
         note_type: noteType,
+        actual_hours: noteType === "emergency" ? 0 : (actualHours ? parseFloat(actualHours) : null),
       });
 
       showToastMsg("Đã gửi ghi chú báo bận đột xuất cho Quản lý!");
@@ -109,12 +148,19 @@ export function ShiftNotesPage() {
   const handleAdminUpdateStatus = async () => {
     if (!selectedNoteForReply) return;
     try {
+      const actHours = adminActionStatus === "approved" ? parseFloat(adminActualHours) : null;
       await api.updateShiftNoteStatus(
         selectedNoteForReply.id,
         adminActionStatus,
-        adminReplyText.trim()
+        adminReplyText.trim(),
+        actHours,
+        syncToSchedule
       );
-      showToastMsg("Đã cập nhật trạng thái và gửi thông báo lại cho nhân viên!");
+      showToastMsg(
+        adminActionStatus === "approved" && syncToSchedule
+          ? `Đã duyệt ghi chú ca và tự động đồng bộ ${actHours}h vào Lịch trực & Bảng KPI!`
+          : "Đã cập nhật trạng thái và gửi thông báo lại cho nhân viên!"
+      );
       setSelectedNoteForReply(null);
       setAdminReplyText("");
       fetchNotes();
@@ -278,6 +324,37 @@ export function ShiftNotesPage() {
                 </div>
               </div>
 
+              {/* KPI Hours Badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                {note.actual_hours !== null && note.actual_hours !== undefined && (
+                  <span style={{
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: note.actual_hours > 0 ? "#e0f2fe" : "#fee2e2",
+                    color: note.actual_hours > 0 ? "#0369a1" : "#b91c1c"
+                  }}>
+                    ⏱️ Giờ đề xuất: {note.actual_hours > 0 ? `${note.actual_hours}h` : "0h (Nghỉ ca)"}
+                  </span>
+                )}
+                {note.status === "approved" && (
+                  <span style={{
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: "#dcfce7",
+                    color: "#15803d",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}>
+                    <CheckCircle size={12} /> Đã đồng bộ KPI: {note.actual_hours !== null && note.actual_hours !== undefined ? note.actual_hours : (note.note_type === "emergency" ? 0 : 1.5)}h
+                  </span>
+                )}
+              </div>
+
               {/* Reason */}
               <div style={{
                 background: "#ffffff",
@@ -313,13 +390,7 @@ export function ShiftNotesPage() {
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
                   {note.work_date && note.work_date < todayStr && note.status === "pending" ? (
                     <button
-                      onClick={() => {
-                        setSelectedNoteForReply(note);
-                        setAdminActionStatus("rejected");
-                        setAdminReplyText(
-                          note.admin_response || "Từ chối do quá hạn duyệt (đã qua ngày ca làm việc)"
-                        );
-                      }}
+                      onClick={() => openReplyModal(note, "rejected")}
                       className="btn btn-danger btn-sm"
                       style={{ display: "flex", alignItems: "center", gap: 6, background: "#dc2626", borderColor: "#b91c1c", color: "#ffffff" }}
                     >
@@ -327,14 +398,7 @@ export function ShiftNotesPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
-                        const isPast = note.work_date && note.work_date < todayStr;
-                        setSelectedNoteForReply(note);
-                        setAdminActionStatus(isPast ? "rejected" : "approved");
-                        setAdminReplyText(
-                          note.admin_response || (isPast ? "Từ chối do quá hạn duyệt" : "")
-                        );
-                      }}
+                      onClick={() => openReplyModal(note)}
                       className="btn btn-secondary btn-sm"
                     >
                       <ShieldCheck size={14} color="#2563eb" /> Phản hồi ghi chú này
@@ -350,7 +414,7 @@ export function ShiftNotesPage() {
       {/* Modal Create Shift Note */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" style={{ background: "#ffffff", color: "#0f172a", borderRadius: 16, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }} onClick={(e) => e.stopPropagation()} style={{ padding: "26px" }}>
+          <div className="modal-content" style={{ background: "#ffffff", color: "#0f172a", borderRadius: 16, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", padding: "26px" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
               Báo Bận Đột Xuất / Điều Chỉnh Giờ Ca
             </h3>
@@ -411,13 +475,39 @@ export function ShiftNotesPage() {
                 <select
                   className="form-select"
                   value={noteType}
-                  onChange={(e) => setNoteType(e.target.value)}
+                  onChange={handleNoteTypeChange}
                 >
                   <option value="adjusted_hours">Rút ngắn giờ trực / Xin về sớm</option>
                   <option value="late">Xin đến muộn</option>
                   <option value="emergency">Sự cố khẩn cấp xin nghỉ ca</option>
                   <option value="swap">Đã nhờ đồng nghiệp trực thay</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Số giờ làm thực tế đề xuất (giờ):</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#2563eb" }}>
+                    {noteType === "emergency" ? "0h (Nghỉ ca)" : `${actualHours} giờ`}
+                  </span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="12"
+                    disabled={noteType === "emergency"}
+                    className="form-input"
+                    value={noteType === "emergency" ? 0 : actualHours}
+                    onChange={(e) => setActualHours(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 600 }}>giờ</span>
+                </div>
+                <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, display: "block" }}>
+                  ⏱️ Số giờ này sẽ được tự động cộng vào Bảng KPI 20h/tuần sau khi Quản lý phê duyệt.
+                </span>
               </div>
 
               <div className="form-group">
@@ -483,6 +573,38 @@ export function ShiftNotesPage() {
                     <option value="rejected">❌ Từ chối yêu cầu</option>
                     <option value="acknowledged">ℹ️ Đã ghi nhận thông tin</option>
                   </select>
+                </div>
+              )}
+
+              {!isPast && adminActionStatus === "approved" && (
+                <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label className="form-label" style={{ fontWeight: 700, color: "#166534", marginBottom: 0 }}>
+                      ⏱️ Số giờ KPI tính cho ca này:
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="12"
+                        className="form-input"
+                        style={{ width: 85, fontWeight: 700, textAlign: "center", padding: "4px 8px" }}
+                        value={adminActualHours}
+                        onChange={(e) => setAdminActualHours(e.target.value)}
+                      />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>giờ</span>
+                    </div>
+                  </div>
+                  
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#15803d", cursor: "pointer", marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={syncToSchedule}
+                      onChange={(e) => setSyncToSchedule(e.target.checked)}
+                    />
+                    <span>Tự động đồng bộ số giờ này vào Lịch trực & Bảng KPI 20h</span>
+                  </label>
                 </div>
               )}
 

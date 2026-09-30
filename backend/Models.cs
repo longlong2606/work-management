@@ -52,10 +52,11 @@ public record CreateShiftNoteRequest(
     string original_time,
     string adjusted_time,
     string reason,
-    string? note_type = "adjusted_hours"
+    string? note_type = "adjusted_hours",
+    double? actual_hours = null
 );
 
-public record UpdateShiftNoteStatusRequest(string status, string? admin_response);
+public record UpdateShiftNoteStatusRequest(string status, string? admin_response, double? actual_hours = null, bool sync_to_schedule = true);
 
 public record CreateFeedbackRequest(
     string title,

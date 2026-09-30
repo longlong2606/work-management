@@ -168,12 +168,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  updateShiftNoteStatus: (noteId, status, adminResponse = "") =>
+  updateShiftNoteStatus: (noteId, status, adminResponse = "", actualHours = null, syncToSchedule = true) =>
     request(`/shift-notes/${noteId}/status`, {
       method: "PUT",
       body: JSON.stringify({
         status,
         admin_response: adminResponse,
+        actual_hours: actualHours,
+        sync_to_schedule: syncToSchedule,
       }),
     }),
 
