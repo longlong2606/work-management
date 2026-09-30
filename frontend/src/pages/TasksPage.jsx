@@ -204,14 +204,14 @@ export function TasksPage() {
     }
   };
 
-  const handleReviewSubtask = async () => {
-    if (!reviewModalSubtask.approve && !reviewComment.trim()) {
-      showToast("Vui lòng nhập nhận xét/lý do yêu cầu làm lại!", "danger");
+  const handleReviewSubtask = async (approve) => {
+    if (!approve && !reviewComment.trim()) {
+      showToast("Vui lòng nhập nhận xét / lý do yêu cầu làm lại!", "danger");
       return;
     }
     try {
-      const res = await api.reviewSubtask(reviewModalSubtask.id, reviewModalSubtask.approve, reviewComment.trim());
-      showToast(res.message || "Đã xử lý nghiệm thu mục checklist!");
+      const res = await api.reviewSubtask(reviewModalSubtask.id, approve, reviewComment.trim());
+      showToast(res.message || (approve ? "Đã duyệt đạt mục việc!" : "Đã gửi yêu cầu chỉnh sửa lại!"));
       setReviewModalSubtask(null);
       setReviewComment("");
       if (taskDetail) refreshTaskDetail(taskDetail.task.id);
@@ -1195,72 +1195,47 @@ export function TasksPage() {
                                         display: "flex",
                                         alignItems: "center",
                                         gap: 5,
-                                        background: "#2563eb",
-                                        color: "#ffffff",
-                                        border: "none",
-                                        padding: "6px 12px",
-                                        borderRadius: 6,
+                                        background: "transparent",
+                                        color: "#0d6efd",
+                                        border: "1px solid #0d6efd",
+                                        padding: "6px 14px",
+                                        borderRadius: 999,
                                         fontSize: 12,
-                                        fontWeight: 700,
+                                        fontWeight: 600,
                                         cursor: "pointer",
-                                        boxShadow: "0 2px 4px rgba(37,99,235,0.2)",
                                       }}
-                                      title="Đã hoàn thành phần việc, nộp để Trưởng nhóm nghiệm thu"
+                                      title="Submit for Review (Member)"
                                     >
                                       <Send size={13} />
-                                      <span>Nộp Duyệt</span>
+                                      <span>Submit for Review (Member)</span>
                                     </button>
                                   )}
 
                                   {/* 2. Leader reviews */}
                                   {sub.status === "REVIEW" && isLeaderOrAdmin && (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                      <button
-                                        onClick={() => {
-                                          setReviewModalSubtask({ id: sub.id, title: sub.title, approve: true });
-                                          setReviewComment("Đã nghiệm thu đạt chuẩn.");
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 4,
-                                          background: "#10b981",
-                                          color: "#ffffff",
-                                          border: "none",
-                                          padding: "6px 12px",
-                                          borderRadius: 6,
-                                          fontSize: 12,
-                                          fontWeight: 700,
-                                          cursor: "pointer",
-                                        }}
-                                      >
-                                        <Check size={14} />
-                                        <span>Duyệt Đạt</span>
-                                      </button>
-
-                                      <button
-                                        onClick={() => {
-                                          setReviewModalSubtask({ id: sub.id, title: sub.title, approve: false });
-                                          setReviewComment("");
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 4,
-                                          background: "#fee2e2",
-                                          color: "#b91c1c",
-                                          border: "1px solid #fca5a5",
-                                          padding: "6px 10px",
-                                          borderRadius: 6,
-                                          fontSize: 12,
-                                          fontWeight: 700,
-                                          cursor: "pointer",
-                                        }}
-                                      >
-                                        <RotateCcw size={13} />
-                                        <span>Yêu Cầu Sửa</span>
-                                      </button>
-                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setReviewModalSubtask({ id: sub.id, title: sub.title });
+                                        setReviewComment("");
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#198754",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        padding: "6px 14px",
+                                        borderRadius: 999,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        boxShadow: "0 2px 4px rgba(25,135,84,0.2)",
+                                      }}
+                                    >
+                                      <Search size={13} />
+                                      <span>Review Subtask (Leader)</span>
+                                    </button>
                                   )}
 
                                   {/* Delete subtask */}
@@ -1318,7 +1293,7 @@ export function TasksPage() {
           allMembers={allMembers}
           onSuccess={() => {
             refreshTaskDetail(taskDetail.task.id);
-            showToast("Đã thêm mục checklist thành công!");
+            showToast("Đã thêm mục việc thành công!");
           }}
         />
       )}
@@ -1342,72 +1317,76 @@ export function TasksPage() {
           <div
             style={{
               background: "#ffffff",
-              borderRadius: 14,
+              borderRadius: 16,
               width: "100%",
               maxWidth: 480,
               padding: 24,
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0" }}>
-              {reviewModalSubtask.approve ? "✅ Nghiệm Thu Đạt Chuẩn" : "↩ Yêu Cầu Chỉnh Sửa Lại"}
-            </h3>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px 0" }}>
-              Mục: <strong>{reviewModalSubtask.title}</strong>
-            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
+                Review Subtask: {reviewModalSubtask.title}
+              </h3>
+              <button onClick={() => setReviewModalSubtask(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                <X size={20} />
+              </button>
+            </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-                {reviewModalSubtask.approve ? "Nhận xét nghiệm thu (Tùy chọn):" : "Nhận xét chi tiết lý do cần sửa (Bắt buộc):"}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                Review Comment
               </label>
               <textarea
                 rows={3}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={reviewModalSubtask.approve ? "Đã nghiệm thu đạt chuẩn..." : "Cần kiểm tra lại các máy dãy B..."}
+                placeholder="Enter feedback or comment..."
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  padding: "9px 12px",
                   borderRadius: 8,
                   border: "1px solid #cbd5e1",
-                  fontSize: 13,
-                  outline: "none",
+                  fontSize: 14,
                   boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
                 }}
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
-                onClick={() => setReviewModalSubtask(null)}
+                type="button"
+                onClick={() => handleReviewSubtask(false)}
                 style={{
-                  background: "#f1f5f9",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  color: "#475569",
-                }}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={handleReviewSubtask}
-                style={{
-                  background: reviewModalSubtask.approve ? "#10b981" : "#ef4444",
+                  background: "#dc2626",
                   color: "#ffffff",
                   border: "none",
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: 13,
+                  padding: "8px 22px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 14,
                   cursor: "pointer",
                 }}
               >
-                {reviewModalSubtask.approve ? "Xác nhận Duyệt Đạt" : "Gửi Yêu Cầu Sửa"}
+                Request Changes
+              </button>
+              <button
+                type="button"
+                onClick={() => handleReviewSubtask(true)}
+                style={{
+                  background: "#198754",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "8px 22px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                Approve & Finish
               </button>
             </div>
           </div>
@@ -1433,72 +1412,77 @@ export function TasksPage() {
           <div
             style={{
               background: "#ffffff",
-              borderRadius: 14,
+              borderRadius: 16,
               width: "100%",
               maxWidth: 480,
               padding: 24,
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0" }}>
-              Tạm Hoãn Nhiệm Vụ
-            </h3>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px 0" }}>
-              Nhiệm vụ: <strong>{postponeModalTask.title}</strong>
-            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#dc2626", margin: 0 }}>
+                Postpone Task
+              </h3>
+              <button onClick={() => setPostponeModalTask(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                <X size={20} />
+              </button>
+            </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-                Lý do tạm hoãn (Bắt buộc):
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                Postponed Reason (Required)
               </label>
               <textarea
                 rows={3}
+                required
                 value={postponeReason}
                 onChange={(e) => setPostponeReason(e.target.value)}
-                placeholder="Nhập lý do tạm hoãn nhiệm vụ..."
+                placeholder="Explain why the task is postponed..."
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  padding: "9px 12px",
                   borderRadius: 8,
                   border: "1px solid #cbd5e1",
-                  fontSize: 13,
-                  outline: "none",
+                  fontSize: 14,
                   boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
                 }}
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
+                type="button"
                 onClick={() => setPostponeModalTask(null)}
                 style={{
-                  background: "#f1f5f9",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  color: "#475569",
-                }}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={handlePostponeTask}
-                style={{
-                  background: "#64748b",
+                  background: "#52525b",
                   color: "#ffffff",
                   border: "none",
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: 13,
+                  padding: "8px 24px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 14,
                   cursor: "pointer",
                 }}
               >
-                Xác nhận Tạm Hoãn
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePostponeTask}
+                style={{
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "8px 24px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                Confirm Postpone
               </button>
             </div>
           </div>
@@ -1508,31 +1492,23 @@ export function TasksPage() {
   );
 }
 
-// ================= MODAL COMPONENT: CREATE TASK =================
+/* ================= MODAL COMPONENT: CREATE TASK (MATCHING LAB_MANAGEMENT) ================= */
 function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [taskType, setTaskType] = useState("LAB_MAINTENANCE");
+  const [taskType, setTaskType] = useState("RESEARCH");
   const [plannedDate, setPlannedDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [deadline, setDeadline] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split("T")[0] + " 17:00";
-  });
-  const [location, setLocation] = useState("Phòng Lab 301 & 402");
-  const [customerInfo, setCustomerInfo] = useState("Khoa CNTT Greenwich");
+  const [deadline, setDeadline] = useState("");
   const [leaderId, setLeaderId] = useState(allMembers[0]?.id || 1);
+  const [location, setLocation] = useState("");
+  const [customerInfo, setCustomerInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Vui lòng nhập tiêu đề nhiệm vụ!");
-      return;
-    }
-    if (!deadline.trim()) {
-      setError("Vui lòng nhập thời hạn chót!");
+      setError("Vui lòng nhập Title!");
       return;
     }
 
@@ -1544,7 +1520,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         description: description.trim(),
         task_type: taskType,
         planned_date: plannedDate,
-        deadline: deadline.trim(),
+        deadline: deadline ? deadline.replace("T", " ") : "",
         location: location.trim(),
         customer_info: customerInfo.trim(),
         leader_id: parseInt(leaderId),
@@ -1580,75 +1556,83 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
           background: "#ffffff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 600,
+          maxWidth: 520,
+          maxHeight: "90vh",
+          overflowY: "auto",
           padding: 24,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Plus size={20} color="#2563eb" />
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-              Khởi Tạo Nhiệm Vụ Mới
-            </h2>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
+            Create Task (Admin)
+          </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
           </button>
         </div>
 
         {error && (
-          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 16 }}>
+          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-              Tiêu đề nhiệm vụ *
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Title:
             </label>
             <input
               type="text"
               required
-              placeholder="VD: Bảo trì hệ thống phòng máy Lab 301..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box", outline: "none" }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Description:
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Loại nhiệm vụ
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Task type:
               </label>
               <select
                 value={taskType}
                 onChange={(e) => setTaskType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box", background: "#fff" }}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
               >
-                <option value="LAB_MAINTENANCE">Bảo trì Lab</option>
-                <option value="EVENT">Sự kiện / Workshop</option>
-                <option value="INDUSTRY">Dự án Doanh nghiệp</option>
-                <option value="RESEARCH">Nghiên cứu AI / Lab</option>
-                <option value="OTHER">Khác</option>
+                <option value="RESEARCH">Research</option>
+                <option value="INDUSTRY">Industry</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Trưởng nhóm phụ trách (Leader) *
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Leader:
               </label>
               <select
                 value={leaderId}
                 onChange={(e) => setLeaderId(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box", background: "#fff" }}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
               >
                 {allMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name} ({m.username})
+                    @{m.username} ({m.full_name})
                   </option>
                 ))}
               </select>
@@ -1657,87 +1641,70 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Ngày dự kiến bắt đầu
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Planned date:
               </label>
               <input
                 type="date"
                 value={plannedDate}
                 onChange={(e) => setPlannedDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Hạn chót hoàn thành (Deadline) *
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Deadline:
               </label>
               <input
-                type="text"
-                required
-                placeholder="2026-10-15 17:00"
+                type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Địa điểm triển khai
-              </label>
-              <input
-                type="text"
-                placeholder="Lab 301, Hội trường..."
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Đơn vị / Đối tác phối hợp
-              </label>
-              <input
-                type="text"
-                placeholder="Khoa CNTT, Doanh nghiệp..."
-                value={customerInfo}
-                onChange={(e) => setCustomerInfo(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-              Mô tả chi tiết yêu cầu
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Location:
             </label>
-            <textarea
-              rows={3}
-              placeholder="Ghi chú mục tiêu, quy chuẩn hoàn thành của nhiệm vụ..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box", outline: "none" }}
+            <input
+              type="text"
+              placeholder="Vị trí / Phòng Lab..."
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Customer info:
+            </label>
+            <input
+              type="text"
+              placeholder="Thông tin đối tác / Đơn vị..."
+              value={customerInfo}
+              onChange={(e) => setCustomerInfo(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
             <button
               type="button"
               onClick={onClose}
-              style={{ background: "#f1f5f9", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", color: "#475569" }}
+              style={{ background: "#52525b", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
             >
-              Hủy
+              Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              style={{ background: "#2563eb", color: "#ffffff", border: "none", padding: "9px 20px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              style={{ background: "#0d6efd", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
             >
-              {loading ? "Đang tạo..." : "Tạo Nhiệm Vụ"}
+              {loading ? "Creating..." : "Save Task"}
             </button>
           </div>
         </form>
@@ -1746,25 +1713,19 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   );
 }
 
-// ================= MODAL COMPONENT: ADD SUBTASK =================
+/* ================= MODAL COMPONENT: ADD SUBTASK (EXACT MATCH TO LAB_MANAGEMENT SCREENSHOT) ================= */
 function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueAt, setDueAt] = useState(taskDeadline || "");
+  const [dueAt, setDueAt] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const toggleAssignee = (userId) => {
-    setSelectedAssignees((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Vui lòng nhập tiêu đề mục checklist!");
+      setError("Vui lòng nhập Title!");
       return;
     }
 
@@ -1774,7 +1735,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
       await api.createSubtask(taskId, {
         title: title.trim(),
         description: description.trim(),
-        due_at: dueAt.trim(),
+        due_at: dueAt ? dueAt.replace("T", " ") : "",
         assignee_ids: selectedAssignees,
       });
       onSuccess();
@@ -1808,106 +1769,152 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
           background: "#ffffff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 520,
+          maxWidth: 460,
           padding: 24,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Plus size={20} color="#2563eb" />
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-              Thêm Mục Việc Checklist
-            </h3>
-          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
+            Add Subtask (Leader)
+          </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
           </button>
         </div>
 
         {error && (
-          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 16 }}>
+          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-              Tiêu đề mục việc *
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Title:
             </label>
             <input
               type="text"
               required
-              placeholder="VD: Kiểm tra và thay dây cáp mạng dãy máy B..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+              }}
             />
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-              Hạn hoàn thành checklist
-            </label>
-            <input
-              type="text"
-              placeholder="2026-10-10 17:00"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-              Phân công thành viên thực hiện
-            </label>
-            <div style={{ maxHeight: 150, overflowY: "auto", border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-              {allMembers.map((m) => {
-                const checked = selectedAssignees.includes(m.id);
-                return (
-                  <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleAssignee(m.id)}
-                    />
-                    <span>{m.full_name} ({m.username})</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-              Hướng dẫn / Yêu cầu chi tiết
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Description:
             </label>
             <textarea
-              rows={2}
-              placeholder="Mô tả tiêu chuẩn hoàn thành của đầu việc này..."
+              rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, boxSizing: "border-box" }}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+              }}
             />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Assignees:
+            </label>
+            <select
+              multiple
+              size={4}
+              value={selectedAssignees.map(String)}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, (option) => parseInt(option.value));
+                setSelectedAssignees(selected);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 13,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+                background: "#ffffff",
+              }}
+            >
+              {allMembers.map((m) => (
+                <option key={m.id} value={m.id} style={{ padding: "4px 8px", borderRadius: 4, margin: "1px 0" }}>
+                  @{m.username} [{m.role ? m.role.toUpperCase() : "MEMBER"}]
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Due at:
+            </label>
+            <input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
             <button
               type="button"
               onClick={onClose}
-              style={{ background: "#f1f5f9", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", color: "#475569" }}
+              style={{
+                background: "#52525b",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 24px",
+                borderRadius: 999,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
             >
-              Hủy
+              Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              style={{ background: "#2563eb", color: "#ffffff", border: "none", padding: "9px 20px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              style={{
+                background: "#0d6efd",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 24px",
+                borderRadius: 999,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
             >
-              {loading ? "Đang thêm..." : "Thêm Vào Checklist"}
+              {loading ? "Adding..." : "Add Subtask"}
             </button>
           </div>
         </form>
