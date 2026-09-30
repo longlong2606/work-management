@@ -1032,71 +1032,118 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* 4. DANH SÁCH THÀNH VIÊN THAM GIA CA HÔM NAY (CỐ ĐỊNH 1 DÒNG, KHÔNG BỊ KÉO XUỐNG) */}
-                  <div style={{ marginTop: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        flexWrap: "nowrap",
-                        overflow: "hidden"
-                      }}
-                    >
-                      {shiftMembers.length === 0 ? (
+                  {/* 4. DANH SÁCH THÀNH VIÊN THAM GIA CA (ANIMATION TỰ KÉO XUỐNG KHI CÓ NHIỀU NGƯỜI / VẮNG MẶT) */}
+                  <div
+                    style={{
+                      marginTop: 4,
+                      height: 26,
+                      overflow: "hidden",
+                      position: "relative"
+                    }}
+                  >
+                    {shiftMembers.length === 0 ? (
+                      <div style={{ display: "flex", alignItems: "center", height: 26 }}>
                         <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>
                           Chưa phân công
                         </span>
-                      ) : (
-                        shiftMembers.map((m, idx) => {
+                      </div>
+                    ) : (
+                      <div
+                        className={
+                          shiftMembers.length === 2
+                            ? "auto-scroll-members-2"
+                            : shiftMembers.length === 3
+                              ? "auto-scroll-members-3"
+                              : shiftMembers.length > 3
+                                ? "auto-scroll-members-many"
+                                : ""
+                        }
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4
+                        }}
+                      >
+                        {shiftMembers.map((m, idx) => {
                           const isAbsent = m.attendance_status === "absent";
                           return (
-                            <span
+                            <div
                               key={m.id || idx}
                               style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                width: "100%",
+                                height: 26,
+                                minHeight: 26,
+                                padding: "2px 8px",
+                                borderRadius: 6,
                                 background: isAbsent ? "#fee2e2" : "#f0fdf4",
                                 border: isAbsent ? "1.5px solid #fca5a5" : "1px solid #bbf7d0",
                                 color: isAbsent ? "#b91c1c" : "#15803d",
-                                padding: "2px 6px",
-                                borderRadius: 5,
                                 fontSize: 11,
                                 fontWeight: 700,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 3,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                maxWidth: 140,
-                                flexShrink: 1,
-                                textDecoration: isAbsent ? "line-through" : "none"
+                                boxSizing: "border-box"
                               }}
                               title={isAbsent ? `${m.full_name || m.username} (Vắng mặt)` : `${m.full_name || m.username} (Có mặt)`}
                             >
-                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {m.full_name || m.username}
-                              </span>
-                              {isAbsent && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
                                 <span
                                   style={{
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    background: "#ef4444",
-                                    color: "#ffffff",
-                                    padding: "0 3px",
-                                    borderRadius: 3,
-                                    textDecoration: "none",
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: "50%",
+                                    background: isAbsent ? "#ef4444" : "#10b981",
                                     flexShrink: 0
                                   }}
+                                />
+                                <span
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    textDecoration: isAbsent ? "line-through" : "none"
+                                  }}
                                 >
-                                  Vắng
+                                  {m.full_name || m.username}
                                 </span>
-                              )}
-                            </span>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginLeft: 6 }}>
+                                {isAbsent ? (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 800,
+                                      background: "#ef4444",
+                                      color: "#ffffff",
+                                      padding: "1px 5px",
+                                      borderRadius: 4,
+                                      letterSpacing: 0.3
+                                    }}
+                                  >
+                                    Vắng mặt
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      background: "#dcfce7",
+                                      color: "#166534",
+                                      padding: "1px 5px",
+                                      borderRadius: 4
+                                    }}
+                                  >
+                                    Có mặt
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
