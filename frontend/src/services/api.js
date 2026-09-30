@@ -240,6 +240,12 @@ export const api = {
     request(`/shifts/events/${id}`, {
       method: "DELETE",
     }),
+  updateActualHours: (data) =>
+    request('/shifts/attendance/hours', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   toggleAttendance: (data) =>
     request('/shifts/attendance/toggle', {
       method: 'POST',

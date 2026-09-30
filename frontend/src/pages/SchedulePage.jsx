@@ -101,6 +101,16 @@ export function SchedulePage() {
   });
 
   // Create Event Modal (Hỗ trợ chọn nhiều shift cùng lúc hoặc Cả ngày)
+    // Modal chỉnh giờ làm thực tế trong ca (Đi muộn / Về sớm / Thiếu giờ)
+  const [editingHoursModal, setEditingHoursModal] = useState({
+    open: false,
+    member: null,
+    shift: null,
+    day: null,
+    actual_hours: 1.5,
+    time_note: "",
+  });
+
   const [createEventModal, setCreateEventModal] = useState({
     open: false,
     selected_shifts: [0], // [0] = cả ngày, hoặc [1, 2, 3], hoặc [7, 8]...
@@ -277,6 +287,43 @@ export function SchedulePage() {
 
   // Handle Admin Approve or Reject Absence
     // Admin đánh dấu nhân sự vắng mặt / bỏ ca trực tiếp
+    // Mở modal chỉnh giờ làm thực tế
+  const openEditHours = (member) => {
+    const stdHours = rosterModal.shift?.id === 8 ? 0.5 : 1.5;
+    const curHours = (member.actual_hours !== null && member.actual_hours !== undefined)
+      ? member.actual_hours
+      : stdHours;
+    setEditingHoursModal({
+      open: true,
+      member,
+      shift: rosterModal.shift,
+      day: rosterModal.day,
+      actual_hours: curHours,
+      time_note: member.time_note || "",
+    });
+  };
+
+  // Lưu giờ làm thực tế
+  const handleSaveActualHours = async (e) => {
+    e.preventDefault();
+    try {
+      await api.updateActualHours({
+        user_id: editingHoursModal.member.user_id,
+        shift_id: editingHoursModal.shift.id,
+        work_date: editingHoursModal.day.dateStr,
+        actual_hours: editingHoursModal.actual_hours !== "" ? Number(editingHoursModal.actual_hours) : null,
+        time_note: editingHoursModal.time_note?.trim() || null,
+      });
+      showToast(`Đã lưu số giờ thực tế (${editingHoursModal.actual_hours}h) cho ${editingHoursModal.member.full_name}!`);
+      setEditingHoursModal((prev) => ({ ...prev, open: false }));
+      const data = await api.getShiftRoster(editingHoursModal.shift.id, editingHoursModal.day.dateStr);
+      setRosterModal((prev) => ({ ...prev, rosterList: data || [] }));
+      fetchSchedule();
+    } catch (err) {
+      showToast("Lỗi khi lưu giờ làm: " + (err.message || ""), "danger");
+    }
+  };
+
   const handleAdminMarkAbsent = async (member) => {
     if (!window.confirm(`Xác nhận đánh dấu ${member.full_name} VẮNG MẶT / BỎ CA trong ca này? Hành động này sẽ trừ giờ KPI của nhân sự.`)) {
       return;
@@ -2212,22 +2259,41 @@ export function SchedulePage() {
 
                           {/* 1b. If Admin and user is PRESENT -> button to Mark Absent / Missed Shift */}
                           {isAdmin && isPresent && (
-                            <button
-                              onClick={() => handleAdminMarkAbsent(m)}
-                              style={{
-                                background: "#fff1f2",
-                                border: "1px solid #fecaca",
-                                color: "#b91c1c",
-                                borderRadius: 6,
-                                padding: "5px 10px",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                              }}
-                              title="Đánh dấu nhân viên này không đi làm / bỏ ca trực (sẽ trừ KPI)"
-                            >
-                              ❌ Đánh dấu vắng / Bỏ ca
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleAdminMarkAbsent(m)}
+                                style={{
+                                  background: "#fff1f2",
+                                  border: "1px solid #fecaca",
+                                  color: "#b91c1c",
+                                  borderRadius: 6,
+                                  padding: "5px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                                title="Đánh dấu nhân viên này không đi làm / bỏ ca trực (sẽ trừ KPI)"
+                              >
+                                ❌ Đánh dấu vắng
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openEditHours(m)}
+                                style={{
+                                  background: "#eff6ff",
+                                  border: "1px solid #bfdbfe",
+                                  color: "#1d4ed8",
+                                  borderRadius: 6,
+                                  padding: "5px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                                title="Chỉnh sửa số giờ làm thực tế nếu nhân viên đi muộn, về sớm hoặc làm thiếu giờ"
+                              >
+                                ⏱️ Chỉnh giờ làm
+                              </button>
+                            </>
                           )}
 
                           {/* 2. If Staff has PENDING request */}
@@ -2712,6 +2778,185 @@ export function SchedulePage() {
       )}
 
       {/* ================= MODAL: TẠO SỰ KIỆN MỚI (CREATE EVENT MODAL) ================= */}
+            {/* ================= MODAL CHỈNH GIỜ LÀM THỰC TẾ ================= */}
+      {editingHoursModal.open && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10003,
+            padding: 16,
+          }}
+          onClick={() => setEditingHoursModal((prev) => ({ ...prev, open: false }))}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              border: "1px solid #e2e8f0",
+              maxWidth: 460,
+              width: "100%",
+              padding: 24,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: "1px solid #e2e8f0",
+                paddingBottom: 12,
+                marginBottom: 16,
+              }}
+            >
+              <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                ⏱️ Ghi Nhận Giờ Làm Thực Tế
+              </h3>
+              <button
+                onClick={() => setEditingHoursModal((prev) => ({ ...prev, open: false }))}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveActualHours}>
+              <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
+                <div><strong>Nhân sự:</strong> {editingHoursModal.member?.full_name} (@{editingHoursModal.member?.username})</div>
+                <div style={{ marginTop: 3 }}><strong>Ca làm việc:</strong> {editingHoursModal.shift?.name} ({editingHoursModal.shift?.label})</div>
+                <div style={{ marginTop: 3 }}><strong>Ngày trực:</strong> {editingHoursModal.day?.dateStr}</div>
+                <div style={{ marginTop: 3, color: "#2563eb" }}>
+                  <strong>Thời lượng chuẩn của ca:</strong> {editingHoursModal.shift?.id === 8 ? "0.5 giờ (30 phút)" : "1.5 giờ (90 phút)"}
+                </div>
+              </div>
+
+              {/* Quick choices */}
+              <div style={{ marginBottom: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: 12, marginBottom: 6, display: "block" }}>
+                  Chọn nhanh số giờ làm thực tế:
+                </label>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditingHoursModal((prev) => ({ ...prev, actual_hours: prev.shift?.id === 8 ? 0.5 : 1.5, time_note: "" }))}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#16a34a" : "#cbd5e1",
+                      background: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#dcfce7" : "#ffffff",
+                      color: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#15803d" : "#334155",
+                    }}
+                  >
+                    Đủ ca ({editingHoursModal.shift?.id === 8 ? "0.5h" : "1.5h"})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingHoursModal((prev) => ({ ...prev, actual_hours: 1.0, time_note: "Đi muộn hoặc về sớm 30 phút" }))}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: Number(editingHoursModal.actual_hours) === 1.0 ? "#ea580c" : "#cbd5e1",
+                      background: Number(editingHoursModal.actual_hours) === 1.0 ? "#fff7ed" : "#ffffff",
+                      color: Number(editingHoursModal.actual_hours) === 1.0 ? "#c2410c" : "#334155",
+                    }}
+                  >
+                    1.0h (Thiếu 30p)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingHoursModal((prev) => ({ ...prev, actual_hours: 0.5, time_note: "Chỉ trực 30 phút" }))}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: Number(editingHoursModal.actual_hours) === 0.5 && editingHoursModal.shift?.id !== 8 ? "#ea580c" : "#cbd5e1",
+                      background: Number(editingHoursModal.actual_hours) === 0.5 && editingHoursModal.shift?.id !== 8 ? "#fff7ed" : "#ffffff",
+                      color: Number(editingHoursModal.actual_hours) === 0.5 && editingHoursModal.shift?.id !== 8 ? "#c2410c" : "#334155",
+                    }}
+                  >
+                    0.5h (Thiếu 1h)
+                  </button>
+                </div>
+              </div>
+
+              {/* Number Input */}
+              <div style={{ marginBottom: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: 12 }}>
+                  Số giờ làm thực tế được ghi nhận (*):
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="10"
+                    required
+                    value={editingHoursModal.actual_hours}
+                    onChange={(e) => setEditingHoursModal((prev) => ({ ...prev, actual_hours: e.target.value }))}
+                    className="form-control"
+                    style={{ fontWeight: 700, width: 120 }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>giờ (h)</span>
+                  {Number(editingHoursModal.actual_hours) < (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) && (
+                    <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>
+                      ⚠️ Trực thiếu {((editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) - Number(editingHoursModal.actual_hours)).toFixed(1)}h
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Reason / Note input */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: 12 }}>
+                  Lý do / Ghi chú (tùy chọn):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Vào muộn 30p do kẹt xe, Về sớm 15p..."
+                  value={editingHoursModal.time_note}
+                  onChange={(e) => setEditingHoursModal((prev) => ({ ...prev, time_note: e.target.value }))}
+                  className="form-control"
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingHoursModal((prev) => ({ ...prev, open: false }))}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Hủy bỏ
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 700 }}>
+                  ✓ Lưu Giờ Làm Thực Tế
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {createEventModal.open && (
         <div
           style={{

@@ -51,7 +51,11 @@ export function KpiLeaderboardModal({
             startTime: s.start_time || "08:00",
             endTime: s.end_time || "09:30",
           };
-          const duration = s.shift_id === 8 ? 0.5 : 1.5;
+          const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+          const actualHours = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : null;
+          const duration = actualHours !== null ? actualHours : standardDuration;
+          const isDeficit = actualHours !== null && actualHours < standardDuration;
+          const deficitHours = isDeficit ? (standardDuration - actualHours) : 0;
           const isAbsent = s.attendance_status === "absent";
           const isPending = s.attendance_status === "pending_absence";
 
@@ -93,7 +97,11 @@ export function KpiLeaderboardModal({
           return {
             ...s,
             shiftMeta,
+            standardDuration,
+            actualHours,
             duration,
+            isDeficit,
+            deficitHours,
             timeState,
             finalStatus,
           };
@@ -786,12 +794,23 @@ export function KpiLeaderboardModal({
                                       <span>{sh.duration}h</span>
                                     </div>
                                     <div style={{ fontSize: 9, opacity: 0.9 }}>
-                                      {sh.finalStatus === "completed" && "✅ Đã trực"}
+                                      {sh.finalStatus === "completed" && (
+                                        sh.isDeficit ? (
+                                          <span style={{ color: "#d97706", fontWeight: 700 }}>
+                                            ⚠️ Thiếu {sh.deficitHours.toFixed(1)}h (Làm {sh.duration}h)
+                                          </span>
+                                        ) : "✅ Đã trực"
+                                      )}
                                       {sh.finalStatus === "absent" && "❌ VẮNG MẶT"}
                                       {sh.finalStatus === "in_progress" && "⚡ Đang trực"}
                                       {sh.finalStatus === "upcoming" && "⏳ Chờ trực"}
                                       {sh.finalStatus === "pending_absence" && "🟡 Chờ duyệt"}
                                     </div>
+                                    {sh.time_note && (
+                                      <div style={{ fontSize: 8, color: "#64748b", fontStyle: "italic", marginTop: 1 }}>
+                                        💬 {sh.time_note}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>

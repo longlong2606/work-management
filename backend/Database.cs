@@ -230,6 +230,8 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_reported_at TIMESTAMP;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_approved_by INTEGER;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_approved_at TIMESTAMP;"); } catch { }
+            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN actual_hours REAL;"); } catch { }
+            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
 
             // 1. Synchronize shift templates
             var shifts = new[]

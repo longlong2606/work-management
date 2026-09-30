@@ -71,6 +71,7 @@ app.MapGet("/api/tv/today", (string? date) =>
     var regQuery = @"
         SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date, sr.status, sr.note,
                COALESCE(sr.attendance_status, 'present') as attendance_status,
+               sr.actual_hours, sr.time_note,
                sr.absence_reason,
                u.full_name, u.username, u.email, u.phone,
                st.name as shift_name, st.start_time, st.end_time, st.label as shift_label
@@ -391,6 +392,8 @@ app.MapGet("/api/shifts/roster", (int shift_id, string work_date, HttpContext ct
             u.department,
             sr.id as registration_id,
             COALESCE(sr.attendance_status, 'present') as attendance_status,
+            sr.actual_hours,
+            sr.time_note,
             sr.absence_reason,
             sr.absence_reported_at,
             sr.absence_approved_by,
@@ -714,6 +717,49 @@ app.MapDelete("/api/shifts/events/{id:long}", (long id, HttpContext ctx) =>
     using var conn = Database.GetConnection();
     conn.Execute("DELETE FROM shift_events WHERE id = @id", new { id });
     return Results.Ok(new { success = true, message = "Xóa sự kiện thành công!" });
+});
+
+app.MapPost("/api/shifts/attendance/hours", (UpdateActualHoursRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+    if (currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var reg = conn.QueryFirstOrDefault(
+        "SELECT id, attendance_status, actual_hours FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+        new { uid = req.user_id, sid = req.shift_id, wdate = req.work_date }
+    );
+
+    if (reg == null)
+    {
+        conn.Execute(@"
+            INSERT INTO shift_registrations (user_id, shift_id, work_date, attendance_status, status, actual_hours, time_note, note)
+            VALUES (@uid, @sid, @wdate, 'present', 'confirmed', @hours, @time_note, @note)",
+            new { 
+                uid = req.user_id, 
+                sid = req.shift_id, 
+                wdate = req.work_date, 
+                hours = req.actual_hours,
+                time_note = req.time_note,
+                note = $"Ghi nhận giờ thực tế: {req.actual_hours}h" 
+            });
+    }
+    else
+    {
+        conn.Execute(@"
+            UPDATE shift_registrations 
+            SET actual_hours = @hours, time_note = @time_note 
+            WHERE id = @id", 
+            new { hours = req.actual_hours, time_note = req.time_note, id = (long)reg.id });
+    }
+
+    return Results.Ok(new { 
+        success = true, 
+        actual_hours = req.actual_hours,
+        time_note = req.time_note,
+        message = req.actual_hours.HasValue ? $"Đã cập nhật số giờ thực tế: {req.actual_hours.Value}h!" : "Đã đặt lại giờ chuẩn của ca!" 
+    });
 });
 
 app.MapPost("/api/shifts/attendance/toggle", (ToggleAttendanceRequest req, HttpContext ctx) =>
