@@ -96,6 +96,27 @@ export function ClassScheduleModal({
     }
   }, [isOpen, activeTab, listFilterUser]);
 
+  // Map shift number or text to start_time and end_time
+  const parseShiftTime = (shiftVal) => {
+    if (!shiftVal) return null;
+    const str = shiftVal.toString().trim();
+    const nums = str.match(/\d+/g);
+    if (!nums || nums.length === 0) return null;
+
+    const startId = parseInt(nums[0], 10);
+    const endId = nums.length > 1 ? parseInt(nums[nums.length - 1], 10) : startId;
+
+    const startShift = SHIFTS.find((s) => s.id === startId) || SHIFTS[0];
+    const endShift = SHIFTS.find((s) => s.id === endId) || startShift;
+
+    return {
+      startTime: startShift.startTime,
+      endTime: endShift.endTime,
+      shiftLabel: startId === endId ? `Ca ${startId} (${startShift.label})` : `Ca ${startId} - Ca ${endId} (${startShift.startTime} - ${endShift.endTime})`,
+      shiftName: startId === endId ? `Ca ${startId}` : `Ca ${startId}-${endId}`
+    };
+  };
+
   // Check if a time range overlaps with any of the 9 lab shifts
   const getOverlappingShifts = (startTime, endTime) => {
     const overlapping = [];
@@ -137,18 +158,19 @@ export function ClassScheduleModal({
     const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
     const rawHeaders = lines[0].split(delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
 
-    // Normalize header mapping
+    // Normalize header mapping (supports 'shift' / 'ca' column or legacy 'start_time' / 'end_time')
     const colIndex = {
       course_code: rawHeaders.findIndex((h) => h.includes("code") || h.includes("mã môn") || h.includes("subject")),
       class_name: rawHeaders.findIndex((h) => h.includes("class") || h.includes("name") || h.includes("tên môn") || h.includes("môn học")),
       date: rawHeaders.findIndex((h) => h.includes("date") || h.includes("ngày") || h.includes("start_date")),
+      shift: rawHeaders.findIndex((h) => h.includes("shift") || h.includes("ca") || h.includes("slot") || h.includes("buổi")),
       start_time: rawHeaders.findIndex((h) => h.includes("start_time") || h.includes("giờ bắt đầu") || h.includes("from")),
       end_time: rawHeaders.findIndex((h) => h.includes("end_time") || h.includes("giờ kết thúc") || h.includes("to")),
       room: rawHeaders.findIndex((h) => h.includes("room") || h.includes("phòng") || h.includes("địa điểm")),
     };
 
-    if (colIndex.date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1)) {
-      setParsingError("Cột tiêu đề không hợp lệ! Bắt buộc phải có các cột: Mã môn/Tên môn, Ngày học (Date), Giờ bắt đầu, Giờ kết thúc.");
+    if (colIndex.date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1) || (colIndex.shift === -1 && colIndex.start_time === -1)) {
+      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code (Mã môn), class_name (Tên môn), work_date (Ngày học), shift (Ca học: 1, 2, 3...) và room (Phòng).");
       setParsedRows([]);
       return;
     }
@@ -162,9 +184,24 @@ export function ClassScheduleModal({
       let courseCode = colIndex.course_code !== -1 ? (parts[colIndex.course_code] || "") : "";
       let className = colIndex.class_name !== -1 ? (parts[colIndex.class_name] || "") : "";
       let dateStr = colIndex.date !== -1 ? (parts[colIndex.date] || "") : "";
+      let shiftVal = colIndex.shift !== -1 ? (parts[colIndex.shift] || "") : "";
       let startTime = colIndex.start_time !== -1 ? (parts[colIndex.start_time] || "") : "";
       let endTime = colIndex.end_time !== -1 ? (parts[colIndex.end_time] || "") : "";
       const room = colIndex.room !== -1 ? (parts[colIndex.room] || "") : "";
+
+      let shiftLabel = "";
+      if (shiftVal) {
+        const parsedShift = parseShiftTime(shiftVal);
+        if (parsedShift) {
+          startTime = parsedShift.startTime;
+          endTime = parsedShift.endTime;
+          shiftLabel = parsedShift.shiftLabel;
+        }
+      }
+      if (!shiftLabel && startTime && endTime) {
+        const matching = SHIFTS.find((s) => s.startTime === startTime && s.endTime === endTime);
+        shiftLabel = matching ? `${matching.name.split(" ")[0]} (${matching.label})` : `${startTime} - ${endTime}`;
+      }
 
       // Fallback smart lookup from GREENWICH_COURSES
       if (courseCode && !className && GREENWICH_COURSES[courseCode.toUpperCase()]) {
@@ -235,19 +272,19 @@ export function ClassScheduleModal({
     d2.setDate(today.getDate() + 2);
     const dStr2 = d2.toISOString().split("T")[0];
 
-    const demoCsv = `course_code,class_name,work_date,start_time,end_time,room
-COMP1752,Lập trình hướng đối tượng (Object Oriented Programming),${dStr1},08:30,11:30,Room 302
-COMP1841,Lập trình web 1 (Web Programming 1),${dStr1},13:30,16:00,Lab 01
-MATH1179,Toán cho Khoa học máy tính (Mathematics for Computing),${dStr2},09:00,11:30,Room 405
-COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},14:45,17:15,Room 201`;
+    const demoCsv = `course_code,class_name,work_date,shift,room
+COMP1752,Lập trình hướng đối tượng (Object Oriented Programming),${dStr1},1,Room 302
+COMP1841,Lập trình web 1 (Web Programming 1),${dStr1},4,Lab 01
+MATH1179,Toán cho Khoa học máy tính (Mathematics for Computing),${dStr2},2,Room 405
+COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},5,Room 201`;
 
     handleParseCsv(demoCsv, "demo_greenwich_schedule.csv");
   };
 
   // Download template CSV
   const handleDownloadTemplate = () => {
-    const csvHeader = "course_code,class_name,work_date,start_time,end_time,room\n";
-    const sampleRow = "COMP1752,Lập trình hướng đối tượng,2026-10-05,09:00,11:30,Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,13:30,16:00,Room 401\n";
+    const csvHeader = "course_code,class_name,work_date,shift,room\n";
+    const sampleRow = "COMP1752,Lập trình hướng đối tượng,2026-10-05,1,Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2,Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,4,Room 201\n";
     const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -502,7 +539,7 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},14:45,1
                   Tải lên File Thời Khóa Biểu (Excel .xlsx hoặc .csv)
                 </h4>
                 <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 16px" }}>
-                  Chứa các cột: <code>Mã môn / Tên môn, Ngày học (work_date), Giờ bắt đầu, Giờ kết thúc, Phòng học</code>
+                  Chứa các cột gọn nhẹ: <code>course_code (Mã môn), class_name (Tên môn), work_date (Ngày học), shift (Ca học: 1, 2, 3...), room (Phòng)</code>
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -577,7 +614,7 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},14:45,1
                         <tr>
                           <th style={{ padding: "10px 12px" }}>Mã / Tên Môn Học</th>
                           <th style={{ padding: "10px 12px" }}>Ngày Học</th>
-                          <th style={{ padding: "10px 12px" }}>Giờ Học</th>
+                          <th style={{ padding: "10px 12px" }}>Ca Học (Shift)</th>
                           <th style={{ padding: "10px 12px" }}>Phòng</th>
                           <th style={{ padding: "10px 12px" }}>Đối Chiếu Ca Trực Lab</th>
                           <th style={{ padding: "10px 12px" }}>Trạng Thái</th>
@@ -591,8 +628,10 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},14:45,1
                               <div style={{ fontSize: 11, color: "#64748b" }}>{r.class_name}</div>
                             </td>
                             <td style={{ padding: "8px 12px", fontWeight: 600 }}>{r.work_date}</td>
-                            <td style={{ padding: "8px 12px", fontWeight: 600, color: "#2563eb" }}>
-                              {r.start_time} - {r.end_time}
+                            <td style={{ padding: "8px 12px" }}>
+                              <span style={{ fontWeight: 700, color: "#2563eb", background: "#eff6ff", border: "1px solid #bfdbfe", padding: "2px 8px", borderRadius: 6, fontSize: 11.5 }}>
+                                {r.shiftLabel}
+                              </span>
                             </td>
                             <td style={{ padding: "8px 12px" }}>{r.room || "-"}</td>
                             <td style={{ padding: "8px 12px" }}>
