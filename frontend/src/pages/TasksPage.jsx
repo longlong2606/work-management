@@ -1648,9 +1648,6 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                   );
                 })}
               </select>
-              <small style={{ fontSize: 11, color: "#2563eb", marginTop: 4, display: "block", fontWeight: 500 }}>
-                💡 Bất kỳ thành viên nào được chọn sẽ có toàn quyền Trưởng nhóm: tự thêm checklist, phân công và nghiệm thu công việc.
-              </small>
             </div>
           </div>
 
