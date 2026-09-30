@@ -889,7 +889,14 @@ export function TasksPage() {
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                         <span style={{ color: "#64748b" }}>Trưởng nhóm:</span>
-                        <strong style={{ color: "#0f172a" }}>@{taskDetail.task.leader_name}</strong>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <strong style={{ color: "#0f172a" }}>@{taskDetail.task.leader_name}</strong>
+                          {taskDetail.task.leader_id === user?.id && (
+                            <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "1px 6px", borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                              ⭐ Bạn là Trưởng nhóm
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -1624,8 +1631,8 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Trưởng nhóm phụ trách:
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>
+                Trưởng nhóm phụ trách (Chọn bất kỳ ai):
               </label>
               <select
                 value={leaderId}
@@ -1633,14 +1640,17 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                 style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
               >
                 {allMembers.map((m) => {
-                  const roleText = m.role === 'leader' ? '⭐ TRƯỞNG NHÓM' : m.role === 'admin' ? '👑 QUẢN TRỊ' : '👤 THÀNH VIÊN';
+                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
                   return (
                     <option key={m.id} value={m.id}>
-                      @{m.username} ({m.full_name}) — [{roleText}]
+                      {m.full_name} (@{m.username}) — [{roleBadge}]
                     </option>
                   );
                 })}
               </select>
+              <small style={{ fontSize: 11, color: "#2563eb", marginTop: 4, display: "block", fontWeight: 500 }}>
+                💡 Bất kỳ thành viên nào được chọn sẽ có toàn quyền Trưởng nhóm: tự thêm checklist, phân công và nghiệm thu công việc.
+              </small>
             </div>
           </div>
 
