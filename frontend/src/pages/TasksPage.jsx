@@ -18,7 +18,8 @@ import {
   ChevronRight,
   MapPin,
   Check,
-  RotateCcw
+  RotateCcw,
+  PauseCircle
 } from "lucide-react";
 
 export function TasksPage() {
@@ -734,7 +735,7 @@ export function TasksPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: 20,
+            padding: 16,
           }}
           onClick={() => {
             setSelectedTask(null);
@@ -745,19 +746,21 @@ export function TasksPage() {
             style={{
               background: "#ffffff",
               borderRadius: 16,
-              width: "100%",
-              maxWidth: 900,
-              maxHeight: "90vh",
+              width: "95%",
+              maxWidth: 1200,
+              maxHeight: "92vh",
               overflowY: "auto",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               border: "1px solid #cbd5e1",
+              display: "flex",
+              flexDirection: "column",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* MODAL HEADER */}
             <div
               style={{
-                padding: "20px 24px",
+                padding: "18px 24px",
                 borderBottom: "1px solid #e2e8f0",
                 display: "flex",
                 alignItems: "center",
@@ -765,6 +768,9 @@ export function TasksPage() {
                 background: "#f8fafc",
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -785,6 +791,9 @@ export function TasksPage() {
                   color: "#64748b",
                   padding: 6,
                   borderRadius: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <X size={20} />
@@ -793,21 +802,47 @@ export function TasksPage() {
 
             {/* MODAL BODY */}
             {detailLoading || !taskDetail ? (
-              <div style={{ padding: "60px 0", textAlign: "center", color: "#64748b" }}>
-                <Clock size={32} style={{ animation: "spin 1.5s linear infinite", color: "#2563eb", marginBottom: 10 }} />
-                <div>Đang tải chi tiết nhiệm vụ và danh sách checklist...</div>
+              <div style={{ padding: "80px 0", textAlign: "center", color: "#64748b" }}>
+                <Clock size={36} style={{ animation: "spin 1.5s linear infinite", color: "#2563eb", marginBottom: 12 }} />
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Đang tải chi tiết nhiệm vụ và danh sách checklist...</div>
               </div>
-            ) : (
-              <div style={{ padding: 24 }}>
-                {/* PARENT TASK SUMMARY */}
-                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, marginBottom: 24 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            ) : (() => {
+              const subtasks = taskDetail.subtasks || [];
+              const totalSub = subtasks.length;
+              const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
+              const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
+              const isLeaderOrAdmin = isAdmin || taskDetail.task.leader_id === user?.id;
+
+              return (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
+                    gap: 24,
+                    padding: 24,
+                    alignItems: "start",
+                  }}
+                >
+                  {/* ================= LEFT COLUMN: TASK METADATA & CONTROLS ================= */}
+                  <div
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 14,
+                      padding: 20,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 16,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    {/* TYPE & STATUS BADGES */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                       <span
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
-                          padding: "2px 8px",
+                          padding: "3px 10px",
                           borderRadius: 6,
                           background: getTypeBadge(taskDetail.task.task_type).bg,
                           color: getTypeBadge(taskDetail.task.task_type).color,
@@ -820,7 +855,7 @@ export function TasksPage() {
                         style={{
                           fontSize: 11,
                           fontWeight: 800,
-                          padding: "2px 8px",
+                          padding: "3px 10px",
                           borderRadius: 6,
                           background: getStatusBadge(taskDetail.task.status).bg,
                           color: getStatusBadge(taskDetail.task.status).color,
@@ -831,328 +866,431 @@ export function TasksPage() {
                       </span>
                     </div>
 
-                    {/* FINISH TASK BUTTON (IF ELIGIBLE) */}
-                    {(isAdmin || taskDetail.task.leader_id === user?.id) && taskDetail.task.status !== "FINISHED" && (
-                      <button
-                        onClick={() => handleFinishTask(taskDetail.task.id)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: "#10b981",
-                          color: "#ffffff",
-                          border: "none",
-                          padding: "7px 14px",
-                          borderRadius: 8,
-                          fontWeight: 700,
-                          fontSize: 12,
-                          cursor: "pointer",
-                          boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
-                        }}
-                      >
-                        <Award size={15} />
-                        <span>Nghiệm Thu Hoàn Thành Nhiệm Vụ</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <p style={{ fontSize: 13, color: "#334155", margin: "0 0 12px 0", lineHeight: 1.6 }}>
-                    {taskDetail.task.description || "Không có mô tả chi tiết."}
-                  </p>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, fontSize: 12, color: "#475569" }}>
+                    {/* TITLE & DESCRIPTION */}
                     <div>
-                      Trưởng nhóm: <strong>{taskDetail.task.leader_name}</strong>
+                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.4 }}>
+                        {taskDetail.task.title}
+                      </h3>
+                      <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                        {taskDetail.task.description || "Không có mô tả chi tiết."}
+                      </p>
                     </div>
-                    <div>
-                      Hạn chót: <strong>{taskDetail.task.deadline}</strong>
-                    </div>
-                    <div>
-                      Địa điểm: <strong>{taskDetail.task.location || "Chưa xác định"}</strong>
-                    </div>
-                    <div>
-                      Đối tác / Đơn vị: <strong>{taskDetail.task.customer_info || "Nội bộ trường"}</strong>
-                    </div>
-                  </div>
 
-                  {taskDetail.task.status === "POSTPONED" && taskDetail.task.postponed_reason && (
-                    <div style={{ marginTop: 12, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 12, color: "#991b1b" }}>
-                      <strong>Lý do tạm hoãn:</strong> {taskDetail.task.postponed_reason}
-                    </div>
-                  )}
-                </div>
-
-                {/* CHECKLIST SECTION HEADER */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                      Mục Việc Checklist Chi Tiết ({taskDetail.subtasks?.length || 0})
-                    </h3>
-                    <p style={{ fontSize: 12, color: "#64748b", margin: "2px 0 0 0" }}>
-                      Quy trình: Phân công cho Thành viên $\rightarrow$ Thành viên bấm Nộp duyệt $\rightarrow$ Trưởng nhóm/Admin nghiệm thu đạt
-                    </p>
-                  </div>
-
-                  {(isAdmin || taskDetail.task.leader_id === user?.id) && (
-                    <button
-                      onClick={() => setShowAddSubtaskModal(true)}
+                    {/* METADATA LIST (LIST GROUP) */}
+                    <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: "#2563eb",
-                        color: "#ffffff",
-                        border: "none",
-                        padding: "7px 14px",
-                        borderRadius: 8,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
+                        flexDirection: "column",
+                        gap: 10,
+                        borderTop: "1px solid #e2e8f0",
+                        paddingTop: 14,
+                        fontSize: 13,
                       }}
                     >
-                      <Plus size={15} />
-                      <span>Thêm Mục Checklist</span>
-                    </button>
-                  )}
-                </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Trưởng nhóm (Leader):</span>
+                        <strong style={{ color: "#0f172a" }}>@{taskDetail.task.leader_name}</strong>
+                      </div>
 
-                {/* SUBTASKS LIST */}
-                {(!taskDetail.subtasks || taskDetail.subtasks.length === 0) ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", border: "1.5px dashed #cbd5e1", borderRadius: 10, color: "#64748b" }}>
-                    <CheckSquare size={32} style={{ color: "#94a3b8", marginBottom: 8 }} />
-                    <div style={{ fontWeight: 600 }}>Nhiệm vụ này chưa có mục việc checklist nào.</div>
-                    {(isAdmin || taskDetail.task.leader_id === user?.id) && (
-                      <button
-                        onClick={() => setShowAddSubtaskModal(true)}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Ngày dự kiến (Planned):</span>
+                        <strong style={{ color: "#334155" }}>{taskDetail.task.planned_date || "Chưa đặt"}</strong>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Hạn chót (Deadline):</span>
+                        <strong style={{ color: "#dc2626", fontWeight: 800 }}>{taskDetail.task.deadline || "Không có"}</strong>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Địa điểm:</span>
+                        <strong style={{ color: "#334155" }}>{taskDetail.task.location || "Chưa xác định"}</strong>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Đối tác / Đơn vị:</span>
+                        <strong style={{ color: "#334155" }}>{taskDetail.task.customer_info || "Nội bộ trường"}</strong>
+                      </div>
+                    </div>
+
+                    {/* POSTPONED REASON BANNER */}
+                    {taskDetail.task.status === "POSTPONED" && taskDetail.task.postponed_reason && (
+                      <div
                         style={{
-                          marginTop: 10,
-                          background: "#eff6ff",
-                          border: "1px solid #bfdbfe",
-                          color: "#1d4ed8",
-                          padding: "6px 12px",
-                          borderRadius: 6,
+                          padding: "10px 14px",
+                          background: "#fef2f2",
+                          border: "1px solid #fecdd3",
+                          borderRadius: 8,
                           fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
+                          color: "#991b1b",
                         }}
                       >
-                        ➕ Tạo mục việc đầu tiên
-                      </button>
+                        <strong style={{ display: "block", marginBottom: 4 }}>⚠️ Lý do tạm hoãn:</strong>
+                        {taskDetail.task.postponed_reason}
+                      </div>
+                    )}
+
+                    {/* OVERALL CHECKLIST PROGRESS BAR */}
+                    <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                        <span style={{ color: "#475569" }}>Tiến độ checklist:</span>
+                        <span style={{ color: percent === 100 ? "#059669" : "#2563eb" }}>
+                          {finishedSub}/{totalSub} ({percent}%)
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: 8, background: "#e2e8f0", borderRadius: 999, overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${percent}%`,
+                            height: "100%",
+                            background: percent === 100 ? "#10b981" : "#2563eb",
+                            borderRadius: 999,
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* ADMIN / LEADER ACTION BUTTONS (FINISH & POSTPONE) */}
+                    {isLeaderOrAdmin && (
+                      <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                        {taskDetail.task.status !== "FINISHED" && (
+                          <button
+                            onClick={() => handleFinishTask(taskDetail.task.id)}
+                            style={{
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              background: "#10b981",
+                              color: "#ffffff",
+                              border: "none",
+                              padding: "9px 12px",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: "pointer",
+                              boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
+                            }}
+                          >
+                            <Award size={15} />
+                            <span>Hoàn Thành</span>
+                          </button>
+                        )}
+
+                        {taskDetail.task.status !== "POSTPONED" && taskDetail.task.status !== "FINISHED" && (
+                          <button
+                            onClick={() => setPostponeModalTask(taskDetail.task)}
+                            style={{
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              background: "#ffffff",
+                              color: "#dc2626",
+                              border: "1.5px solid #fca5a5",
+                              padding: "9px 12px",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <PauseCircle size={15} />
+                            <span>Tạm Hoãn</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {taskDetail.subtasks.map((sub, idx) => {
-                      const isAssignedToMe = sub.assignees?.some((a) => a.user_id === user?.id);
-                      const isLeaderOrAdmin = isAdmin || taskDetail.task.leader_id === user?.id;
 
-                      let statusBadge = { label: "Đang làm", bg: "#fef3c7", color: "#b45309", border: "#fde68a" };
-                      if (sub.status === "REVIEW") {
-                        statusBadge = { label: "🟡 Chờ duyệt", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
-                      } else if (sub.status === "FINISHED") {
-                        statusBadge = { label: "🟢 Hoàn thành", bg: "#ecfdf5", color: "#047857", border: "#a7f3d0" };
-                      }
+                  {/* ================= RIGHT COLUMN: SUBTASKS CHECKLIST ================= */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 14,
+                      padding: 20,
+                      display: "flex",
+                      flexDirection: "column",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    {/* CHECKLIST HEADER */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                      <div>
+                        <h4 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>📋</span> Mục Việc Checklist ({totalSub})
+                        </h4>
+                        <p style={{ fontSize: 12, color: "#64748b", margin: "2px 0 0 0" }}>
+                          Quy trình: Phân công → Thành viên nộp duyệt → Trưởng nhóm duyệt
+                        </p>
+                      </div>
 
-                      return (
-                        <div
-                          key={sub.id}
+                      {isLeaderOrAdmin && (
+                        <button
+                          onClick={() => setShowAddSubtaskModal(true)}
                           style={{
-                            padding: 16,
-                            borderRadius: 12,
-                            background: sub.status === "FINISHED" ? "#fcfdfd" : sub.status === "REVIEW" ? "#fffbeb" : "#ffffff",
-                            border: sub.status === "REVIEW" ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            background: "#2563eb",
+                            color: "#ffffff",
+                            border: "none",
+                            padding: "7px 14px",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: "0 2px 4px rgba(37,99,235,0.2)",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1, minWidth: 260 }}>
-                              <div
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: 8,
-                                  background: sub.status === "FINISHED" ? "#10b981" : "#e2e8f0",
-                                  color: sub.status === "FINISHED" ? "#ffffff" : "#475569",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontWeight: 800,
-                                  fontSize: 12,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {sub.status === "FINISHED" ? <Check size={16} /> : idx + 1}
-                              </div>
+                          <Plus size={15} />
+                          <span>Thêm Mục Việc (Leader)</span>
+                        </button>
+                      )}
+                    </div>
 
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                                    {sub.title}
-                                  </h4>
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      fontWeight: 800,
-                                      padding: "2px 7px",
-                                      borderRadius: 4,
-                                      background: statusBadge.bg,
-                                      color: statusBadge.color,
-                                      border: `1px solid ${statusBadge.border}`,
-                                    }}
-                                  >
-                                    {statusBadge.label}
-                                  </span>
-                                </div>
+                    {/* SUBTASKS LIST */}
+                    {totalSub === 0 ? (
+                      <div style={{ padding: "40px 0", textAlign: "center", border: "1.5px dashed #cbd5e1", borderRadius: 10, color: "#64748b" }}>
+                        <CheckSquare size={32} style={{ color: "#94a3b8", marginBottom: 8 }} />
+                        <div style={{ fontWeight: 600 }}>Nhiệm vụ này chưa có mục việc checklist nào.</div>
+                        {isLeaderOrAdmin && (
+                          <button
+                            onClick={() => setShowAddSubtaskModal(true)}
+                            style={{
+                              marginTop: 10,
+                              background: "#eff6ff",
+                              border: "1px solid #bfdbfe",
+                              color: "#1d4ed8",
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            ➕ Thêm mục việc đầu tiên
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {subtasks.map((sub, idx) => {
+                          const isAssignedToMe = sub.assignees?.some((a) => a.user_id === user?.id);
 
-                                {sub.description && (
-                                  <p style={{ margin: "4px 0 8px 0", fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
-                                    {sub.description}
-                                  </p>
-                                )}
+                          let statusBadge = { label: "Đang làm", bg: "#fef3c7", color: "#b45309", border: "#fde68a" };
+                          if (sub.status === "REVIEW") {
+                            statusBadge = { label: "🟡 Chờ duyệt", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+                          } else if (sub.status === "FINISHED") {
+                            statusBadge = { label: "🟢 Hoàn thành", bg: "#ecfdf5", color: "#047857", border: "#a7f3d0" };
+                          }
 
-                                {/* ASSIGNEES & DEADLINE */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 11, color: "#475569", flexWrap: "wrap" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                    <Users size={13} color="#64748b" />
-                                    <span>
-                                      Người phụ trách:{" "}
-                                      <strong>
-                                        {sub.assignees?.map((a) => a.full_name).join(", ") || "Chưa giao"}
-                                      </strong>
-                                      {isAssignedToMe && " (Giao cho tôi)"}
-                                    </span>
-                                  </div>
-
-                                  {sub.due_at && (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                      <Clock size={13} color="#64748b" />
-                                      <span>Hạn chót: {sub.due_at}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {sub.review_comment && (
+                          return (
+                            <div
+                              key={sub.id}
+                              style={{
+                                padding: 14,
+                                borderRadius: 10,
+                                background: sub.status === "FINISHED" ? "#fcfdfd" : sub.status === "REVIEW" ? "#fffbeb" : "#ffffff",
+                                border: sub.status === "REVIEW" ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1, minWidth: 240 }}>
                                   <div
                                     style={{
-                                      marginTop: 8,
-                                      padding: "6px 10px",
-                                      background: sub.status === "FINISHED" ? "#f0fdf4" : "#fef2f2",
-                                      border: `1px solid ${sub.status === "FINISHED" ? "#bbf7d0" : "#fecdd3"}`,
+                                      width: 26,
+                                      height: 26,
                                       borderRadius: 6,
-                                      fontSize: 11,
-                                      color: sub.status === "FINISHED" ? "#166534" : "#991b1b",
+                                      background: sub.status === "FINISHED" ? "#10b981" : "#e2e8f0",
+                                      color: sub.status === "FINISHED" ? "#ffffff" : "#475569",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontWeight: 800,
+                                      fontSize: 12,
+                                      flexShrink: 0,
                                     }}
                                   >
-                                    <strong>Nhận xét nghiệm thu:</strong> {sub.review_comment}
+                                    {sub.status === "FINISHED" ? <Check size={15} /> : idx + 1}
                                   </div>
-                                )}
+
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                      <h5 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                                        {sub.title}
+                                      </h5>
+                                      <span
+                                        style={{
+                                          fontSize: 10,
+                                          fontWeight: 800,
+                                          padding: "2px 7px",
+                                          borderRadius: 4,
+                                          background: statusBadge.bg,
+                                          color: statusBadge.color,
+                                          border: `1px solid ${statusBadge.border}`,
+                                        }}
+                                      >
+                                        {statusBadge.label}
+                                      </span>
+                                    </div>
+
+                                    {sub.description && (
+                                      <p style={{ margin: "4px 0 8px 0", fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                                        {sub.description}
+                                      </p>
+                                    )}
+
+                                    {/* ASSIGNEES & DEADLINE */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 11, color: "#475569", flexWrap: "wrap", marginTop: 4 }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                        <Users size={13} color="#64748b" />
+                                        <span>
+                                          Phụ trách:{" "}
+                                          <strong style={{ color: "#2563eb" }}>
+                                            {sub.assignees?.map((a) => `@${a.username || a.full_name}`).join(", ") || "Chưa giao"}
+                                          </strong>
+                                          {isAssignedToMe && " (Tôi)"}
+                                        </span>
+                                      </div>
+
+                                      {sub.due_at && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                          <Clock size={13} color="#64748b" />
+                                          <span>Hạn: {sub.due_at}</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {sub.review_comment && (
+                                      <div
+                                        style={{
+                                          marginTop: 8,
+                                          padding: "6px 10px",
+                                          background: sub.status === "FINISHED" ? "#f0fdf4" : "#fef2f2",
+                                          border: `1px solid ${sub.status === "FINISHED" ? "#bbf7d0" : "#fecdd3"}`,
+                                          borderRadius: 6,
+                                          fontSize: 11,
+                                          color: sub.status === "FINISHED" ? "#166534" : "#991b1b",
+                                        }}
+                                      >
+                                        <strong>Nhận xét:</strong> {sub.review_comment}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center" }}>
+                                  {/* 1. Member submits */}
+                                  {sub.status === "PROCESSING" && (isAssignedToMe || isLeaderOrAdmin) && (
+                                    <button
+                                      onClick={() => handleSubmitSubtask(sub.id)}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#2563eb",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        padding: "6px 12px",
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        boxShadow: "0 2px 4px rgba(37,99,235,0.2)",
+                                      }}
+                                      title="Đã hoàn thành phần việc, nộp để Trưởng nhóm nghiệm thu"
+                                    >
+                                      <Send size={13} />
+                                      <span>Nộp Duyệt</span>
+                                    </button>
+                                  )}
+
+                                  {/* 2. Leader reviews */}
+                                  {sub.status === "REVIEW" && isLeaderOrAdmin && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <button
+                                        onClick={() => {
+                                          setReviewModalSubtask({ id: sub.id, title: sub.title, approve: true });
+                                          setReviewComment("Đã nghiệm thu đạt chuẩn.");
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          background: "#10b981",
+                                          color: "#ffffff",
+                                          border: "none",
+                                          padding: "6px 12px",
+                                          borderRadius: 6,
+                                          fontSize: 12,
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                        }}
+                                      >
+                                        <Check size={14} />
+                                        <span>Duyệt Đạt</span>
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setReviewModalSubtask({ id: sub.id, title: sub.title, approve: false });
+                                          setReviewComment("");
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          background: "#fee2e2",
+                                          color: "#b91c1c",
+                                          border: "1px solid #fca5a5",
+                                          padding: "6px 10px",
+                                          borderRadius: 6,
+                                          fontSize: 12,
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                        }}
+                                      >
+                                        <RotateCcw size={13} />
+                                        <span>Yêu Cầu Sửa</span>
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Delete subtask */}
+                                  {isLeaderOrAdmin && (
+                                    <button
+                                      onClick={() => handleDeleteSubtask(sub.id)}
+                                      style={{
+                                        background: "#f8fafc",
+                                        border: "1px solid #e2e8f0",
+                                        color: "#94a3b8",
+                                        padding: "6px 8px",
+                                        borderRadius: 6,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Xóa mục checklist"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-
-                            {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center" }}>
-                              {/* 1. Member submits */}
-                              {sub.status === "PROCESSING" && (isAssignedToMe || isLeaderOrAdmin) && (
-                                <button
-                                  onClick={() => handleSubmitSubtask(sub.id)}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    background: "#2563eb",
-                                    color: "#ffffff",
-                                    border: "none",
-                                    padding: "6px 12px",
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    boxShadow: "0 2px 4px rgba(37,99,235,0.2)",
-                                  }}
-                                  title="Đã làm xong, nộp để Trưởng nhóm nghiệm thu"
-                                >
-                                  <Send size={13} />
-                                  <span>Nộp Duyệt</span>
-                                </button>
-                              )}
-
-                              {/* 2. Leader approves or rejects */}
-                              {sub.status === "REVIEW" && isLeaderOrAdmin && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                  <button
-                                    onClick={() => {
-                                      setReviewModalSubtask({ id: sub.id, title: sub.title, approve: true });
-                                      setReviewComment("Đã nghiệm thu đạt chuẩn.");
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                      background: "#10b981",
-                                      color: "#ffffff",
-                                      border: "none",
-                                      padding: "6px 12px",
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <Check size={14} />
-                                    <span>Duyệt Đạt</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      setReviewModalSubtask({ id: sub.id, title: sub.title, approve: false });
-                                      setReviewComment("");
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                      background: "#fee2e2",
-                                      color: "#b91c1c",
-                                      border: "1px solid #fca5a5",
-                                      padding: "6px 10px",
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <RotateCcw size={13} />
-                                    <span>Yêu Cầu Sửa</span>
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* Delete subtask button */}
-                              {isLeaderOrAdmin && (
-                                <button
-                                  onClick={() => handleDeleteSubtask(sub.id)}
-                                  style={{
-                                    background: "#f8fafc",
-                                    border: "1px solid #e2e8f0",
-                                    color: "#94a3b8",
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    cursor: "pointer",
-                                  }}
-                                  title="Xóa mục checklist"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
