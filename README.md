@@ -75,6 +75,32 @@ stop_all.bat
 
 ---
 
+### Cách 3: Triển khai toàn diện bằng Docker Compose (Production / Đa nền tảng)
+
+Hệ thống được cấu hình sẵn Docker Compose hoàn chỉnh gồm 4 dịch vụ:
+1. **db**: PostgreSQL 16 Alpine
+2. **backend**: ASP.NET Core (.NET 10) Minimal API
+3. **frontend**: Web Quản lý React 19 (Nginx Reverse Proxy)
+4. **tv-display**: Kiosk Smart TV React 19 (Nginx Reverse Proxy)
+
+Khởi chạy 1 lệnh duy nhất:
+```bash
+docker compose up -d --build
+```
+
+Truy cập các dịch vụ:
+- 🖥️ **Web Quản lý máy tính:** `http://localhost:3000`
+- 📺 **Màn hình Kiosk Smart TV:** `http://localhost:3001` (hoặc `http://<IP_LAN>:3001`)
+- ⚙️ **Backend API REST:** `http://localhost:8001/api`
+- 🗄️ **PostgreSQL Database:** `localhost:5432`
+
+Dừng hệ thống:
+```bash
+docker compose down
+```
+
+---
+
 ### Cách 2: Khởi chạy thủ công từng phần
 
 #### 1. Khởi chạy Backend (.NET 10)
@@ -107,6 +133,7 @@ npm run dev
 | Vai trò | Tên đăng nhập | Mật khẩu |
 | :--- | :--- | :--- |
 | **Quản trị viên (Admin)** | `admin` | `Admin@123` |
+| **Trưởng nhóm (Leader)** | `leader1` | `leader123` |
 | **Nhân viên (Staff)** | `longlong` | `User@123` |
 
 ---

@@ -51,6 +51,19 @@ services:
     networks:
       - wm-network
 
+  tv-display:
+    build:
+      context: ./tv-display
+      dockerfile: Dockerfile
+    container_name: work-management-tv
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - wm-network
+
 volumes:
   postgres_data:
     driver: local

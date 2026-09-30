@@ -1,9 +1,12 @@
 // API Service for WorkShiftPro TV Signage
 
 const API_BASE_URL =
-  typeof window !== "undefined" && window.location.hostname
-    ? `http://${window.location.hostname}:8000/api`
-    : "http://127.0.0.1:8000/api";
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && (window.location.port === "3001" || window.location.port === "3000" || window.location.port === "80" || window.location.port === "")
+    ? "/api"
+    : (typeof window !== "undefined" && window.location.hostname
+        ? `http://${window.location.hostname}:8000/api`
+        : "http://127.0.0.1:8000/api"));
 
 // 9 Ca làm việc chuẩn
 export const DEFAULT_SHIFTS = [
