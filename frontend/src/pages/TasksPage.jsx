@@ -1632,11 +1632,14 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                 onChange={(e) => setLeaderId(e.target.value)}
                 style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
               >
-                {allMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    @{m.username} ({m.full_name})
-                  </option>
-                ))}
+                {allMembers.map((m) => {
+                  const roleText = m.role === 'leader' ? '⭐ TRƯỞNG NHÓM' : m.role === 'admin' ? '👑 QUẢN TRỊ' : '👤 THÀNH VIÊN';
+                  return (
+                    <option key={m.id} value={m.id}>
+                      @{m.username} ({m.full_name}) — [{roleText}]
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
