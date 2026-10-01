@@ -213,6 +213,13 @@ export function SchedulePage() {
     fetchEvents();
   }, [isAdmin, fetchPendingRequests, fetchEvents, fetchMembers]);
 
+  const showToast = useCallback((text, type = "success") => {
+    setActionMsg({ text, type });
+    setTimeout(() => setActionMsg({ text: "", type: "success" }), 4000);
+  }, []);
+
+  const totalMembers = allMembers.length;
+
   const fetchSchedule = useCallback(async () => {
     try {
       let start, end;
@@ -239,18 +246,11 @@ export function SchedulePage() {
     } catch (err) {
       showToast("Lỗi khi tải dữ liệu: " + (err.message || ""), "danger");
     }
-  }, [viewMode, currentDate, mondayDate, isAdmin, fetchPendingRequests]);
+  }, [viewMode, currentDate, mondayDate, isAdmin, fetchPendingRequests, showToast]);
 
   useEffect(() => {
     fetchSchedule();
   }, [fetchSchedule]);
-
-  const totalMembers = allMembers.length;
-
-  const showToast = (text, type = "success") => {
-    setActionMsg({ text, type });
-    setTimeout(() => setActionMsg({ text: "", type: "success" }), 4000);
-  };
 
   // Open Roster Modal (All Members)
   const openRosterModal = async (shift, day) => {

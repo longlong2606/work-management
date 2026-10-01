@@ -144,7 +144,7 @@ npm run dev
 
 | Vai trò | Tên đăng nhập | Mật khẩu |
 | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `admin` | `Admin@123` |
+| **Quản trị viên (Admin)** | `admin` | `admin123` |
 | **Trưởng nhóm (Leader)** | `leader1` | `leader123` |
 | **Nhân viên (Staff)** | `longlong` | `User@123` |
 

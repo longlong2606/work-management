@@ -1,4 +1,8 @@
-const BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== "undefined" && window.location.port === "5173" ? "http://127.0.0.1:8000/api" : "/api");
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && (window.location.port === "5173" || window.location.port === "5174")
+    ? `http://${window.location.hostname}:8000/api`
+    : "/api");
 
 function getToken() {
   return localStorage.getItem("wm_token") || "";
