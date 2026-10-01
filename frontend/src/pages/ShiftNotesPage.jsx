@@ -483,129 +483,225 @@ export function ShiftNotesPage() {
         )}
       </div>
 
-      {/* Modal Create Shift Note */}
+      {/* Modal Create Shift Note (2-COLUMN GROUPED) */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" style={{ background: "#ffffff", color: "#0f172a", borderRadius: 16, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", padding: "26px" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
-              Báo Bận Đột Xuất / Điều Chỉnh Giờ Ca
-            </h3>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 20 }}>
-              Gửi thông tin cho quản lý để điều phối người hỗ trợ hoặc duyệt giờ trực thực tế.
-            </p>
+          <div
+            className="modal-content"
+            style={{
+              background: "#ffffff",
+              color: "#0f172a",
+              borderRadius: 20,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              padding: "24px 28px",
+              maxWidth: 680,
+              width: "100%",
+              border: "1px solid #e2e8f0"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* HEADER */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, borderBottom: "1px solid #f1f5f9", paddingBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Báo Bận Đột Xuất / Điều Chỉnh Giờ Ca
+                </h3>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "3px 0 0 0" }}>
+                  Gửi thông tin cho quản lý để điều phối người hỗ trợ hoặc duyệt giờ trực thực tế
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#64748b"
+                }}
+              >
+                ✕
+              </button>
+            </div>
 
             <form onSubmit={handleSubmitNote}>
-              <div className="form-group">
-                <label className="form-label">Chọn ca làm việc liên quan:</label>
-                <select
-                  className="form-select"
-                  value={selectedShiftId}
-                  onChange={handleShiftChange}
+              {/* 2-COLUMN SECTION GRID */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+                {/* CỘT TRÁI: CA & THỜI GIAN */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12
+                  }}
                 >
-                  {SHIFTS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.label})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    ⏱️ 1. Ca & Thời gian
+                  </div>
 
-              <div className="form-group">
-                <label className="form-label">Ngày làm việc:</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  min={todayStr}
-                  value={workDate}
-                  onChange={(e) => setWorkDate(e.target.value)}
-                  required
-                />
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
-                  ℹ️ Hệ thống chỉ cho phép chọn ngày hôm nay hoặc các ngày trong tương lai.
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                      Ca làm việc liên quan <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <select
+                      className="form-select"
+                      value={selectedShiftId}
+                      onChange={handleShiftChange}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 13, background: "#ffffff" }}
+                    >
+                      {SHIFTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.label})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                      Ngày làm việc <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      min={todayStr}
+                      value={workDate}
+                      onChange={(e) => setWorkDate(e.target.value)}
+                      required
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 13, background: "#ffffff", boxSizing: "border-box" }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                      Khung giờ thực tế có mặt:
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={adjustedTime}
+                      onChange={(e) => setAdjustedTime(e.target.value)}
+                      placeholder="VD: 08:00 - 09:00 hoặc Xin về sớm 30p"
+                      required
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 13, background: "#ffffff", boxSizing: "border-box" }}
+                    />
+                  </div>
+                </div>
+
+                {/* CỘT PHẢI: LOẠI ĐIỀU CHỈNH & GIỜ & LÝ DO */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    📝 2. Chi tiết & Lý do
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                        Loại điều chỉnh
+                      </label>
+                      <select
+                        className="form-select"
+                        value={noteType}
+                        onChange={handleNoteTypeChange}
+                        style={{ width: "100%", padding: "9px 10px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 12.5, background: "#ffffff" }}
+                      >
+                        <option value="adjusted_hours">Về sớm / Rút ngắn</option>
+                        <option value="late">Xin đến muộn</option>
+                        <option value="emergency">Sự cố xin nghỉ</option>
+                        <option value="swap">Đã nhờ đổi ca</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                        Giờ thực tế (h)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="12"
+                        disabled={noteType === "emergency"}
+                        className="form-input"
+                        value={noteType === "emergency" ? 0 : actualHours}
+                        onChange={(e) => setActualHours(e.target.value)}
+                        required
+                        style={{ width: "100%", padding: "9px 10px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 13, background: "#ffffff", boxSizing: "border-box" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
+                      Lý do chi tiết gửi Quản lý <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <textarea
+                      className="form-textarea"
+                      rows={3}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="VD: Trùng lịch thi giữa kỳ tại trường nên em chỉ trực được 8h-9h..."
+                      required
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #cbd5e1", fontSize: 13, background: "#ffffff", boxSizing: "border-box", resize: "vertical", flex: 1 }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  Khung giờ thực tế bạn có thể trực:
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={adjustedTime}
-                  onChange={(e) => setAdjustedTime(e.target.value)}
-                  placeholder="VD: 08:00 - 09:00 hoặc Xin về sớm 1 tiếng"
-                  required
-                />
-                <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, display: "block" }}>
-                  Ghi rõ khoảng thời gian bạn có mặt được (VD: ban đầu ca 8h-10h, chỉ làm được 8h-9h).
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Loại điều chỉnh:</label>
-                <select
-                  className="form-select"
-                  value={noteType}
-                  onChange={handleNoteTypeChange}
-                >
-                  <option value="adjusted_hours">Rút ngắn giờ trực / Xin về sớm</option>
-                  <option value="late">Xin đến muộn</option>
-                  <option value="emergency">Sự cố khẩn cấp xin nghỉ ca</option>
-                  <option value="swap">Đã nhờ đồng nghiệp trực thay</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span>Số giờ làm thực tế đề xuất (giờ):</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#2563eb" }}>
-                    {noteType === "emergency" ? "0h (Nghỉ ca)" : `${actualHours} giờ`}
-                  </span>
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="12"
-                    disabled={noteType === "emergency"}
-                    className="form-input"
-                    value={noteType === "emergency" ? 0 : actualHours}
-                    onChange={(e) => setActualHours(e.target.value)}
-                    required
-                  />
-                  <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 600 }}>giờ</span>
-                </div>
-                <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, display: "block" }}>
-                  ⏱️ Số giờ này sẽ được tự động cộng vào Bảng KPI 20h/tuần sau khi Quản lý phê duyệt.
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Lý do chi tiết gửi Quản lý:</label>
-                <textarea
-                  className="form-textarea"
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="VD: Trùng lịch kiểm tra giữa kỳ lúc 9h15 tại trường nên em chỉ trực được 8h-9h..."
-                  required
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
+              {/* FOOTER ACTIONS */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="btn btn-secondary"
+                  style={{
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "1px solid #e2e8f0",
+                    padding: "9px 20px",
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease"
+                  }}
                 >
                   Đóng
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
                   disabled={submitting}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "9px 22px",
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                    transition: "all 0.15s ease"
+                  }}
                 >
                   {submitting ? "Đang gửi..." : "Gửi Báo Cáo Cho Quản Lý"}
                 </button>

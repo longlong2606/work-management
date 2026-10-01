@@ -166,7 +166,7 @@ export function BulkAbsenceModal({
       <div
         style={{
           width: "100%",
-          maxWidth: 620,
+          maxWidth: 820,
           maxHeight: "92vh",
           backgroundColor: "#ffffff",
           borderRadius: 20,
@@ -233,7 +233,7 @@ export function BulkAbsenceModal({
           </button>
         </div>
 
-        {/* ================= FORM BODY ================= */}
+        {/* ================= FORM BODY (2-COLUMN GROUPED) ================= */}
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
           {errorMsg && (
             <div
@@ -242,7 +242,7 @@ export function BulkAbsenceModal({
                 border: "1px solid #fca5a5",
                 color: "#b91c1c",
                 padding: "10px 14px",
-                borderRadius: 8,
+                borderRadius: 10,
                 fontSize: 13,
                 fontWeight: 600,
                 marginBottom: 16,
@@ -256,387 +256,450 @@ export function BulkAbsenceModal({
             </div>
           )}
 
-          {/* 1. NGƯỜI XIN NGHỈ (ADMIN CÓ THỂ CHỌN NHÂN SỰ) */}
-          <div style={{ marginBottom: 16 }}>
-            <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, display: "block" }}>
-              👤 Nhân sự nộp đơn xin nghỉ:
-            </label>
-            {isAdmin ? (
-              <select
-                value={targetUserId}
-                onChange={(e) => setTargetUserId(e.target.value)}
-                className="form-control"
-                style={{ fontWeight: 600 }}
-              >
-                {allMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Tôi)" : ""}
-                  </option>
-                ))}
-              </select>
-            ) : (
+          {/* 2-COLUMN GRID SECTION */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 14 }}>
+            {/* CỘT TRÁI: NHÂN SỰ & NGÀY NGHỈ & LÝ DO */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* 1. NGƯỜI XIN NGHỈ */}
               <div
                 style={{
                   background: "#f8fafc",
                   border: "1px solid #e2e8f0",
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#0f172a",
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                }}
+              >
+                <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", marginBottom: 6, display: "block", textTransform: "uppercase" }}>
+                  👤 1. Nhân sự nộp đơn:
+                </label>
+                {isAdmin ? (
+                  <select
+                    value={targetUserId}
+                    onChange={(e) => setTargetUserId(e.target.value)}
+                    className="form-control"
+                    style={{ fontWeight: 600, fontSize: 13, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #cbd5e1" }}
+                  >
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Tôi)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <User size={16} color="#2563eb" />
+                    {currentUser?.full_name || currentUser?.username} (@{currentUser?.username})
+                  </div>
+                )}
+              </div>
+
+              {/* 2. PHẠM VI NGÀY NGHỈ */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  padding: "12px 14px",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 8,
+                  flexDirection: "column",
+                  gap: 10,
                 }}
               >
-                <User size={16} color="#2563eb" />
-                {currentUser?.full_name || currentUser?.username} (@{currentUser?.username})
-              </div>
-            )}
-          </div>
+                <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", display: "block", textTransform: "uppercase" }}>
+                  📅 2. Thời gian xin nghỉ:
+                </label>
+                <div style={{ display: "flex", gap: 5 }}>
+                  <button
+                    type="button"
+                    onClick={() => setScopeMode("whole_week")}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: scopeMode === "whole_week" ? "#dc2626" : "#cbd5e1",
+                      background: scopeMode === "whole_week" ? "#fef2f2" : "#ffffff",
+                      color: scopeMode === "whole_week" ? "#b91c1c" : "#475569",
+                      flex: 1,
+                      textAlign: "center",
+                    }}
+                  >
+                    🌟 Cả tuần
+                  </button>
 
-          {/* 2. PHẠM VI THỜI GIAN NGHỈ (SCOPE TABS) */}
-          <div style={{ marginBottom: 16 }}>
-            <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, display: "block" }}>
-              📅 Phạm vi thời gian xin nghỉ:
-            </label>
-            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-              <button
-                type="button"
-                onClick={() => setScopeMode("whole_week")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: scopeMode === "whole_week" ? "#dc2626" : "#cbd5e1",
-                  background: scopeMode === "whole_week" ? "#fef2f2" : "#ffffff",
-                  color: scopeMode === "whole_week" ? "#b91c1c" : "#475569",
-                  flex: 1,
-                  textAlign: "center",
-                }}
-              >
-                🌟 Cả tuần này
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setScopeMode("date_range")}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: scopeMode === "date_range" ? "#dc2626" : "#cbd5e1",
+                      background: scopeMode === "date_range" ? "#fef2f2" : "#ffffff",
+                      color: scopeMode === "date_range" ? "#b91c1c" : "#475569",
+                      flex: 1,
+                      textAlign: "center",
+                    }}
+                  >
+                    📅 Khoảng ngày
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setScopeMode("date_range")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: scopeMode === "date_range" ? "#dc2626" : "#cbd5e1",
-                  background: scopeMode === "date_range" ? "#fef2f2" : "#ffffff",
-                  color: scopeMode === "date_range" ? "#b91c1c" : "#475569",
-                  flex: 1,
-                  textAlign: "center",
-                }}
-              >
-                📅 Khoảng ngày (Từ - Đến)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setScopeMode("custom_days")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: scopeMode === "custom_days" ? "#dc2626" : "#cbd5e1",
-                  background: scopeMode === "custom_days" ? "#fef2f2" : "#ffffff",
-                  color: scopeMode === "custom_days" ? "#b91c1c" : "#475569",
-                  flex: 1,
-                  textAlign: "center",
-                }}
-              >
-                📆 Chọn các ngày cụ thể
-              </button>
-            </div>
-
-            {/* Chi tiết theo từng mode */}
-            {scopeMode === "whole_week" && (
-              <div style={{ background: "#f8fafc", padding: "10px 14px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: "#475569" }}>
-                ✨ Sẽ xin vắng tất cả các ngày làm việc trong tuần hiện tại:{" "}
-                <strong>{weekDays[0]?.displayDate} $\rightarrow$ {weekDays[weekDays.length - 1]?.displayDate}</strong>.
-              </div>
-            )}
-
-            {scopeMode === "date_range" && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, background: "#f8fafc", padding: 12, borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 4, display: "block" }}>
-                    Từ ngày (*):
-                  </label>
-                  <input
-                    type="date"
-                    min={todayStr}
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="form-control"
-                    style={{ fontWeight: 600, fontSize: 13 }}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setScopeMode("custom_days")}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: scopeMode === "custom_days" ? "#dc2626" : "#cbd5e1",
+                      background: scopeMode === "custom_days" ? "#fef2f2" : "#ffffff",
+                      color: scopeMode === "custom_days" ? "#b91c1c" : "#475569",
+                      flex: 1,
+                      textAlign: "center",
+                    }}
+                  >
+                    📆 Chọn ngày
+                  </button>
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 4, display: "block" }}>
-                    Đến ngày (*):
-                  </label>
-                  <input
-                    type="date"
-                    min={startDate || todayStr}
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="form-control"
-                    style={{ fontWeight: 600, fontSize: 13 }}
-                  />
-                </div>
+
+                {/* Chi tiết theo từng mode */}
+                {scopeMode === "whole_week" && (
+                  <div style={{ background: "#ffffff", padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 11.5, color: "#475569" }}>
+                    ✨ Áp dụng các ngày trong tuần:{" "}
+                    <strong>{weekDays[0]?.displayDate} → {weekDays[weekDays.length - 1]?.displayDate}</strong>.
+                  </div>
+                )}
+
+                {scopeMode === "date_range" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                    <div>
+                      <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", marginBottom: 3, display: "block" }}>
+                        Từ ngày (*):
+                      </label>
+                      <input
+                        type="date"
+                        min={todayStr}
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", marginBottom: 3, display: "block" }}>
+                        Đến ngày (*):
+                      </label>
+                      <input
+                        type="date"
+                        min={startDate || todayStr}
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {scopeMode === "custom_days" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                    {weekDays.map((d) => {
+                      const isChecked = selectedDates.includes(d.dateStr);
+                      const isPast = d.dateStr < todayStr;
+                      return (
+                        <button
+                          type="button"
+                          key={d.dateStr}
+                          disabled={isPast}
+                          onClick={() => handleToggleDate(d.dateStr)}
+                          style={{
+                            padding: "6px 2px",
+                            borderRadius: 6,
+                            border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
+                            background: isChecked ? "#fef2f2" : "#ffffff",
+                            color: isChecked ? "#b91c1c" : isPast ? "#94a3b8" : "#334155",
+                            fontWeight: isChecked ? 800 : 600,
+                            cursor: isPast ? "not-allowed" : "pointer",
+                            opacity: isPast ? 0.5 : 1,
+                            fontSize: 10.5,
+                            textAlign: "center",
+                          }}
+                        >
+                          <div>{d.dayName.replace("Thứ ", "T")}</div>
+                          <div style={{ fontSize: 9.5, opacity: 0.8 }}>{d.displayDate}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
 
-            {scopeMode === "custom_days" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, background: "#f8fafc", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                {weekDays.map((d) => {
-                  const isChecked = selectedDates.includes(d.dateStr);
-                  const isPast = d.dateStr < todayStr;
-                  return (
-                    <button
-                      type="button"
-                      key={d.dateStr}
-                      disabled={isPast}
-                      onClick={() => handleToggleDate(d.dateStr)}
-                      style={{
-                        padding: "8px 4px",
-                        borderRadius: 6,
-                        border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
-                        background: isChecked ? "#fef2f2" : "#ffffff",
-                        color: isChecked ? "#b91c1c" : isPast ? "#94a3b8" : "#334155",
-                        fontWeight: isChecked ? 800 : 600,
-                        cursor: isPast ? "not-allowed" : "pointer",
-                        opacity: isPast ? 0.5 : 1,
-                        fontSize: 11,
-                        textAlign: "center",
-                      }}
-                    >
-                      <div>{d.dayName.replace("Thứ ", "T")}</div>
-                      <div style={{ fontSize: 10, opacity: 0.8 }}>{d.displayDate}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 3. CHỌN CA ÁP DỤNG (SHIFTS SCOPE) */}
-          <div style={{ marginBottom: 16 }}>
-            <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, display: "block" }}>
-              ⚡ Ca làm việc xin nghỉ trong các ngày đã chọn:
-            </label>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-              <button
-                type="button"
-                onClick={() => setShiftScope("all")}
+              {/* 3. LÝ DO XIN VẮNG */}
+              <div
                 style={{
-                  padding: "5px 10px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: shiftScope === "all" ? "#dc2626" : "#cbd5e1",
-                  background: shiftScope === "all" ? "#fef2f2" : "#ffffff",
-                  color: shiftScope === "all" ? "#b91c1c" : "#475569",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  padding: "12px 14px",
                 }}
               >
-                🌟 Tất cả các ca (Ca 1 - Ca 9)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShiftScope("morning")}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: shiftScope === "morning" ? "#2563eb" : "#cbd5e1",
-                  background: shiftScope === "morning" ? "#eff6ff" : "#ffffff",
-                  color: shiftScope === "morning" ? "#1d4ed8" : "#475569",
-                }}
-              >
-                🌅 Ca Sáng (Ca 1, 2, 3)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShiftScope("afternoon")}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: shiftScope === "afternoon" ? "#ea580c" : "#cbd5e1",
-                  background: shiftScope === "afternoon" ? "#fff7ed" : "#ffffff",
-                  color: shiftScope === "afternoon" ? "#c2410c" : "#475569",
-                }}
-              >
-                ☀️ Ca Chiều (Ca 4, 5, 6)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShiftScope("evening")}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: shiftScope === "evening" ? "#7c3aed" : "#cbd5e1",
-                  background: shiftScope === "evening" ? "#f5f3ff" : "#ffffff",
-                  color: shiftScope === "evening" ? "#6d28d9" : "#475569",
-                }}
-              >
-                🌙 Ca Tối (Ca 7, 8, 9)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShiftScope("custom")}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor: shiftScope === "custom" ? "#0f172a" : "#cbd5e1",
-                  background: shiftScope === "custom" ? "#f1f5f9" : "#ffffff",
-                  color: shiftScope === "custom" ? "#0f172a" : "#475569",
-                }}
-              >
-                ⚙️ Tự chọn từng ca
-              </button>
-            </div>
-
-            {/* Custom shifts selector */}
-            {shiftScope === "custom" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, background: "#f8fafc", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                {SHIFTS.map((s) => {
-                  const isChecked = customShiftIds.includes(s.id);
-                  return (
-                    <button
-                      type="button"
-                      key={s.id}
-                      onClick={() => handleToggleShiftId(s.id)}
-                      style={{
-                        padding: "6px 8px",
-                        borderRadius: 6,
-                        border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
-                        background: isChecked ? "#fef2f2" : "#ffffff",
-                        color: isChecked ? "#b91c1c" : "#334155",
-                        fontWeight: isChecked ? 700 : 500,
-                        cursor: "pointer",
-                        fontSize: 11,
-                        textAlign: "left",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span>{s.name.split(" ")[0]} {s.name.split(" ")[1]}</span>
-                      <span>{isChecked ? "✓" : ""}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 4. PREVIEW SỐ CA ĐƯỢC ÁP DỤNG */}
-          <div
-            style={{
-              padding: "12px 14px",
-              background: affectedShifts.length > 0 ? "#fffbeb" : "#f1f5f9",
-              border: affectedShifts.length > 0 ? "1px solid #fde68a" : "1px solid #e2e8f0",
-              borderRadius: 10,
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
-              <Clock size={16} />
-              <span>
-                Tìm thấy {affectedShifts.length} ca trực thực tế trong lịch phù hợp với phạm vi xin nghỉ
-              </span>
-            </div>
-            {affectedShifts.length > 0 && (
-              <div style={{ fontSize: 11, color: "#78350f", marginTop: 4, lineHeight: 1.4 }}>
-                Các ca sẽ được chuyển sang trạng thái <strong>Chờ Quản lý duyệt</strong>:{" "}
-                {affectedShifts.slice(0, 8).map((s, idx) => (
-                  <span key={idx} style={{ background: "#ffffff", padding: "1px 6px", borderRadius: 4, border: "1px solid #fde68a", marginRight: 4, display: "inline-block", marginTop: 2 }}>
-                    Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")})
-                  </span>
-                ))}
-                {affectedShifts.length > 8 && ` ... và ${affectedShifts.length - 8} ca khác`}
-              </div>
-            )}
-          </div>
-
-          {/* 5. LÝ DO XIN VẮNG (*) */}
-          <div style={{ marginBottom: 18 }}>
-            <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, display: "block" }}>
-              📝 Lý do xin nghỉ (*):
-            </label>
-            <textarea
-              rows={3}
-              required
-              placeholder="Ví dụ: Bị ốm cần điều trị theo chỉ định bác sĩ, Về quê việc gia đình, Bận lịch thi học kỳ..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="form-control"
-              style={{ fontSize: 13 }}
-            />
-            {/* Quick reason pills */}
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-              {[
-                "Bị ốm / Sốt cần nghỉ ngơi",
-                "Về quê có việc gia đình đột xuất",
-                "Bận lịch thi / Học quân sự",
-                "Đi công tác / Nghiên cứu ngoài trường",
-              ].map((r) => (
-                <button
-                  type="button"
-                  key={r}
-                  onClick={() => setReason(r)}
+                <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", marginBottom: 6, display: "block", textTransform: "uppercase" }}>
+                  📝 3. Lý do xin nghỉ (*):
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="Ví dụ: Bận lịch thi học kỳ, việc gia đình đột xuất, ốm sốt..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
                   style={{
-                    background: "#f1f5f9",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 12,
-                    padding: "2px 8px",
-                    fontSize: 11,
-                    color: "#475569",
-                    cursor: "pointer",
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 13,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                    resize: "vertical"
                   }}
-                >
-                  + {r}
-                </button>
-              ))}
+                />
+                {/* Quick reason pills */}
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                  {[
+                    "Bị ốm / Sốt cần nghỉ ngơi",
+                    "Về quê có việc gia đình đột xuất",
+                    "Bận lịch thi / Học quân sự",
+                  ].map((r) => (
+                    <button
+                      type="button"
+                      key={r}
+                      onClick={() => setReason(r)}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 12,
+                        padding: "2px 7px",
+                        fontSize: 10.5,
+                        color: "#475569",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* CỘT PHẢI: CA TRỰC & XEM TRƯỚC */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* 4. CHỌN CA ÁP DỤNG */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", display: "block", textTransform: "uppercase" }}>
+                  ⚡ 4. Ca làm việc xin nghỉ:
+                </label>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShiftScope("all")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: shiftScope === "all" ? "#dc2626" : "#cbd5e1",
+                      background: shiftScope === "all" ? "#fef2f2" : "#ffffff",
+                      color: shiftScope === "all" ? "#b91c1c" : "#475569",
+                    }}
+                  >
+                    🌟 Tất cả 9 ca
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShiftScope("morning")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: shiftScope === "morning" ? "#2563eb" : "#cbd5e1",
+                      background: shiftScope === "morning" ? "#eff6ff" : "#ffffff",
+                      color: shiftScope === "morning" ? "#1d4ed8" : "#475569",
+                    }}
+                  >
+                    🌅 Sáng (1-3)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShiftScope("afternoon")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: shiftScope === "afternoon" ? "#ea580c" : "#cbd5e1",
+                      background: shiftScope === "afternoon" ? "#fff7ed" : "#ffffff",
+                      color: shiftScope === "afternoon" ? "#c2410c" : "#475569",
+                    }}
+                  >
+                    ☀️ Chiều (4-6)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShiftScope("evening")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: shiftScope === "evening" ? "#7c3aed" : "#cbd5e1",
+                      background: shiftScope === "evening" ? "#f5f3ff" : "#ffffff",
+                      color: shiftScope === "evening" ? "#6d28d9" : "#475569",
+                    }}
+                  >
+                    🌙 Tối (7-9)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShiftScope("custom")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: shiftScope === "custom" ? "#0f172a" : "#cbd5e1",
+                      background: shiftScope === "custom" ? "#f1f5f9" : "#ffffff",
+                      color: shiftScope === "custom" ? "#0f172a" : "#475569",
+                    }}
+                  >
+                    ⚙️ Tự chọn
+                  </button>
+                </div>
+
+                {shiftScope === "custom" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                    {SHIFTS.map((s) => {
+                      const isChecked = customShiftIds.includes(s.id);
+                      return (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => handleToggleShiftId(s.id)}
+                          style={{
+                            padding: "5px 6px",
+                            borderRadius: 6,
+                            border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
+                            background: isChecked ? "#fef2f2" : "#ffffff",
+                            color: isChecked ? "#b91c1c" : "#334155",
+                            fontWeight: isChecked ? 700 : 500,
+                            cursor: "pointer",
+                            fontSize: 10.5,
+                            textAlign: "left",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span>Ca {s.id}</span>
+                          <span>{isChecked ? "✓" : ""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. PREVIEW SỐ CA ĐƯỢC ÁP DỤNG */}
+              <div
+                style={{
+                  padding: "14px 16px",
+                  background: affectedShifts.length > 0 ? "#fffbeb" : "#f8fafc",
+                  border: affectedShifts.length > 0 ? "1.5px solid #fde68a" : "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
+                    <Clock size={16} />
+                    <span>
+                      Tìm thấy {affectedShifts.length} ca trực phù hợp trong lịch
+                    </span>
+                  </div>
+                  {affectedShifts.length > 0 ? (
+                    <div style={{ fontSize: 11, color: "#78350f", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
+                      Các ca này sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>:
+                      <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {affectedShifts.slice(0, 10).map((s, idx) => (
+                          <span key={idx} style={{ background: "#ffffff", padding: "2px 6px", borderRadius: 4, border: "1px solid #fde68a", fontSize: 10.5, fontWeight: 600 }}>
+                            Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")})
+                          </span>
+                        ))}
+                        {affectedShifts.length > 10 && (
+                          <span style={{ fontSize: 10.5, color: "#92400e", fontWeight: 700, padding: "2px 4px" }}>
+                            +{affectedShifts.length - 10} ca khác
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                      ℹ️ Chưa tìm thấy ca phân công nào của nhân sự trong khoảng thời gian đã chọn.
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 10, fontSize: 11, color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
+                  💡 Quản lý sẽ nhận được thông báo để phê duyệt hoặc từ chối đơn này.
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ================= ACTIONS ================= */}
+
+        {/* ================= ACTIONS ================= */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
             <button
               type="button"

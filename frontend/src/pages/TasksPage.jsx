@@ -1499,7 +1499,7 @@ export function TasksPage() {
   );
 }
 
-/* ================= MODAL COMPONENT: CREATE TASK (TIẾNG VIỆT CHUẨN) ================= */
+/* ================= MODAL COMPONENT: CREATE TASK (TIẾNG VIỆT CHUẨN - 2-COLUMN GROUPED) ================= */
 function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1549,8 +1549,8 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         position: "fixed",
         inset: 0,
         zIndex: 1100,
-        background: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(4px)",
+        background: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1561,161 +1561,346 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
       <div
         style={{
           background: "#ffffff",
-          borderRadius: 16,
+          borderRadius: 20,
           width: "100%",
-          maxWidth: 520,
+          maxWidth: 720,
           maxHeight: "90vh",
           overflowY: "auto",
-          padding: 24,
+          padding: "24px 28px",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          border: "1px solid #e2e8f0",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-            Tạo Nhiệm Vụ Mới (Quản Trị)
-          </h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
-            <X size={20} />
+        {/* HEADER */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, borderBottom: "1px solid #f1f5f9", paddingBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #2563eb, #3b82f6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                boxShadow: "0 4px 10px rgba(37, 99, 235, 0.25)"
+              }}
+            >
+              <CheckSquare size={22} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                Tạo Nhiệm Vụ Mới
+              </h3>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "2px 0 0 0" }}>
+                Khởi tạo công việc và phân công trưởng nhóm phụ trách
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#f1f5f9",
+              border: "none",
+              borderRadius: 8,
+              width: 32,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "#64748b",
+              transition: "all 0.15s"
+            }}
+          >
+            <X size={18} />
           </button>
         </div>
 
         {error && (
-          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
-            {error}
+          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 10, fontSize: 13, color: "#991b1b", marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Tiêu đề nhiệm vụ:
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="VD: Nghiên cứu tối ưu mạng nơ-ron..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Mô tả chi tiết:
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Nhập nội dung mô tả nhiệm vụ..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Loại nhiệm vụ:
-              </label>
-              <select
-                value={taskType}
-                onChange={(e) => setTaskType(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
-              >
-                <option value="RESEARCH">Nghiên cứu (Research)</option>
-                <option value="INDUSTRY">Dự án doanh nghiệp (Industry)</option>
-                <option value="OTHER">Khác (Other)</option>
-              </select>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* KHỐI 1: THÔNG TIN CỐT LÕI */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📋 1. Thông tin chung</span>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>
-                Trưởng nhóm phụ trách:
-              </label>
-              <select
-                value={leaderId}
-                onChange={(e) => setLeaderId(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
-              >
-                {allMembers.map((m) => {
-                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                  return (
-                    <option key={m.id} value={m.id}>
-                      {m.full_name} (@{m.username}) — [{roleBadge}]
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Ngày dự kiến:
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                Tiêu đề nhiệm vụ <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <input
-                type="date"
-                value={plannedDate}
-                onChange={(e) => setPlannedDate(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
+                type="text"
+                required
+                placeholder="VD: Nghiên cứu tối ưu mô hình mạng nơ-ron, nâng cấp hệ thống..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  outline: "none"
+                }}
               />
             </div>
 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Loại nhiệm vụ
+                </label>
+                <select
+                  value={taskType}
+                  onChange={(e) => setTaskType(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                >
+                  <option value="RESEARCH">🔬 Nghiên cứu (Research)</option>
+                  <option value="INDUSTRY">🏢 Dự án doanh nghiệp (Industry)</option>
+                  <option value="OTHER">📁 Khác (Other)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Trưởng nhóm phụ trách <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select
+                  value={leaderId}
+                  onChange={(e) => setLeaderId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                >
+                  {allMembers.map((m) => {
+                    const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} (@{m.username}) — [{roleBadge}]
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* KHỐI 2: KẾ HOẠCH & THỜI HẠN */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>⏱️ 2. Kế hoạch & Thời hạn</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Ngày dự kiến bắt đầu
+                </label>
+                <input
+                  type="date"
+                  value={plannedDate}
+                  onChange={(e) => setPlannedDate(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Hạn chót hoàn thành (Deadline)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* KHỐI 3: ĐỊA ĐIỂM & CHI TIẾT */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📍 3. Địa điểm & Mô tả chi tiết</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Địa điểm / Phòng Lab
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: Phòng Lab 301, Tòa nhà Beta..."
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Đối tác / Đơn vị yêu cầu
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: Viettel Digital, FPT Telecom, Khoa CNTT..."
+                  value={customerInfo}
+                  onChange={(e) => setCustomerInfo(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff"
+                  }}
+                />
+              </div>
+            </div>
+
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Hạn chót:
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                Mô tả chi tiết nhiệm vụ
               </label>
-              <input
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
+              <textarea
+                rows={3}
+                placeholder="Nhập nội dung, yêu cầu kỹ thuật và mục tiêu cần đạt được..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  resize: "vertical"
+                }}
               />
             </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Địa điểm / Phòng:
-            </label>
-            <input
-              type="text"
-              placeholder="VD: Phòng Lab 301..."
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Đối tác / Đơn vị yêu cầu:
-            </label>
-            <input
-              type="text"
-              placeholder="VD: Doanh nghiệp đối tác / Khoa CNTT..."
-              value={customerInfo}
-              onChange={(e) => setCustomerInfo(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+          {/* FOOTER ACTIONS */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
             <button
               type="button"
               onClick={onClose}
-              style={{ background: "#52525b", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              style={{
+                background: "#f1f5f9",
+                color: "#475569",
+                border: "1px solid #e2e8f0",
+                padding: "10px 20px",
+                borderRadius: 10,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+                transition: "all 0.15s ease"
+              }}
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={loading}
-              style={{ background: "#0d6efd", color: "#ffffff", border: "none", padding: "8px 24px", borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              style={{
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                color: "#ffffff",
+                border: "none",
+                padding: "10px 24px",
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                transition: "all 0.15s ease"
+              }}
             >
+              <CheckSquare size={16} />
               {loading ? "Đang lưu..." : "Lưu Nhiệm Vụ"}
             </button>
           </div>
@@ -1724,6 +1909,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
     </div>
   );
 }
+
 
 /* ================= MODAL COMPONENT: ADD SUBTASK (BỐ CỤC CHUẨN TIẾNG VIỆT) ================= */
 function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, onSuccess }) {
