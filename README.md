@@ -17,7 +17,7 @@
            ▼                                                 ▼
 ┌─────────────────────────────┐           ┌─────────────────────────────────┐
 │     Web Quản Lý Máy Tính    │           │    Web Kiosk Smart TV 50 Inch   │
-│     (frontend / Port: 5173) │           │   (tv-display / Port: 5174)     │
+│   (frontend / Port: 5173/schedule)  │           │   (frontend / Port: 5173 - Root) │
 │   • Phân ca tuần (T2 - T7)  │           │   • Giao diện Dark Kiosk 4K/FHD │
 │   • Chọn nhiều ca sự kiện   │           │   • Đồng hồ & đếm ngược ca trực │
 │   • Bảng KPI 20h/tuần       │           │   • Lịch trực 9 ca trong ngày   │
@@ -93,7 +93,6 @@ Hệ thống được cấu hình sẵn Docker Compose hoàn chỉnh gồm 4 d�
 1. **db**: PostgreSQL 16 Alpine
 2. **backend**: ASP.NET Core (.NET 10) Minimal API
 3. **frontend**: Web Quản lý React 19 (Nginx Reverse Proxy)
-4. **tv-display**: Kiosk Smart TV React 19 (Nginx Reverse Proxy)
 
 Khởi chạy 1 lệnh duy nhất:
 ```bash
@@ -102,7 +101,7 @@ docker compose up -d --build
 
 Truy cập các dịch vụ:
 - 🖥️ **Web Quản lý máy tính:** `http://localhost:3000`
-- 📺 **Màn hình Kiosk Smart TV:** `http://localhost:3001` (hoặc `http://<IP_LAN>:3001`)
+- 📺 **Màn hình Kiosk Smart TV:** `http://localhost:3000 (TV) hoặc http://localhost:3000/schedule (PC)` (hoặc `http://<IP_LAN>:3001`)
 - ⚙️ **Backend API REST:** `http://localhost:8001/api`
 - 🗄️ **PostgreSQL Database:** `localhost:5432`
 
@@ -132,9 +131,6 @@ npm run dev
 
 #### 3. Khởi chạy Màn Hình Kiosk TV
 ```bash
-cd tv-display
-npm install
-npm run dev
 ```
 > Màn hình TV Kiosk tại: `http://localhost:5174` (hoặc `http://<IP_LAN>:5174`)
 
@@ -164,7 +160,6 @@ work-management/
 │   │   ├── pages/            # SchedulePage, AdminPage, LoginPage...
 │   │   └── services/         # Axios API client
 │   └── package.json
-├── tv-display/               # Ứng dụng Kiosk Smart TV 50 inch (React + Vite)
 │   ├── src/                  # App trình chiếu toàn màn hình, đếm ngược ca
 │   └── package.json
 ├── data/                     # Thư mục chứa cơ sở dữ liệu SQLite
