@@ -24,7 +24,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  RotateCcw
 } from "lucide-react";
 
 const ROLE_LABELS = {
@@ -36,6 +37,18 @@ const ROLE_LABELS = {
   staff: { label: "Nhân viên", color: "#3b82f6", bg: "#eff6ff" },
   intern: { label: "Thực tập sinh", color: "#8b5cf6", bg: "#f3e8ff" },
   viewer: { label: "Người xem", color: "#6b7280", bg: "#f3f4f6" },
+};
+
+const TAB_TITLES = {
+  schedule: "Lịch ca",
+  tasks: "Nhiệm vụ",
+  notes: "Ghi chú",
+  feedback: "Góp ý",
+  staff: "Nhân sự",
+  history: "Lịch sử ca",
+  emails: "Nhật ký Mail",
+  smtp: "Cài đặt Mail",
+  tv: "TV Kiosk"
 };
 
 export function Navbar({ activeTab, setActiveTab }) {
@@ -111,11 +124,11 @@ export function Navbar({ activeTab, setActiveTab }) {
           style={{
             maxWidth: 1360,
             margin: "0 auto",
-            padding: "0 16px",
+            padding: "0 14px",
           }}
         >
           {/* ========================================================= */}
-          {/* 1. GIAO DIỆN NAVBAR DESKTOP (Màn hình máy tính >= 768px) */}
+          {/* 1. GIAO DIỆN NAVBAR DESKTOP (Màn hình lớn >= 1025px)     */}
           {/* ========================================================= */}
           <div className="navbar-desktop">
             {/* LOGO & BRAND */}
@@ -476,39 +489,53 @@ export function Navbar({ activeTab, setActiveTab }) {
           </div>
 
           {/* ========================================================= */}
-          {/* 2. GIAO DIỆN NAVBAR MOBILE HEADER (< 768px)               */}
+          {/* 2. GIAO DIỆN NAVBAR MOBILE & TABLET & LANDSCAPE (< 1025px)*/}
           {/* ========================================================= */}
           <div className="navbar-mobile">
-            {/* BRAND */}
+            {/* BRAND & ACTIVE TAB BADGE */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 9,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
                   background: "linear-gradient(135deg, #2563eb, #7c3aed)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#ffffff",
-                  boxShadow: "0 3px 8px rgba(37, 99, 235, 0.3)",
+                  boxShadow: "0 2px 6px rgba(37, 99, 235, 0.3)",
                 }}
               >
-                <Clock size={18} />
+                <Clock size={16} />
               </div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a" }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>
                 WorkShift<span style={{ color: "#2563eb" }}>Pro</span>
               </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: "#eff6ff",
+                  color: "#2563eb",
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  border: "1px solid #bfdbfe",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                {TAB_TITLES[activeTab] || activeTab}
+              </span>
             </div>
 
             {/* ACTION ICONS FOR MOBILE */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {/* Nút QR điện thoại */}
               <button
                 onClick={() => setShowMobileModal(true)}
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1px solid #e2e8f0",
                   background: "#f8fafc",
@@ -518,9 +545,9 @@ export function Navbar({ activeTab, setActiveTab }) {
                   color: "#2563eb",
                   cursor: "pointer",
                 }}
-                title="Mã QR mở trên điện thoại"
+                title="Mã QR & Link điện thoại"
               >
-                <Smartphone size={18} />
+                <Smartphone size={17} />
               </button>
 
               {/* Nút Thông báo */}
@@ -528,8 +555,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                 onClick={() => setIsOpen(true)}
                 style={{
                   position: "relative",
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1px solid #e2e8f0",
                   background: "#f8fafc",
@@ -540,7 +567,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   cursor: "pointer",
                 }}
               >
-                <Bell size={18} />
+                <Bell size={17} />
                 {unreadCount > 0 && (
                   <span
                     style={{
@@ -569,8 +596,8 @@ export function Navbar({ activeTab, setActiveTab }) {
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1.5px solid #2563eb",
                   background: mobileMenuOpen ? "#2563eb" : "#eff6ff",
@@ -583,7 +610,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                 }}
                 title="Menu tất cả chức năng"
               >
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
             </div>
           </div>
@@ -596,13 +623,13 @@ export function Navbar({ activeTab, setActiveTab }) {
           <div
             style={{
               position: "fixed",
-              top: 58,
+              top: 0,
               left: 0,
               right: 0,
               bottom: 0,
               backgroundColor: "rgba(15, 23, 42, 0.4)",
               backdropFilter: "blur(4px)",
-              zIndex: 95,
+              zIndex: 105,
               animation: "fadeIn 0.2s ease-out",
             }}
             onClick={() => setMobileMenuOpen(false)}
@@ -610,60 +637,82 @@ export function Navbar({ activeTab, setActiveTab }) {
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                width: "min(340px, 88vw)",
+                height: "100%",
                 backgroundColor: "#ffffff",
-                borderBottomLeftRadius: 20,
-                borderBottomRightRadius: 20,
-                padding: "16px",
-                maxHeight: "calc(100vh - 120px)",
-                overflowY: "auto",
-                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)",
+                boxShadow: "-8px 0 25px rgba(0, 0, 0, 0.15)",
                 display: "flex",
                 flexDirection: "column",
+                overflowY: "auto",
+                padding: "16px 14px",
                 gap: 12,
               }}
             >
+              {/* Drawer Top Header with close button */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Clock size={18} color="#2563eb" />
+                  <span style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>Menu Hệ Thống</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#64748b"
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
               {/* User profile row in drawer */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "12px",
+                  padding: "10px",
                   backgroundColor: "#f8fafc",
-                  borderRadius: 14,
+                  borderRadius: 12,
                   border: "1px solid #e2e8f0",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 12,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
                       background: userRoleMeta.bg,
                       color: userRoleMeta.color,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontWeight: 800,
-                      fontSize: 16,
+                      fontSize: 15,
                     }}
                   >
                     {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
                       {user?.full_name || user?.username}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                      <span style={{ fontSize: 11, color: userRoleMeta.color, fontWeight: 700 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+                      <span style={{ fontSize: 10, color: userRoleMeta.color, fontWeight: 700 }}>
                         {userRoleMeta.label}
                       </span>
-                      {user?.department && (
-                        <span style={{ fontSize: 11, color: "#64748b" }}>
-                          • {user.department}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -674,16 +723,34 @@ export function Navbar({ activeTab, setActiveTab }) {
                     setShowProfileModal(true);
                   }}
                   className="btn btn-sm btn-secondary"
-                  style={{ fontSize: 12, padding: "6px 10px" }}
+                  style={{ fontSize: 11, padding: "5px 8px" }}
                 >
-                  <Key size={13} />
+                  <Key size={12} />
                   <span>Đổi MK</span>
                 </button>
               </div>
 
+              {/* Landscape tip badge */}
+              <div
+                style={{
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                  fontSize: 11,
+                  color: "#1e40af",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RotateCcw size={14} color="#2563eb" style={{ flexShrink: 0 }} />
+                <span>Mẹo: Bạn có thể <strong>xoay ngang điện thoại</strong> để xem toàn bộ 9 ca làm việc cực kỳ rộng rãi!</span>
+              </div>
+
               {/* Menu items list */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "4px 8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "4px 8px" }}>
                   Chức Năng Chính
                 </div>
                 {mainNavItems.map((item) => {
@@ -697,28 +764,28 @@ export function Navbar({ activeTab, setActiveTab }) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "12px 14px",
-                        borderRadius: 10,
+                        padding: "10px 12px",
+                        borderRadius: 8,
                         border: "none",
                         background: isActive ? "#eff6ff" : "transparent",
                         color: isActive ? "#2563eb" : "#1e293b",
                         fontWeight: isActive ? 800 : 600,
-                        fontSize: 14,
+                        fontSize: 13,
                         cursor: "pointer",
                         textAlign: "left",
                         width: "100%",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Icon size={18} color={isActive ? "#2563eb" : "#64748b"} />
+                        <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
                         <span>{item.label}</span>
                       </div>
-                      <ChevronRight size={16} color={isActive ? "#2563eb" : "#cbd5e1"} />
+                      <ChevronRight size={15} color={isActive ? "#2563eb" : "#cbd5e1"} />
                     </button>
                   );
                 })}
 
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "8px 8px 4px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "6px 8px 2px" }}>
                   Hệ Thống & Quản Trị
                 </div>
                 {systemItems.map((item) => {
@@ -732,23 +799,23 @@ export function Navbar({ activeTab, setActiveTab }) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "12px 14px",
-                        borderRadius: 10,
+                        padding: "10px 12px",
+                        borderRadius: 8,
                         border: "none",
                         background: isActive ? "#eff6ff" : "transparent",
                         color: isActive ? "#2563eb" : "#1e293b",
                         fontWeight: isActive ? 800 : 600,
-                        fontSize: 14,
+                        fontSize: 13,
                         cursor: "pointer",
                         textAlign: "left",
                         width: "100%",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Icon size={18} color={isActive ? "#2563eb" : "#64748b"} />
+                        <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
                         <span>{item.label}</span>
                       </div>
-                      <ChevronRight size={16} color={isActive ? "#2563eb" : "#cbd5e1"} />
+                      <ChevronRight size={15} color={isActive ? "#2563eb" : "#cbd5e1"} />
                     </button>
                   );
                 })}
@@ -760,23 +827,23 @@ export function Navbar({ activeTab, setActiveTab }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "12px 14px",
-                    borderRadius: 10,
+                    padding: "10px 12px",
+                    borderRadius: 8,
                     border: "none",
                     background: activeTab === "tv" ? "#eff6ff" : "transparent",
                     color: activeTab === "tv" ? "#2563eb" : "#1e293b",
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 13,
                     cursor: "pointer",
                     textAlign: "left",
                     width: "100%",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Tv size={18} color="#2563eb" />
+                    <Tv size={16} color="#2563eb" />
                     <span>Màn hình Kiosk TV (/tv)</span>
                   </div>
-                  <ChevronRight size={16} color="#cbd5e1" />
+                  <ChevronRight size={15} color="#cbd5e1" />
                 </button>
 
                 {/* Mã QR điện thoại */}
@@ -789,28 +856,28 @@ export function Navbar({ activeTab, setActiveTab }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "12px 14px",
-                    borderRadius: 10,
+                    padding: "10px 12px",
+                    borderRadius: 8,
                     border: "none",
                     background: "transparent",
                     color: "#0f172a",
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 13,
                     cursor: "pointer",
                     textAlign: "left",
                     width: "100%",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Smartphone size={18} color="#7c3aed" />
+                    <Smartphone size={16} color="#7c3aed" />
                     <span>Mã QR kết nối Điện thoại</span>
                   </div>
-                  <ChevronRight size={16} color="#cbd5e1" />
+                  <ChevronRight size={15} color="#cbd5e1" />
                 </button>
               </div>
 
               {/* Drawer footer with logout */}
-              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: 4 }}>
+              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 10, marginTop: "auto" }}>
                 <button
                   onClick={logout}
                   style={{
@@ -819,18 +886,18 @@ export function Navbar({ activeTab, setActiveTab }) {
                     justifyContent: "center",
                     gap: 8,
                     width: "100%",
-                    padding: "12px",
-                    borderRadius: 10,
+                    padding: "10px",
+                    borderRadius: 8,
                     border: "1.5px solid #fecaca",
                     background: "#fef2f2",
                     color: "#dc2626",
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 13,
                     cursor: "pointer",
                   }}
                 >
-                  <LogOut size={16} />
-                  <span>Đăng xuất tài khoản</span>
+                  <LogOut size={15} />
+                  <span>Đăng xuất</span>
                 </button>
               </div>
             </div>
@@ -853,13 +920,13 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "6px 0",
+            padding: "4px 0",
             color: activeTab === "schedule" ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
           }}
         >
-          <Calendar size={20} color={activeTab === "schedule" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "schedule" ? 800 : 600, marginTop: 3 }}>
+          <Calendar size={18} color={activeTab === "schedule" ? "#2563eb" : "#64748b"} />
+          <span style={{ fontSize: 10, fontWeight: activeTab === "schedule" ? 800 : 600, marginTop: 2 }}>
             Lịch ca
           </span>
         </button>
@@ -875,13 +942,13 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "6px 0",
+            padding: "4px 0",
             color: activeTab === "tasks" ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
           }}
         >
-          <CheckSquare size={20} color={activeTab === "tasks" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "tasks" ? 800 : 600, marginTop: 3 }}>
+          <CheckSquare size={18} color={activeTab === "tasks" ? "#2563eb" : "#64748b"} />
+          <span style={{ fontSize: 10, fontWeight: activeTab === "tasks" ? 800 : 600, marginTop: 2 }}>
             Nhiệm vụ
           </span>
         </button>
@@ -897,13 +964,13 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "6px 0",
+            padding: "4px 0",
             color: activeTab === "notes" ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
           }}
         >
-          <FileText size={20} color={activeTab === "notes" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "notes" ? 800 : 600, marginTop: 3 }}>
+          <FileText size={18} color={activeTab === "notes" ? "#2563eb" : "#64748b"} />
+          <span style={{ fontSize: 10, fontWeight: activeTab === "notes" ? 800 : 600, marginTop: 2 }}>
             Ghi chú
           </span>
         </button>
@@ -919,13 +986,13 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "6px 0",
+            padding: "4px 0",
             color: activeTab === "feedback" ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
           }}
         >
-          <MessageSquare size={20} color={activeTab === "feedback" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "feedback" ? 800 : 600, marginTop: 3 }}>
+          <MessageSquare size={18} color={activeTab === "feedback" ? "#2563eb" : "#64748b"} />
+          <span style={{ fontSize: 10, fontWeight: activeTab === "feedback" ? 800 : 600, marginTop: 2 }}>
             Góp ý
           </span>
         </button>
@@ -941,14 +1008,14 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "6px 0",
+            padding: "4px 0",
             color: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
           }}
         >
-          <Menu size={20} color={(mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? 800 : 600, marginTop: 3 }}>
-            Thêm
+          <Menu size={18} color={(mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b"} />
+          <span style={{ fontSize: 10, fontWeight: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? 800 : 600, marginTop: 2 }}>
+            Menu
           </span>
         </button>
       </nav>

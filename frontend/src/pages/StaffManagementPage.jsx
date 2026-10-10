@@ -445,7 +445,7 @@ export function StaffManagementPage() {
         marginBottom: 20,
       }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--text-main)", marginBottom: 4 }}>
+          <h1 style={{ fontSize: "clamp(18px, 3.5vw, 24px)", fontWeight: 800, color: "var(--text-main)", marginBottom: 4 }}>
             Quản Lý Tổ Chức & Nhân Sự
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
@@ -485,13 +485,16 @@ export function StaffManagementPage() {
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
+      {/* Sub-Navigation Tabs (Touch-scrollable on mobile) */}
       <div style={{
         display: "flex",
         gap: 8,
         borderBottom: "1px solid var(--border)",
-        marginBottom: 24,
-        paddingBottom: 2
+        marginBottom: 20,
+        paddingBottom: 2,
+        overflowX: "auto",
+        whiteSpace: "nowrap",
+        WebkitOverflowScrolling: "touch",
       }}>
         <button
           onClick={() => setActiveTab("staff")}

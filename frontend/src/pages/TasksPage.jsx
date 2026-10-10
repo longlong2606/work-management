@@ -279,7 +279,7 @@ export function TasksPage() {
               <CheckSquare size={24} />
             </div>
             <div>
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
+              <h1 style={{ fontSize: "clamp(17px, 3.5vw, 22px)", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
                 Nhiệm Vụ & Phân Công Dự Án (Tasks & Checklist)
               </h1>
               <p style={{ margin: "2px 0 0 0", fontSize: 13, color: "#64748b" }}>
