@@ -401,7 +401,7 @@ body {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    height: 54px;
+    height: 52px;
   }
 
   .mobile-bottom-bar {
@@ -411,26 +411,20 @@ body {
     left: 0;
     right: 0;
     height: 58px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(226, 232, 240, 0.85);
     z-index: 99;
     align-items: center;
     justify-content: space-around;
     padding: 0 4px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05);
+    padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
   }
 
   main {
     padding-bottom: 75px !important;
-  }
-
-  /* Compact padding on all pages */
-  .page-container,
-  main > div {
-    padding: 14px 10px !important;
   }
 
   .card, .glass-card {
@@ -454,54 +448,66 @@ body {
 /* SPECIFIC MOBILE LANDSCAPE PHONE OPTIMIZATIONS (Height <= 550px) */
 @media (max-height: 550px) {
   .navbar-mobile {
-    height: 44px !important;
+    height: 42px !important;
     padding: 0 4px !important;
   }
 
-  /* On landscape phone: compact slim bottom bar to save vertical space */
   .mobile-bottom-bar {
-    height: 40px !important;
+    height: 38px !important;
     padding: 0 2px !important;
   }
 
   .mobile-bottom-bar span {
-    font-size: 9px !important;
-    margin-top: 1px !important;
+    font-size: 8.5px !important;
+    margin-top: 0px !important;
   }
 
   .mobile-bottom-bar svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 15px !important;
+    height: 15px !important;
   }
 
   main {
-    padding-bottom: 48px !important;
+    padding-bottom: 44px !important;
   }
 
-  /* Header title compact in landscape */
   h1 {
-    font-size: 18px !important;
+    font-size: 17px !important;
   }
 
-  /* Modal on landscape phone: full scrollability without clipping */
   .modal-overlay {
-    padding: 6px !important;
+    padding: 4px !important;
     align-items: center !important;
   }
 
   .modal-content, .glass-card {
-    max-height: 94vh !important;
-    padding: 12px 14px !important;
+    max-height: 95vh !important;
+    padding: 10px 12px !important;
     overflow-y: auto !important;
   }
 }
 
-/* Touch & viewport stability */
-html, body {
+/* Global body & html stability: use overflow-x: clip so position: sticky is preserved! */
+html {
+  box-sizing: border-box;
+  -webkit-text-size-adjust: 100%;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+body {
+  overflow-x: clip;
   max-width: 100vw;
-  overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 div[style*="overflowX: auto"],

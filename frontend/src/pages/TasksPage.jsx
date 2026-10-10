@@ -22,6 +22,22 @@ import {
   PauseCircle
 } from "lucide-react";
 
+function formatDeadline(deadlineStr) {
+  if (!deadlineStr) return "Không có";
+  try {
+    const d = new Date(deadlineStr);
+    if (isNaN(d.getTime())) return deadlineStr;
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${hours}:${minutes} • ${day}/${month}/${year}`;
+  } catch {
+    return deadlineStr;
+  }
+}
+
 export function TasksPage() {
   const { user, isAdmin } = useAuth();
   const [tasks, setTasks] = useState([]);
@@ -232,7 +248,7 @@ export function TasksPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1360, margin: "0 auto", padding: "24px 20px" }}>
+    <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 12px", boxSizing: "border-box" }}>
       {/* TOAST ALERT */}
       {toast.text && (
         <div
@@ -318,45 +334,45 @@ export function TasksPage() {
       </div>
 
       {/* METRIC CARDS */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
-        <div style={{ background: "#ffffff", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: 10, marginBottom: 16 }}>
+        <div style={{ background: "#ffffff", padding: "12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Tổng số nhiệm vụ</span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ListTodo size={18} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Tất cả nhiệm vụ</span>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ListTodo size={15} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginTop: 8 }}>{totalCount}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginTop: 4 }}>{totalCount}</div>
         </div>
 
-        <div style={{ background: "#ffffff", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+        <div style={{ background: "#ffffff", padding: "12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Đang triển khai</span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fffbeb", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Clock size={18} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Đang triển khai</span>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#fffbeb", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Clock size={15} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#d97706", marginTop: 8 }}>{inProgressCount}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#d97706", marginTop: 4 }}>{inProgressCount}</div>
         </div>
 
-        <div style={{ background: "#ffffff", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+        <div style={{ background: "#ffffff", padding: "12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Checklist Chờ Duyệt</span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fef3c7", color: "#b45309", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <AlertCircle size={18} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Checklist Chờ Duyệt</span>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#fef3c7", color: "#b45309", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AlertCircle size={15} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#b45309", marginTop: 8 }}>{needsReviewCount}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#b45309", marginTop: 4 }}>{needsReviewCount}</div>
         </div>
 
-        <div style={{ background: "#ffffff", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+        <div style={{ background: "#ffffff", padding: "12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Đã nghiệm thu</span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#ecfdf5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CheckCircle2 size={18} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Đã nghiệm thu</span>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#ecfdf5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CheckCircle2 size={15} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#059669", marginTop: 8 }}>{finishedCount}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#059669", marginTop: 4 }}>{finishedCount}</div>
         </div>
       </div>
 
@@ -364,24 +380,32 @@ export function TasksPage() {
       <div
         style={{
           background: "#ffffff",
-          padding: "16px 20px",
+          padding: "12px 14px",
           borderRadius: 14,
           border: "1px solid #e2e8f0",
-          marginBottom: 24,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 16,
+          marginBottom: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
         }}
       >
-        {/* TABS */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        {/* HORIZONTAL TOUCH PILL TABS */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            overflowX: "auto",
+            paddingBottom: 8,
+            marginBottom: 10,
+            WebkitOverflowScrolling: "touch",
+            whiteSpace: "nowrap",
+            scrollbarWidth: "none",
+          }}
+        >
           {[
-            { id: "all", label: "Tất cả nhiệm vụ", icon: ListTodo },
+            { id: "all", label: "Tất cả", count: totalCount, icon: ListTodo },
             { id: "my_tasks", label: "Việc của tôi", icon: User },
             { id: "needs_review", label: "Cần duyệt", count: needsReviewCount, icon: AlertCircle },
-            { id: "finished", label: "Đã hoàn thành", icon: CheckCircle2 },
+            { id: "finished", label: "Đã hoàn thành", count: finishedCount, icon: CheckCircle2 },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -390,31 +414,34 @@ export function TasksPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   gap: 6,
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 700,
+                  padding: "7px 14px",
+                  borderRadius: 20,
+                  fontSize: 12.5,
+                  fontWeight: isActive ? 800 : 600,
                   cursor: "pointer",
-                  border: isActive ? "1.5px solid #2563eb" : "1px solid #e2e8f0",
-                  background: isActive ? "#eff6ff" : "#ffffff",
-                  color: isActive ? "#1d4ed8" : "#64748b",
+                  border: isActive ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0",
+                  background: isActive ? "#2563eb" : "#ffffff",
+                  color: isActive ? "#ffffff" : "#475569",
+                  boxShadow: isActive ? "0 3px 8px rgba(37,99,235,0.25)" : "none",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
               >
-                <Icon size={16} />
+                <Icon size={14} color={isActive ? "#ffffff" : "#64748b"} />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
                   <span
                     style={{
-                      background: isActive ? "#2563eb" : "#f59e0b",
-                      color: "#ffffff",
+                      background: isActive ? "rgba(255,255,255,0.25)" : "#f1f5f9",
+                      color: isActive ? "#ffffff" : (tab.id === "needs_review" ? "#d97706" : "#64748b"),
                       fontSize: 11,
                       fontWeight: 800,
                       padding: "1px 6px",
                       borderRadius: 10,
+                      marginLeft: 2,
                     }}
                   >
                     {tab.count}
@@ -425,22 +452,24 @@ export function TasksPage() {
           })}
         </div>
 
-        {/* SEARCH & TYPE FILTER */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+        {/* SEARCH & TYPE FILTER (FULL WIDTH FLEX) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
+          <div style={{ position: "relative", flex: "1 1 180px" }}>
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             <input
               type="text"
               placeholder="Tìm theo tên, địa điểm..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
-                padding: "8px 12px 8px 32px",
+                width: "100%",
+                padding: "8px 10px 8px 30px",
                 borderRadius: 8,
                 border: "1px solid #cbd5e1",
                 fontSize: 13,
-                width: 200,
                 outline: "none",
+                background: "#ffffff",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -449,6 +478,8 @@ export function TasksPage() {
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{
+              flex: "0 1 auto",
+              minWidth: 140,
               padding: "8px 12px",
               borderRadius: 8,
               border: "1px solid #cbd5e1",
@@ -458,6 +489,7 @@ export function TasksPage() {
               fontWeight: 600,
               outline: "none",
               cursor: "pointer",
+              boxSizing: "border-box",
             }}
           >
             <option value="all">Mọi loại nhiệm vụ</option>
@@ -510,7 +542,7 @@ export function TasksPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(410px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 20 }}>
           {tasks.map((task) => {
             const typeBadge = getTypeBadge(task.task_type);
             const statusBadge = getStatusBadge(task.status);
@@ -613,7 +645,7 @@ export function TasksPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <Clock size={14} color="#64748b" />
                       <span>
-                        Hạn chót: <strong>{task.deadline}</strong>
+                        Hạn chót: <strong>{formatDeadline(task.deadline)}</strong>
                       </span>
                     </div>
 
@@ -654,7 +686,7 @@ export function TasksPage() {
                 </div>
 
                 {/* BOTTOM ACTIONS */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #f1f5f9", paddingTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #f1f5f9", paddingTop: 12, flexWrap: "wrap", gap: 8 }}>
                   <button
                     onClick={() => openTaskDetail(task)}
                     style={{

@@ -118,6 +118,7 @@ export function Navbar({ activeTab, setActiveTab }) {
           top: 0,
           zIndex: 100,
           boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.04)",
+          width: "100%",
         }}
       >
         <div
@@ -906,96 +907,56 @@ export function Navbar({ activeTab, setActiveTab }) {
       </header>
 
       {/* ========================================================= */}
-      {/* 4. THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO DI ĐỘNG (BOTTOM BAR)     */}
+      {/* 4. THANH ĐIỀU HƯỚNG DƯỚI CÙNG (BOTTOM BAR PREMIUM CAPSULE) */}
       {/* ========================================================= */}
       <nav className="mobile-bottom-bar">
-        <button
-          onClick={() => handleSelectTab("schedule")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "4px 0",
-            color: activeTab === "schedule" ? "#2563eb" : "#64748b",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <Calendar size={18} color={activeTab === "schedule" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "schedule" ? 800 : 600, marginTop: 2 }}>
-            Lịch ca
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleSelectTab("tasks")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "4px 0",
-            color: activeTab === "tasks" ? "#2563eb" : "#64748b",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <CheckSquare size={18} color={activeTab === "tasks" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "tasks" ? 800 : 600, marginTop: 2 }}>
-            Nhiệm vụ
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleSelectTab("notes")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "4px 0",
-            color: activeTab === "notes" ? "#2563eb" : "#64748b",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <FileText size={18} color={activeTab === "notes" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "notes" ? 800 : 600, marginTop: 2 }}>
-            Ghi chú
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleSelectTab("feedback")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "4px 0",
-            color: activeTab === "feedback" ? "#2563eb" : "#64748b",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <MessageSquare size={18} color={activeTab === "feedback" ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: activeTab === "feedback" ? 800 : 600, marginTop: 2 }}>
-            Góp ý
-          </span>
-        </button>
+        {[
+          { id: "schedule", label: "Lịch ca", icon: Calendar },
+          { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
+          { id: "notes", label: "Ghi chú", icon: FileText },
+          { id: "feedback", label: "Góp ý", icon: MessageSquare },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleSelectTab(item.id)}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                flex: 1,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 0",
+                color: isActive ? "#2563eb" : "#64748b",
+                transition: "all 0.15s ease",
+                userSelect: "none",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 26,
+                  borderRadius: 13,
+                  background: isActive ? "#eff6ff" : "transparent",
+                  transition: "background 0.15s ease",
+                }}
+              >
+                <Icon size={18} color={isActive ? "#2563eb" : "#64748b"} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, marginTop: 1 }}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
 
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1008,13 +969,26 @@ export function Navbar({ activeTab, setActiveTab }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            padding: "4px 0",
+            padding: "2px 0",
             color: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b",
             transition: "all 0.15s ease",
+            userSelect: "none",
           }}
         >
-          <Menu size={18} color={(mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b"} />
-          <span style={{ fontSize: 10, fontWeight: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? 800 : 600, marginTop: 2 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 26,
+              borderRadius: 13,
+              background: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#eff6ff" : "transparent",
+            }}
+          >
+            <Menu size={18} color={(mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b"} strokeWidth={2} />
+          </div>
+          <span style={{ fontSize: 10, fontWeight: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? 800 : 600, marginTop: 1 }}>
             Menu
           </span>
         </button>
