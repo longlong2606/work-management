@@ -283,6 +283,28 @@ public static class Database
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (shift_id) REFERENCES shift_templates(id)
             );
+
+            CREATE TABLE IF NOT EXISTS roles (
+                id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                description TEXT,
+                color TEXT DEFAULT '#3b82f6',
+                is_system INTEGER DEFAULT 0,
+                can_manage_schedule INTEGER DEFAULT 0,
+                can_manage_tasks INTEGER DEFAULT 0,
+                can_manage_staff INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS departments (
+                id {pk},
+                name TEXT UNIQUE NOT NULL,
+                code TEXT,
+                description TEXT,
+                manager_name TEXT,
+                color TEXT DEFAULT '#3b82f6',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
             ");
 
             // Backward compatibility for existing databases
@@ -297,6 +319,58 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN actual_hours REAL;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
+
+            // 0. Synchronize standard Roles
+            var defaultRoles = new[]
+            {
+                new { id = "admin", name = "Quản trị viên (Admin)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
+                new { id = "manager", name = "Quản lý (Manager)", desc = "Quản lý nhân sự, phân công ca, duyệt đề xuất và theo dõi vận hành", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
+                new { id = "leader", name = "Trưởng ca / Tổ trưởng (Leader)", desc = "Điều hành ca trực, giao và duyệt nhiệm vụ checklist, điểm danh nhân viên", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0 },
+                new { id = "supervisor", name = "Giám sát viên (Supervisor)", desc = "Giám sát quy trình ca trực, kiểm tra báo cáo và lịch sử vận hành", color = "#d97706", is_sys = 1, cms = 0, cmt = 1, cmu = 0 },
+                new { id = "technician", name = "Kỹ thuật viên (Technician)", desc = "Trực kỹ thuật chuyên môn, xử lý sự cố thiết bị và thực hiện nhiệm vụ", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
+                new { id = "staff", name = "Nhân viên trực (Staff)", desc = "Nhận ca trực, thực hiện checklist nhiệm vụ, đổi ca và báo vắng", color = "#3b82f6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
+                new { id = "intern", name = "Thực tập sinh (Intern)", desc = "Tham gia trực hỗ trợ, học việc, thực hiện công việc được phân công", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
+                new { id = "viewer", name = "Người xem (Viewer)", desc = "Chỉ xem lịch trực và màn hình TV kiosk, không thao tác sửa đổi", color = "#6b7280", is_sys = 1, cms = 0, cmt = 0, cmu = 0 }
+            };
+            foreach (var r in defaultRoles)
+            {
+                conn.Execute(@"
+                    INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff)
+                    VALUES (@id, @name, @desc, @color, @is_sys, @cms, @cmt, @cmu)
+                    ON CONFLICT (id) DO UPDATE SET
+                        display_name = EXCLUDED.display_name,
+                        description = EXCLUDED.description,
+                        color = EXCLUDED.color,
+                        is_system = EXCLUDED.is_system,
+                        can_manage_schedule = EXCLUDED.can_manage_schedule,
+                        can_manage_tasks = EXCLUDED.can_manage_tasks,
+                        can_manage_staff = EXCLUDED.can_manage_staff", r);
+            }
+
+            // 0.1 Synchronize standard Departments
+            var defaultDepts = new[]
+            {
+                new { name = "Tổ Trực Vận Hành", code = "VAN_HANH", desc = "Chịu trách nhiệm trực giám sát và vận hành thiết bị phòng máy", mgr = "Quản Lý Vận Hành", color = "#2563eb" },
+                new { name = "Tổ Trực Kỹ Thuật", code = "KY_THUAT", desc = "Xử lý sự cố phần cứng, mạng và bảo trì định kỳ", mgr = "Nguyễn Văn Cường", color = "#059669" },
+                new { name = "Tổ Dịch Vụ Sinh Viên", code = "DICH_VU", desc = "Hỗ trợ sinh viên mượn trả phòng máy và giải đáp thắc mắc", mgr = "Trần Thị Bình", color = "#0891b2" },
+                new { name = "Hỗ Trợ Kỹ Thuật", code = "HO_TRO", desc = "Hỗ trợ kỹ thuật ứng cứu nhanh và trực hotline", mgr = "Lê Văn An", color = "#d97706" },
+                new { name = "Kỹ Thuật Hạ Tầng", code = "HA_TANG", desc = "Quản lý hệ thống máy chủ, lưu điện UPS và điều hòa phòng server", mgr = "Quản Lý Vận Hành", color = "#7c3aed" },
+                new { name = "Vận Hành Mạng", code = "MANG_NOC", desc = "Giám sát băng thông và an ninh mạng nội bộ", mgr = "Quản Lý Vận Hành", color = "#0284c7" },
+                new { name = "Chăm Sóc Khách Hàng", code = "CSKH", desc = "Tiếp nhận phản hồi và đánh giá chất lượng dịch vụ phòng máy", mgr = "Quản Lý Vận Hành", color = "#ec4899" },
+                new { name = "Giám Sát Ca Đêm", code = "CA_DEM", desc = "Trực ca đêm và tuần tra an toàn thiết bị phòng máy", mgr = "Lê Văn An", color = "#f59e0b" },
+                new { name = "Ban Quản Trị", code = "BAN_QT", desc = "Ban quản lý và điều hành chung hệ thống Lab", mgr = "Quản Lý Vận Hành", color = "#6366f1" }
+            };
+            foreach (var d in defaultDepts)
+            {
+                conn.Execute(@"
+                    INSERT INTO departments (name, code, description, manager_name, color)
+                    VALUES (@name, @code, @desc, @mgr, @color)
+                    ON CONFLICT (name) DO UPDATE SET
+                        code = EXCLUDED.code,
+                        description = EXCLUDED.description,
+                        manager_name = EXCLUDED.manager_name,
+                        color = EXCLUDED.color", d);
+            }
 
             // 1. Synchronize shift templates
             var shifts = new[]

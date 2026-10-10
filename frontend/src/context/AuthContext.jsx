@@ -54,10 +54,26 @@ export function AuthProvider({ children }) {
   };
 
   const isAdmin = user?.role === "admin";
-  const isLeader = user?.role === "leader";
+  const isManager = user?.role === "admin" || user?.role === "manager";
+  const isLeader = user?.role === "admin" || user?.role === "manager" || user?.role === "leader";
+  const isSupervisor = user?.role === "admin" || user?.role === "manager" || user?.role === "leader" || user?.role === "supervisor";
+  const canManageStaff = user?.role === "admin" || user?.role === "manager";
+  const canManageSchedule = user?.role === "admin" || user?.role === "manager" || user?.role === "leader";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isLeader, loading, updateCurrentUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      isAdmin, 
+      isManager,
+      isLeader, 
+      isSupervisor,
+      canManageStaff,
+      canManageSchedule,
+      loading, 
+      updateCurrentUser 
+    }}>
       {children}
     </AuthContext.Provider>
   );

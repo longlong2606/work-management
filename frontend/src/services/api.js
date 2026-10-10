@@ -85,6 +85,40 @@ export const api = {
       body: JSON.stringify(userData),
     }),
 
+  // Roles Management
+  getRoles: () => request("/roles"),
+  createRole: (roleData) =>
+    request("/roles", {
+      method: "POST",
+      body: JSON.stringify(roleData),
+    }),
+  updateRole: (roleId, roleData) =>
+    request(`/roles/${roleId}`, {
+      method: "PUT",
+      body: JSON.stringify(roleData),
+    }),
+  deleteRole: (roleId) =>
+    request(`/roles/${roleId}`, {
+      method: "DELETE",
+    }),
+
+  // Departments Management
+  getDepartments: () => request("/departments"),
+  createDepartment: (deptData) =>
+    request("/departments", {
+      method: "POST",
+      body: JSON.stringify(deptData),
+    }),
+  updateDepartment: (deptId, deptData) =>
+    request(`/departments/${deptId}`, {
+      method: "PUT",
+      body: JSON.stringify(deptData),
+    }),
+  deleteDepartment: (deptId) =>
+    request(`/departments/${deptId}`, {
+      method: "DELETE",
+    }),
+
   // Shifts
   getShiftTemplates: () => request("/shifts/templates"),
   getSchedule: (startDate, endDate) =>

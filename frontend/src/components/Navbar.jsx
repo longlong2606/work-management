@@ -1,3 +1,14 @@
+const ROLE_LABELS = {
+  admin: { label: "Quản trị viên", color: "#7c3aed", bg: "#ede9fe" },
+  manager: { label: "Quản lý", color: "#2563eb", bg: "#dbeafe" },
+  leader: { label: "Trưởng ca", color: "#059669", bg: "#d1fae5" },
+  supervisor: { label: "Giám sát viên", color: "#d97706", bg: "#fef3c7" },
+  technician: { label: "Kỹ thuật viên", color: "#0891b2", bg: "#cffafe" },
+  staff: { label: "Nhân viên", color: "#3b82f6", bg: "#eff6ff" },
+  intern: { label: "Thực tập sinh", color: "#8b5cf6", bg: "#f3e8ff" },
+  viewer: { label: "Người xem", color: "#6b7280", bg: "#f3f4f6" },
+};
+
 ﻿import React, { useState, useRef, useEffect } from "react";
 import ProfileModal from "./ProfileModal";
 import { useAuth } from "../context/AuthContext";
@@ -22,7 +33,7 @@ import {
 } from "lucide-react";
 
 export function Navbar({ activeTab, setActiveTab }) {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, canManageStaff } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -47,7 +58,7 @@ export function Navbar({ activeTab, setActiveTab }) {
     { id: "feedback", label: "Góp ý", icon: MessageSquare },
   ];
 
-  if (isAdmin) {
+  if (canManageStaff) {
     mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users });
   }
 
@@ -357,8 +368,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: isAdmin ? "#ede9fe" : "#dbeafe",
-                color: isAdmin ? "#6d28d9" : "#1d4ed8",
+                background: ROLE_LABELS[user?.role]?.bg || "#dbeafe",
+                color: ROLE_LABELS[user?.role]?.color || "#1d4ed8",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -373,15 +384,14 @@ export function Navbar({ activeTab, setActiveTab }) {
                 {user?.full_name || user?.username}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
-                {isAdmin ? (
-                  <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-                    <ShieldCheck size={10} /> Admin
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 10, color: "#2563eb", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-                    <UserCheck size={10} /> Nhân viên
-                  </span>
-                )}
+                {(() => {
+                  const meta = ROLE_LABELS[user?.role] || { label: user?.role || "Nhân viên", color: "#2563eb", bg: "#eff6ff" };
+                  return (
+                    <span style={{ fontSize: 10, color: meta.color, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+                      <ShieldCheck size={10} /> {meta.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>

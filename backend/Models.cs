@@ -233,3 +233,65 @@ public record ReviewSubtaskRequest(
     bool approve,
     string? comment
 );
+
+public class RoleEntity
+{
+    public string id { get; set; } = "";
+    public string display_name { get; set; } = "";
+    public string? description { get; set; }
+    public string? color { get; set; } = "#3b82f6";
+    public bool is_system { get; set; } = false;
+    public bool can_manage_schedule { get; set; } = false;
+    public bool can_manage_tasks { get; set; } = false;
+    public bool can_manage_staff { get; set; } = false;
+    public int user_count { get; set; } = 0;
+    public string? created_at { get; set; }
+}
+
+public record CreateRoleRequest(
+    string id,
+    string display_name,
+    string? description,
+    string? color = "#3b82f6",
+    bool can_manage_schedule = false,
+    bool can_manage_tasks = false,
+    bool can_manage_staff = false
+);
+
+public record UpdateRoleRequest(
+    string display_name,
+    string? description,
+    string? color,
+    bool can_manage_schedule = false,
+    bool can_manage_tasks = false,
+    bool can_manage_staff = false
+);
+
+public class DepartmentEntity
+{
+    public long id { get; set; }
+    public string name { get; set; } = "";
+    public string? code { get; set; }
+    public string? description { get; set; }
+    public string? manager_name { get; set; }
+    public string? color { get; set; } = "#3b82f6";
+    public int member_count { get; set; } = 0;
+    public string? created_at { get; set; }
+}
+
+public record CreateDepartmentRequest(
+    string name,
+    string? code,
+    string? description,
+    string? manager_name,
+    string? color = "#3b82f6"
+);
+
+public record UpdateDepartmentRequest(
+    string name,
+    string? code,
+    string? description,
+    string? manager_name,
+    string? color = "#3b82f6"
+);
+
