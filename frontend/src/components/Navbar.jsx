@@ -295,7 +295,7 @@ export function Navbar({ activeTab, setActiveTab }) {
               cursor: "pointer",
               transition: "all 0.15s ease"
             }}
-            title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn / hoặc /tv)"
+            title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn /tv)"
           >
             <Tv size={15} color="#2563eb" />
             <span>Màn hình TV</span>

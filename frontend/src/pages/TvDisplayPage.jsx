@@ -409,7 +409,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
             {onNavigateToManagement && (
               <button
                 onClick={onNavigateToManagement}
-                title="Chuyển sang giao diện Quản lý máy tính (/schedule)"
+                title="Chuyển sang giao diện Quản lý & Lịch làm việc (/)"
                 style={{
                   padding: "8px 14px",
                   borderRadius: 10,

@@ -17,46 +17,56 @@ import { TvDisplayPage } from "./pages/TvDisplayPage";
 const VALID_TABS = ["schedule", "tasks", "history", "notes", "feedback", "staff", "emails", "smtp"];
 
 function getTabFromUrl() {
-  if (typeof window === "undefined") return "tv";
-  // 1. Pathname check (e.g. /notes, /feedback, /schedule)
+  if (typeof window === "undefined") return "schedule";
+
+  // 1. Pathname check (ví dụ: /tv, /schedule, /tasks, /staff, ...)
   const path = window.location.pathname.replace(/^\/+/, "").split("/")[0].toLowerCase();
-  if (path === "" || path === "tv") {
+  if (path === "tv") {
     return "tv";
+  }
+  if (path === "" || path === "schedule") {
+    return "schedule";
   }
   if (VALID_TABS.includes(path)) {
     return path;
   }
-  // 2. Hash check (e.g. #notes, #feedback, /schedule#feedback)
+
+  // 2. Hash check (fallback cho bookmark hoặc host tĩnh: #/tv, #/schedule, #staff)
   const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
-  if (hash === "tv" || hash === "") {
+  if (hash === "tv") {
     return "tv";
+  }
+  if (hash === "" || hash === "schedule") {
+    return "schedule";
   }
   if (VALID_TABS.includes(hash)) {
     return hash;
   }
-  // Khi không có tiền tố nào (ví dụ http://localhost:5173/ bỏ schedule) -> mặc định là TV
-  return "tv";
+
+  // Mặc định truy cập root ("/") -> Schedule (Lịch làm việc)
+  return "schedule";
 }
 
 function MainContent() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, canManageStaff } = useAuth();
   const [activeTab, setActiveTabState] = useState(getTabFromUrl);
 
-  // Navigate to tab and push clean HTML5 state to browser history
+  // Chuyển tab và cập nhật HTML5 history URL
   const navigateToTab = useCallback((newTab) => {
     setActiveTabState(newTab);
-    const targetPath = newTab === "tv" ? "/" : `/${newTab}`;
+    // Index route "/" tương ứng với Schedule
+    const targetPath = newTab === "schedule" ? "/" : `/${newTab}`;
     if (window.location.pathname !== targetPath || window.location.hash) {
       window.history.pushState({ tab: newTab }, "", targetPath);
     }
   }, []);
 
-  // Listen to browser Back / Forward buttons (popstate)
+  // Lắng nghe nút Back / Forward của trình duyệt (popstate)
   useEffect(() => {
     const initial = getTabFromUrl();
     setActiveTabState(initial);
-    const targetPath = initial === "tv" ? "/" : `/${initial}`;
-    if (window.location.pathname !== targetPath) {
+    const targetPath = initial === "schedule" ? "/" : `/${initial}`;
+    if (window.location.pathname !== targetPath && !window.location.pathname.startsWith(`/${initial}`)) {
       window.history.replaceState({ tab: initial }, "", targetPath);
     }
 
@@ -69,8 +79,8 @@ function MainContent() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Nếu tab là "tv" (hoặc truy cập root / không có /schedule):
-  // Hiển thị trực tiếp màn hình Kiosk TV mà KHÔNG yêu cầu đăng nhập!
+  // Nếu tab là "tv" (truy cập /tv):
+  // Hiển thị trực tiếp màn hình Kiosk TV mà KHÔNG yêu cầu đăng nhập
   if (activeTab === "tv") {
     return <TvDisplayPage onNavigateToManagement={() => navigateToTab("schedule")} />;
   }
@@ -106,7 +116,7 @@ function MainContent() {
         {activeTab === "history" && <ShiftHistoryPage />}
         {activeTab === "notes" && <ShiftNotesPage />}
         {activeTab === "feedback" && <FeedbackPage />}
-        {activeTab === "staff" && isAdmin && <StaffManagementPage />}
+        {activeTab === "staff" && canManageStaff && <StaffManagementPage />}
         {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
         {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
       </main>
