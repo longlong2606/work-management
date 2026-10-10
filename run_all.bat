@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
 color 0b
-title WorkShiftPro - Khoi Chay He Thong (May Tinh + Smart TV)
+title WorkShiftPro - Khoi Chay He Thong (May Tinh + Dien Thoai + Smart TV)
 cls
 echo =====================================================================
-echo          HE THONG WORKSHIFTPRO - UNIFIED DUAL INTERFACE
+echo          HE THONG WORKSHIFTPRO - UNIFIED MULTI-PLATFORM
 echo =====================================================================
 echo.
 
@@ -35,21 +35,24 @@ echo =====================================================================
 echo                   KHOI CHAY HOAN TAT 100%%!
 echo =====================================================================
 echo.
-echo  * Web Quan Ly May Tinh (PC):  http://localhost:5173/schedule
-echo  * Man Hinh Kiosk Smart TV:    http://localhost:5173
+echo  * Web Quan Ly & Lich Ca (PC / Mac):     http://localhost:5173
+echo  * Man Hinh Kiosk Smart TV:               http://localhost:5173/tv
 echo.
-echo  >>> DIA CHI MO TREN SMART TV (CHUNG WI-FI/LAN):
+echo  >>> DIA CHI MO TREN DIEN THOAI (CHUNG WI-FI):
 echo      http://%LOCAL_IP%:5173
+echo.
+echo  >>> DIA CHI MO TREN SMART TV (CHUNG WI-FI):
+echo      http://%LOCAL_IP%:5173/tv
 echo.
 echo =====================================================================
 echo.
-echo Dang mo trinh duyet ca 2 giao dien tren may tinh...
-start http://localhost:5173/schedule
+echo Dang mo trinh duyet tren may tinh...
 start http://localhost:5173
 echo.
-echo [Huong dan Smart TV]
-echo - Tren trinh duyet TV 50 inch, truy cap: http://%LOCAL_IP%:5173
-echo - Nhan F11 tren ban phim TV de xem toan man hinh Kiosk.
+echo [Huong dan su dung Dien Thoai & TV]
+echo - Tren Dien Thoai (Safari/Chrome): vao http://%LOCAL_IP%:5173 (hoac quet ma QR trong web).
+echo - Co san thanh dieu huong duoi man hinh giup cham chon lich ca, nhiem vu, ghi chu cuc de.
+echo - Tren Smart TV: truy cap http://%LOCAL_IP%:5173/tv va nhan F11 de xem toan man hinh.
 echo.
 echo Nhan phim bat ky de DONG TAT CA cac server va thoat...
 pause >nul

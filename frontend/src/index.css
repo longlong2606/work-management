@@ -368,3 +368,98 @@ body {
 .auto-scroll-members-many:hover {
   animation-play-state: paused;
 }
+
+/* ========================================================
+   RESPONSIVE MOBILE & TOUCH OPTIMIZATIONS
+   ======================================================== */
+.navbar-desktop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 64px;
+}
+
+.navbar-mobile {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 58px;
+}
+
+.mobile-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .navbar-desktop {
+    display: none !important;
+  }
+
+  .navbar-mobile {
+    display: flex !important;
+  }
+
+  .mobile-bottom-bar {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid #e2e8f0;
+    z-index: 99;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Ensure main content is not overlapped by sticky bottom bar */
+  main {
+    padding-bottom: 85px !important;
+  }
+
+  /* Responsive cards and containers */
+  .card, .glass-card {
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Responsive modal overlay & content */
+  .modal-overlay {
+    padding: 10px !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    max-height: 90vh !important;
+    border-radius: 20px 20px 12px 12px !important;
+  }
+
+  /* Table horizontal touch scroll */
+  div[style*="overflowX: auto"], div[style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Minimum touch target size */
+  button, .btn {
+    min-height: 38px;
+    touch-action: manipulation;
+  }
+
+  /* Prevent auto zoom on iOS when focusing inputs */
+  input, select, textarea, .form-control {
+    font-size: 16px !important;
+  }
+}
