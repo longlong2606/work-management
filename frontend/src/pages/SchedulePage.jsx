@@ -73,6 +73,41 @@ export function SchedulePage() {
   const [expandedDay, setExpandedDay] = useState(null);
   const [isFullWidth, setIsFullWidth] = useState(false);
   const tableScrollRef = React.useRef(null);
+  const [activeDay, setActiveDay] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+
+  const scrollToDay = (dateStr) => {
+    setActiveDay(dateStr);
+    if (viewMode === "day") {
+      setCurrentDate(dateStr);
+    } else {
+      const colElem = document.getElementById(`day-col-${dateStr}`);
+      if (colElem && tableScrollRef.current) {
+        const stickyWidth = window.innerWidth <= 768 ? 95 : 115;
+        const targetPos = Math.max(0, colElem.offsetLeft - stickyWidth);
+        tableScrollRef.current.scrollTo({ left: targetPos, behavior: "smooth" });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isTodayInWeek = weekDays.some((d) => d.dateStr === todayStr);
+    if (isTodayInWeek && tableScrollRef.current && viewMode === "week") {
+      const timer = setTimeout(() => {
+        const colElem = document.getElementById(`day-col-${todayStr}`);
+        if (colElem && tableScrollRef.current) {
+          const stickyWidth = window.innerWidth <= 768 ? 95 : 115;
+          tableScrollRef.current.scrollTo({
+            left: Math.max(0, colElem.offsetLeft - stickyWidth),
+            behavior: "smooth"
+          });
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [mondayDate, viewMode]);
 
   // Roster Modal: Shows all members for a clicked shift
   const [rosterModal, setRosterModal] = useState({
@@ -821,11 +856,13 @@ export function SchedulePage() {
 
   const toggleExpandDay = (dateStr) => {
     setExpandedDay((prev) => (prev === dateStr ? null : dateStr));
+    setActiveDay(dateStr);
     setTimeout(() => {
       const colElem = document.getElementById(`day-col-${dateStr}`);
       if (colElem && tableScrollRef.current) {
-        const leftPos = colElem.offsetLeft - 150;
-        tableScrollRef.current.scrollTo({ left: Math.max(0, leftPos), behavior: "smooth" });
+        const stickyWidth = window.innerWidth <= 768 ? 95 : 115;
+        const leftPos = Math.max(0, colElem.offsetLeft - stickyWidth);
+        tableScrollRef.current.scrollTo({ left: leftPos, behavior: "smooth" });
       }
     }, 60);
   };
@@ -927,13 +964,13 @@ export function SchedulePage() {
               {totalMembers > 0 ? `Đội Ngũ ${totalMembers} Thành Viên` : "Đội Ngũ Thành Viên"}
             </span>
           </h1>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+          <p className="page-subtitle-mobile-hide" style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>
             Ô ca hiển thị gọn <strong>{totalMembers > 0 ? `${totalMembers} người` : "danh sách"}</strong> (nhấn vào để xem đầy đủ ai có mặt, ai vắng
             mặt kèm lý do). Nhân viên vắng phải báo vắng kèm lý do cho Quản lý.
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="schedule-action-bar">
           {isAdmin && pendingRequests.length > 0 && (
             <button
               onClick={() => setShowPendingModal(true)}
@@ -952,7 +989,7 @@ export function SchedulePage() {
                 boxShadow: "0 2px 4px rgba(220, 38, 38, 0.1)",
               }}
             >
-              <ShieldAlert size={16} />
+              <ShieldAlert size={16} style={{ flexShrink: 0 }} />
               <span>Chờ Duyệt ({pendingRequests.length})</span>
             </button>
           )}
@@ -976,7 +1013,7 @@ export function SchedulePage() {
               }}
               title="Tạo sự kiện chung cho cả ngày hoặc cho ca cụ thể"
             >
-              <Plus size={16} />
+              <Plus size={16} style={{ flexShrink: 0 }} />
               <span>+ Thêm Sự Kiện (Ngày / Ca)</span>
             </button>
           )}
@@ -1001,7 +1038,7 @@ export function SchedulePage() {
             }}
             title="Xem bảng xếp hạng và tiến độ chỉ tiêu 20 giờ/tuần của từng nhân sự"
           >
-            <Trophy size={16} />
+            <Trophy size={16} style={{ flexShrink: 0 }} />
             <span>Bảng KPI 20h</span>
           </button>
 
@@ -1024,7 +1061,7 @@ export function SchedulePage() {
             }}
             title="Nhập và quản lý thời khóa biểu học tập (CSV/Excel) để cảnh báo trùng lịch trực"
           >
-            <GraduationCap size={16} />
+            <GraduationCap size={16} style={{ flexShrink: 0 }} />
             <span>TKB Học Tập (CSV)</span>
           </button>
 
@@ -1047,7 +1084,7 @@ export function SchedulePage() {
             }}
             title="Báo vắng nhiều ca làm việc hoặc báo vắng cả tuần"
           >
-            <CalendarX2 size={16} />
+            <CalendarX2 size={16} style={{ flexShrink: 0 }} />
             <span>Báo Vắng Tuần / Nhiều Ca</span>
           </button>
 
@@ -1057,7 +1094,7 @@ export function SchedulePage() {
               className="btn btn-primary"
               style={{ display: "flex", alignItems: "center", gap: 8 }}
             >
-              <Send size={16} />
+              <Send size={16} style={{ flexShrink: 0 }} />
               <span>Xuất Bản Lịch & Gửi Mail</span>
             </button>
           )}
@@ -1198,10 +1235,10 @@ export function SchedulePage() {
 
       {/* NAVIGATION BAR & VIEW SWITCHER */}
       <div
-        className="card"
+        className="card schedule-controls-card"
         style={{
           padding: "12px 16px",
-          marginBottom: 20,
+          marginBottom: 12,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -1209,35 +1246,38 @@ export function SchedulePage() {
           gap: 12,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="schedule-view-tabs">
           <button
             onClick={() => setViewMode("week")}
             className={`btn ${viewMode === "week" ? "btn-primary" : "btn-secondary"}`}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
           >
-            <LayoutGrid size={15} />
-            Lịch 1 Tuần (9 Ca)
+            <LayoutGrid size={15} style={{ flexShrink: 0 }} />
+            <span className="tab-label-full">Lịch 1 Tuần (9 Ca)</span>
+            <span className="tab-label-mobile">Tuần</span>
           </button>
           <button
             onClick={() => setViewMode("day")}
             className={`btn ${viewMode === "day" ? "btn-primary" : "btn-secondary"}`}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
           >
-            <CalendarRange size={15} />
-            Chi Tiết Theo 1 Ngày
+            <CalendarRange size={15} style={{ flexShrink: 0 }} />
+            <span className="tab-label-full">Chi Tiết Theo 1 Ngày</span>
+            <span className="tab-label-mobile">Theo Ngày</span>
           </button>
           <button
             onClick={() => setViewMode("my")}
             className={`btn ${viewMode === "my" ? "btn-primary" : "btn-secondary"}`}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
           >
-            <UserCheck size={15} />
-            Ca Trực Của Tôi ({myShiftsInWeek.length})
+            <UserCheck size={15} style={{ flexShrink: 0 }} />
+            <span className="tab-label-full">Ca Trực Của Tôi ({myShiftsInWeek.length})</span>
+            <span className="tab-label-mobile">Của Tôi ({myShiftsInWeek.length})</span>
           </button>
         </div>
 
         {/* Date Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {viewMode === "week" && (
             <>
               <button
@@ -1247,7 +1287,7 @@ export function SchedulePage() {
               >
                 <ChevronLeft size={16} />
               </button>
-              <span style={{ fontWeight: 700, fontSize: 14, minWidth: 170, textAlign: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 13, minWidth: 160, textAlign: "center" }}>
                 Tuần: {weekDays[0]?.displayDate} - {weekDays[weekDays.length - 1]?.displayDate}/2026
               </span>
               <button
@@ -1279,9 +1319,12 @@ export function SchedulePage() {
               <input
                 type="date"
                 value={currentDate}
-                onChange={(e) => setCurrentDate(e.target.value)}
+                onChange={(e) => {
+                  setCurrentDate(e.target.value);
+                  setActiveDay(e.target.value);
+                }}
                 style={{
-                  padding: "4px 10px",
+                  padding: "4px 8px",
                   borderRadius: 6,
                   border: "1.5px solid #cbd5e1",
                   fontSize: 13,
@@ -1298,7 +1341,11 @@ export function SchedulePage() {
                 <ChevronRight size={16} />
               </button>
               <button
-                onClick={() => setCurrentDate(new Date().toISOString().split("T")[0])}
+                onClick={() => {
+                  const today = new Date().toISOString().split("T")[0];
+                  setCurrentDate(today);
+                  setActiveDay(today);
+                }}
                 className="btn btn-secondary btn-sm"
                 style={{ fontSize: 12 }}
               >
@@ -1309,6 +1356,105 @@ export function SchedulePage() {
         </div>
       </div>
 
+      {/* QUICK DAY JUMP TABS (TOUCH-SCROLLABLE FOR MOBILE & DESKTOP) */}
+      <div className="schedule-day-pills-bar">
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", whiteSpace: "nowrap", marginRight: 4, display: "flex", alignItems: "center", gap: 3 }}>
+          <Calendar size={13} /> Ngày:
+        </span>
+        {weekDays.map((day) => {
+          const isSelected = viewMode === "day" ? currentDate === day.dateStr : activeDay === day.dateStr;
+          const absentInDay = schedule.filter(
+            (s) => s.work_date === day.dateStr && s.attendance_status === "absent"
+          ).length;
+          const pendingInDay = schedule.filter(
+            (s) => s.work_date === day.dateStr && s.attendance_status === "pending_absence"
+          ).length;
+          return (
+            <button
+              key={day.dateStr}
+              onClick={() => scrollToDay(day.dateStr)}
+              style={{
+                flexShrink: 0,
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: isSelected
+                  ? "1.5px solid #2563eb"
+                  : day.isToday
+                    ? "1.5px solid #93c5fd"
+                    : "1px solid #cbd5e1",
+                background: isSelected
+                  ? "#2563eb"
+                  : day.isToday
+                    ? "#eff6ff"
+                    : "#ffffff",
+                color: isSelected
+                  ? "#ffffff"
+                  : day.isToday
+                    ? "#1d4ed8"
+                    : "#334155",
+                fontWeight: isSelected || day.isToday ? 800 : 600,
+                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                cursor: "pointer",
+                boxShadow: isSelected
+                  ? "0 2px 6px rgba(37, 99, 235, 0.25)"
+                  : "0 1px 2px rgba(0,0,0,0.03)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>{day.dayName}</span>
+              <span style={{ fontSize: 11, opacity: isSelected ? 0.9 : 0.7 }}>
+                {day.displayDate}
+              </span>
+              {day.isToday && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    background: isSelected ? "#ffffff" : "#2563eb",
+                    color: isSelected ? "#2563eb" : "#ffffff",
+                    padding: "1px 5px",
+                    borderRadius: 8,
+                    fontWeight: 800,
+                  }}
+                >
+                  Hôm nay
+                </span>
+              )}
+              {absentInDay > 0 && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    padding: "1px 5px",
+                    borderRadius: 8,
+                    fontWeight: 800,
+                  }}
+                >
+                  🔴 {absentInDay}
+                </span>
+              )}
+              {pendingInDay > 0 && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    background: "#f59e0b",
+                    color: "#ffffff",
+                    padding: "1px 5px",
+                    borderRadius: 8,
+                    fontWeight: 800,
+                  }}
+                >
+                  🟡 {pendingInDay}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ================= VIEW 1: LỊCH 1 TUẦN TỔNG THỂ (9 CA MATRIX) ================= */}
       {viewMode === "week" && (
         <div
@@ -1317,16 +1463,13 @@ export function SchedulePage() {
         >
           <div
             ref={tableScrollRef}
-            style={{
-              overflowX: "auto",
-              scrollBehavior: "smooth",
-              WebkitOverflowScrolling: "touch",
-            }}
+            className="schedule-table-wrap"
           >
             <table
+              className="schedule-table"
               style={{
                 width: "100%",
-                minWidth: expandedDay ? 1500 : 1200,
+                minWidth: expandedDay ? 1500 : 1180,
                 borderCollapse: "separate",
                 borderSpacing: 0,
                 textAlign: "left",
@@ -1336,11 +1479,9 @@ export function SchedulePage() {
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
                   <th
+                    className="schedule-shift-col"
                     style={{
-                      padding: "14px 12px",
-                      width: 115,
-                      minWidth: 115,
-                      maxWidth: 115,
+                      padding: "14px 10px",
                       fontWeight: 800,
                       fontSize: 12,
                       color: "#475569",
@@ -1363,11 +1504,10 @@ export function SchedulePage() {
                         id={`day-col-${day.dateStr}`}
                         key={day.dateStr}
                         onClick={() => toggleExpandDay(day.dateStr)}
+                        className={`schedule-day-col ${isExpanded ? "expanded" : ""}`}
                         style={{
-                          padding: "12px 10px",
+                          padding: "12px 8px",
                           textAlign: "center",
-                          width: isExpanded ? 330 : 190,
-                          minWidth: isExpanded ? 330 : 190,
                           background: isExpanded
                             ? "#eff6ff"
                             : day.isToday
@@ -1502,12 +1642,10 @@ export function SchedulePage() {
                   <tr key={shift.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     {/* Shift Label Column (Sticky Left) */}
                     <td
+                      className="schedule-shift-col"
                       style={{
-                        padding: "12px 10px",
+                        padding: "10px 8px",
                         verticalAlign: "top",
-                        width: 115,
-                        minWidth: 115,
-                        maxWidth: 115,
                         position: "sticky",
                         left: 0,
                         zIndex: 10,
@@ -1522,20 +1660,21 @@ export function SchedulePage() {
                       </div>
                       <div
                         style={{
-                          fontSize: 11,
+                          fontSize: 10.5,
                           fontWeight: 700,
                           color: "#2563eb",
                           marginTop: 3,
                           background: "#eff6ff",
-                          padding: "2px 6px",
+                          padding: "2px 5px",
                           borderRadius: 4,
                           display: "inline-block",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {shift.label}
                       </div>
                       {shift.description && (
-                        <div style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>
+                        <div style={{ fontSize: 9.5, color: "#64748b", marginTop: 4 }}>
                           {shift.description}
                         </div>
                       )}
@@ -1577,11 +1716,10 @@ export function SchedulePage() {
                       return (
                         <td
                           key={day.dateStr}
+                          className={`schedule-day-col ${isExpanded ? "expanded" : ""}`}
                           style={{
                             padding: isExpanded ? "10px 12px" : "8px",
                             verticalAlign: "top",
-                            width: isExpanded ? 280 : 180,
-                            minWidth: isExpanded ? 280 : 180,
                             borderLeft: isExpanded ? "2px solid #60a5fa" : "1px solid #f1f5f9",
                             borderRight: isExpanded ? "2px solid #60a5fa" : "none",
                             borderBottom: "1px solid #e2e8f0",
