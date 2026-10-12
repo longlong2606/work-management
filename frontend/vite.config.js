@@ -5,7 +5,14 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Cho phép Smart TV và thiết bị trong mạng LAN kết nối
+    host: true, // Cho phep Smart TV va thiet bi trong mang LAN ket noi
     port: 5173,
+    allowedHosts: true, // Cho phep truy cap tu moi duong link tunnel va IP dien thoai
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      }
+    }
   }
 })
