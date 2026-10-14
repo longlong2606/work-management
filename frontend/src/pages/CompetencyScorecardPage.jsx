@@ -93,9 +93,9 @@ export function CompetencyScorecardPage() {
   const currentTier = useMemo(() => getRankTier(currentStats.overallAvg), [currentStats]);
   const compareTier = useMemo(() => getRankTier(compareStats.overallAvg), [compareStats]);
 
-  // Handle score edit for current member (Hỗ trợ gõ trực tiếp số 0 - 10 không bị kẹt số 10)
+  // Handle score edit for current member (Xóa 1 chạm là mất sạch, gõ số mới tự nhiên)
   const handleScoreChange = (criterionId, val) => {
-    // Nếu người dùng xóa trống ô input để chuẩn bị gõ số mới
+    // Nếu người dùng xóa trống ô (bấm Backspace hoặc Delete)
     if (val === "" || val === null || val === undefined) {
       const updated = members.map((m) => {
         if (m.id === currentMember.id) {
@@ -113,13 +113,31 @@ export function CompetencyScorecardPage() {
       return;
     }
 
-    const strVal = String(val).trim();
+    // Chuyển dấu phẩy tiếng Việt thành dấu chấm thập phân (ví dụ 7,5 -> 7.5)
+    let strVal = String(val).replace(",", ".").trim();
+
+    // Nếu người dùng đang gõ dở dấu chấm (ví dụ "7.") thì giữ nguyên để gõ tiếp số lẻ
+    if (strVal.endsWith(".")) {
+      const updated = members.map((m) => {
+        if (m.id === currentMember.id) {
+          return {
+            ...m,
+            scores: {
+              ...m.scores,
+              [criterionId]: strVal,
+            },
+          };
+        }
+        return m;
+      });
+      saveMembers(updated);
+      return;
+    }
+
     let parsed = parseFloat(strVal);
     if (isNaN(parsed)) return;
 
-    // XỬ LÝ THÔNG MINH KHI GÕ BÀN PHÍM:
-    // Nếu ô đang có điểm cũ (ví dụ 8 hoặc 10) mà người dùng gõ thêm số mới (ví dụ bấm 5 thành "85" hoặc "105"):
-    // Chắc chắn người dùng muốn chấm điểm là số vừa gõ (số 5), không bị ép kẹt thành 10!
+    // Nếu gõ đè số mới vào số cũ (ví dụ đang là 8 gõ 5 thành "85", hoặc đang là 10 gõ 5 thành "105")
     if (parsed > 10 && !strVal.includes(".")) {
       if (strVal === "10" || strVal.endsWith("10")) {
         parsed = 10;
@@ -1046,18 +1064,24 @@ export function CompetencyScorecardPage() {
                                   }}
                                 >
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="10"
-                                    step="0.5"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={score === "" ? "" : score}
                                     onFocus={(e) => e.target.select()}
                                     onClick={(e) => e.target.select()}
-                                    onChange={(e) => handleScoreChange(crit.id, e.target.value)}
-                                    onBlur={(e) => {
-                                      if (score === "" || isNaN(Number(score))) handleScoreChange(crit.id, 0);
+                                    onKeyDown={(e) => {
+                                      if ((e.key === "Backspace" || e.key === "Delete") && (score === 0 || score === "0" || score === "")) {
+                                        e.preventDefault();
+                                        handleScoreChange(crit.id, "");
+                                      }
                                     }}
-                                    placeholder="0"
+                                    onChange={(e) => handleScoreChange(crit.id, e.target.value)}
+                                    onBlur={() => {
+                                      if (score === "" || score === null || isNaN(Number(score))) {
+                                        handleScoreChange(crit.id, 0);
+                                      }
+                                    }}
+                                    placeholder=""
                                     style={{
                                       width: 44,
                                       height: 26,
@@ -1070,7 +1094,7 @@ export function CompetencyScorecardPage() {
                                       background: "transparent",
                                       padding: 0,
                                     }}
-                                    title="Gõ điểm trực tiếp bằng bàn phím (0 - 10)"
+                                    title="Xóa 1 lần là sạch ô, gõ số điểm từ 0 đến 10"
                                   />
                                   <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>/ 10</span>
                                 </div>
