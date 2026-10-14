@@ -257,7 +257,7 @@ export function BulkAbsenceModal({
           )}
 
           {/* 2-COLUMN GRID SECTION */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 14 }}>
+          <div className="bulk-absence-grid">
             {/* CỘT TRÁI: NHÂN SỰ & NGÀY NGHỈ & LÝ DO */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {/* 1. NGƯỜI XIN NGHỈ */}

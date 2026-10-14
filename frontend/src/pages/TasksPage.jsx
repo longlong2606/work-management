@@ -1699,7 +1699,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="task-modal-grid-2col">
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
                   Loại nhiệm vụ
@@ -1769,7 +1769,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
               <span>⏱️ 2. Kế hoạch & Thời hạn</span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="task-modal-grid-2col">
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
                   Ngày dự kiến bắt đầu
@@ -1828,7 +1828,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
               <span>📍 3. Địa điểm & Mô tả chi tiết</span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="task-modal-grid-2col">
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
                   Địa điểm / Phòng Lab

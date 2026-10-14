@@ -1291,7 +1291,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             </div>
 
             <form onSubmit={handleCreateUser}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="staff-modal-grid-2col">
                 <div className="form-group">
                   <label className="form-label">Tên đăng nhập: *</label>
                   <input
@@ -1328,7 +1328,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+              <div className="staff-modal-grid-2col" style={{ marginTop: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Email nhận lịch: *</label>
                   <input
@@ -1353,7 +1353,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               </div>
 
               {/* DYNAMIC DEPARTMENT & ROLE DROPDOWNS */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+              <div className="staff-modal-grid-2col" style={{ marginTop: 14 }}>
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <label className="form-label" style={{ margin: 0 }}>Phòng ban / Tổ trực:</label>
@@ -1603,7 +1603,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="staff-modal-grid-2col" style={{ marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Email: *</label>
                   <input
@@ -1745,7 +1745,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="staff-modal-grid-2col" style={{ marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Mã viết tắt:</label>
                   <input
@@ -1864,7 +1864,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             </div>
 
             <form onSubmit={handleSaveRole}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="staff-modal-grid-2col" style={{ marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Mã vai trò (ID): *</label>
                   <input

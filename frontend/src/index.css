@@ -894,3 +894,174 @@ div[style*="overflow-x: auto"] {
     text-align: center !important;
   }
 }
+
+
+/* ==========================================================================
+   CROSS-DEVICE COMPREHENSIVE RESPONSIVE STYLES (MOBILE -> DESKTOP -> 4K TV)
+   ========================================================================== */
+
+/* TV Display Responsive Rules */
+.tv-page-container {
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tv-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.tv-main-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 36% 64%;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.tv-shifts-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* Tablet & Smaller Screens (<= 1024px) */
+@media (max-width: 1024px) {
+  .tv-page-container {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    padding: 10px 12px !important;
+  }
+
+  .tv-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .tv-main-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    overflow: visible !important;
+  }
+
+  .tv-shifts-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: auto !important;
+    overflow: visible !important;
+  }
+}
+
+/* Mobile Screens (<= 640px) */
+@media (max-width: 640px) {
+  .tv-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+    padding: 10px 12px !important;
+  }
+
+  .tv-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tv-shifts-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Large 4K TV Wall Mode (>= 2560px / 3840px 4K Displays) */
+@media (min-width: 2560px) {
+  .tv-page-container {
+    padding: 24px 36px !important;
+  }
+
+  .tv-header {
+    padding: 18px 30px !important;
+    border-radius: 24px !important;
+  }
+
+  .tv-header h1, .tv-header h2, .tv-header .digital-clock {
+    font-size: 52px !important;
+  }
+
+  .tv-kpi-grid > div {
+    padding: 18px 24px !important;
+    border-radius: 18px !important;
+  }
+
+  .tv-kpi-grid > div > div:first-child {
+    font-size: 16px !important;
+  }
+
+  .tv-kpi-grid > div > div:nth-child(2) {
+    font-size: 28px !important;
+  }
+
+  .tv-main-grid {
+    gap: 24px !important;
+  }
+
+  .tv-shifts-grid {
+    gap: 16px !important;
+  }
+
+  .tv-shifts-grid > div {
+    padding: 14px 18px !important;
+    border-radius: 16px !important;
+  }
+
+  .tv-shifts-grid > div span {
+    font-size: 16px !important;
+  }
+}
+
+/* Bulk Absence Modal Responsive */
+.bulk-absence-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 768px) {
+  .bulk-absence-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+}
+
+/* Task Modal Responsive */
+.task-modal-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .task-modal-grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+/* Staff Modal Responsive */
+.staff-modal-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .staff-modal-grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}

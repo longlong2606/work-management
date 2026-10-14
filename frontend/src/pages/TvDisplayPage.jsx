@@ -223,10 +223,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
   const totalAssignedStaff = uniqueMembers.size;
 
   return (
-    <div
-      style={{
-        width: "100vw",
-        height: "100vh",
+    <div className="tv-page-container" style={{ width: "100vw",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#f8fafc",
@@ -240,8 +237,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
       {/* ========================================================
           1. HEADER CHUẨN FORM WORKSHIFTPRO + ĐỒNG HỒ DIGITAL TV
           ======================================================== */}
-      <header
-        style={{
+      <header className="tv-header" style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -491,10 +487,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
         </div>
 
         {/* 4 THẺ KPI CHUẨN FORM THEO ẢNH */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+        <div className="tv-kpi-grid" style={{
             gap: 12
           }}
         >
@@ -571,11 +564,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
       {/* ========================================================
           3. NỘI DUNG CHÍNH: CHIA 2 BÊN (SỰ KIỆN vs LỊCH 9 CA)
           ======================================================== */}
-      <div
-        style={{
-          flex: 1,
-          display: "grid",
-          gridTemplateColumns: "36% 64%",
+      <div className="tv-main-grid" style={{ flex: 1,
           gap: 16,
           overflow: "hidden"
         }}
@@ -868,12 +857,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
           </div>
 
           {/* LƯỚI 9 CA LÀM VIỆC (3 CỘT X 3 HÀNG) - CHUẨN FORM NHƯ ẢNH GỐC */}
-          <div
-            style={{
-              flex: 1,
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gridTemplateRows: "repeat(3, 1fr)",
+          <div className="tv-shifts-grid" style={{ flex: 1,
               gap: 10,
               overflow: "hidden"
             }}
