@@ -692,63 +692,22 @@ export function CompetencyScorecardPage() {
                   animation: "fadeInDown 0.15s ease",
                 }}
               >
-                {/* Search & Filter Header in Dropdown */}
-                <div style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc" }}>
-                  <div style={{ position: "relative", marginBottom: 8 }}>
-                    <Search
-                      size={14}
-                      color="#94a3b8"
-                      style={{ position: "absolute", left: 10, top: 10 }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Tìm theo tên, chức vụ, phòng ban..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      autoFocus
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px 8px 32px",
-                        borderRadius: 8,
-                        border: "1px solid #cbd5e1",
-                        fontSize: 12.5,
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  {/* Filter chips */}
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                    {[
-                      { id: "all", label: `Tất cả (${members.length})` },
-                      { id: "admin", label: "Admin" },
-                      { id: "core", label: "Core" },
-                      { id: "leader", label: "Leader" },
-                      { id: "contributor", label: "Contributor" },
-                      { id: "learning", label: "Learning" },
-                    ].map((rf) => (
-                      <button
-                        key={rf.id}
-                        type="button"
-                        onClick={() => setRoleFilter(rf.id)}
-                        style={{
-                          padding: "3px 8px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          border: "none",
-                          background: roleFilter === rf.id ? "#1e293b" : "#ffffff",
-                          color: roleFilter === rf.id ? "#ffffff" : "#475569",
-                          border: roleFilter === rf.id ? "none" : "1px solid #e2e8f0",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {rf.label}
-                      </button>
-                    ))}
-                  </div>
+                {/* Clean Header in Dropdown */}
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderBottom: "1px solid #f1f5f9",
+                    background: "#f8fafc",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#475569",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Toàn bộ thành viên ({members.length})</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Nhấp chọn để đánh giá</span>
                 </div>
 
                 {/* List of Members */}
@@ -762,12 +721,7 @@ export function CompetencyScorecardPage() {
                     gap: 4,
                   }}
                 >
-                  {filteredMembers.length === 0 ? (
-                    <div style={{ padding: "24px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
-                      Không tìm thấy nhân sự phù hợp với từ khóa "{searchTerm}".
-                    </div>
-                  ) : (
-                    filteredMembers.map((m) => {
+                  {members.map((m) => {
                       const isSelected = m.id === selectedMemberId;
                       const st = calculateMemberStats(m.scores);
                       const tier = getRankTier(st.overallAvg);
@@ -855,8 +809,7 @@ export function CompetencyScorecardPage() {
                           </div>
                         </div>
                       );
-                    })
-                  )}
+                  })}
                 </div>
 
                 {/* Footer hint */}
@@ -872,7 +825,7 @@ export function CompetencyScorecardPage() {
                     alignItems: "center",
                   }}
                 >
-                  <span>Hiển thị {filteredMembers.length} / {members.length} nhân sự</span>
+                  <span>Tổng số: {members.length} nhân sự</span>
                   <span style={{ color: "#2563eb", fontWeight: 700 }}>Chọn để đổi bảng điểm</span>
                 </div>
               </div>
