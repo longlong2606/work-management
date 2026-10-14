@@ -487,15 +487,11 @@ export function ShiftNotesPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div
-            className="modal-content"
+            className="modal-content shift-note-modal"
             style={{
               background: "#ffffff",
               color: "#0f172a",
-              borderRadius: 20,
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              padding: "24px 28px",
-              maxWidth: 680,
-              width: "100%",
               border: "1px solid #e2e8f0"
             }}
             onClick={(e) => e.stopPropagation()}
@@ -532,7 +528,7 @@ export function ShiftNotesPage() {
 
             <form onSubmit={handleSubmitNote}>
               {/* 2-COLUMN SECTION GRID */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+              <div className="shift-note-grid">
                 {/* CỘT TRÁI: CA & THỜI GIAN */}
                 <div
                   style={{
@@ -614,7 +610,7 @@ export function ShiftNotesPage() {
                     📝 2. Chi tiết & Lý do
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+                  <div className="shift-note-row-2col">
                     <div>
                       <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 5 }}>
                         Loại điều chỉnh
@@ -668,40 +664,19 @@ export function ShiftNotesPage() {
                 </div>
               </div>
 
-              {/* FOOTER ACTIONS */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
+                            {/* FOOTER ACTIONS */}
+              <div className="shift-note-actions">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    border: "1px solid #e2e8f0",
-                    padding: "9px 20px",
-                    borderRadius: 10,
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease"
-                  }}
+                  className="shift-note-btn-cancel"
                 >
                   Đóng
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "9px 22px",
-                    borderRadius: 10,
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
-                    transition: "all 0.15s ease"
-                  }}
+                  className="shift-note-btn-submit"
                 >
                   {submitting ? "Đang gửi..." : "Gửi Báo Cáo Cho Quản Lý"}
                 </button>
