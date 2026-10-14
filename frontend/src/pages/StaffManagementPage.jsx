@@ -1,3 +1,4 @@
+import { CompetencyScorecardPage } from "./CompetencyScorecardPage";
 import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../services/api";
 import { 
@@ -419,7 +420,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   };
 
   return (
-    <div style={{ maxWidth: 1400, margin: "0 auto", paddingBottom: 60 }}>
+    <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "16px 20px 60px 20px", boxSizing: "border-box" }}>
       {/* Toast Alert */}
       {toast.text && (
         <div
@@ -495,6 +496,69 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       </div>
 
+      {/* Competency Radar Banner Alert */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)",
+          border: "1px solid #c4b5fd",
+          borderRadius: 14,
+          padding: "12px 18px",
+          marginBottom: 18,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: "#7c3aed",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 10px rgba(124, 58, 237, 0.25)",
+              flexShrink: 0
+            }}
+          >
+            <Award size={20} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "#1e1b4b" }}>
+              Bảng Điểm Đánh Giá Năng Lực Thành Viên (Biểu Đồ Tam Giác Blue Lock)
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              Đã tích hợp 3 trụ cột (Quản lý, Kỹ thuật, Research) & 5 cấp bậc vai trò theo bảng đánh giá Lab.
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveTab("competency")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            background: "#7c3aed",
+            color: "#ffffff",
+            border: "none",
+            fontWeight: 800,
+            fontSize: 12.5,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.3)",
+          }}
+        >
+          <span>Xem Thẻ Điểm Ngay</span>
+          <ChevronRight size={15} />
+        </button>
+      </div>
+
       {/* Sub-Navigation Tabs (Touch-scrollable on mobile) */}
       <div style={{
         display: "flex",
@@ -567,6 +631,29 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           }}
         >
           <Shield size={16} /> Quản Lý Vai Trò & Quyền Hạn ({roles.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("competency")}
+          style={{
+            padding: "10px 18px",
+            borderRadius: "8px 8px 0 0",
+            fontWeight: 700,
+            fontSize: 14,
+            border: "none",
+            cursor: "pointer",
+            background: activeTab === "competency" ? "var(--surface)" : "transparent",
+            color: activeTab === "competency" ? "#7c3aed" : "var(--text-muted)",
+            borderBottom: activeTab === "competency" ? "3px solid #7c3aed" : "3px solid transparent",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap"
+          }}
+        >
+          <Award size={16} color={activeTab === "competency" ? "#7c3aed" : "currentColor"} />
+          <span>Bảng Điểm Năng Lực (Radar Tam Giác)</span>
         </button>
       </div>
 
@@ -777,6 +864,24 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                           </td>
                           <td style={{ padding: "14px 20px", textAlign: "center" }}>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <button
+                                onClick={() => setActiveTab("competency")}
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#6d28d9",
+                                  background: "#f5f3ff",
+                                  border: "1px solid #ddd6fe",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                                title={`Xem thẻ điểm năng lực & biểu đồ radar tam giác của ${u.full_name}`}
+                              >
+                                <Award size={13} /> Thẻ Điểm
+                              </button>
                               <button
                                 onClick={() => handleOpenReset(u)}
                                 className="btn btn-secondary btn-sm"
@@ -1128,6 +1233,15 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 4: BẢNG ĐIỂM NĂNG LỰC & BIỂU ĐỒ RADAR TAM GIÁC       */}
+      {/* ======================================================== */}
+      {activeTab === "competency" && (
+        <div style={{ marginTop: 8 }}>
+          <CompetencyScorecardPage />
         </div>
       )}
 

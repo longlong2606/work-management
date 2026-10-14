@@ -130,9 +130,11 @@ export function Navbar({ activeTab, setActiveTab }) {
       >
         <div
           style={{
-            maxWidth: 1360,
+            width: "100%",
+            maxWidth: 1400,
             margin: "0 auto",
             padding: "0 14px",
+            boxSizing: "border-box",
           }}
         >
           {/* ========================================================= */}
@@ -167,7 +169,7 @@ export function Navbar({ activeTab, setActiveTab }) {
             </div>
 
             {/* NAVIGATION TABS DESKTOP */}
-            <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <nav style={{ display: "flex", alignItems: "center", gap: 3, flex: 1, minWidth: 0, overflowX: "auto", scrollbarWidth: "none" }}>
               {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -179,9 +181,9 @@ export function Navbar({ activeTab, setActiveTab }) {
                       display: "flex",
                       alignItems: "center",
                       gap: 7,
-                      padding: "8px 14px",
+                      padding: "7px 11px",
                       borderRadius: 8,
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: isActive ? 700 : 600,
                       cursor: "pointer",
                       border: "none",
@@ -338,7 +340,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                 title="Quét mã QR để mở trang web trên điện thoại di động"
               >
                 <Smartphone size={15} color="#2563eb" />
-                <span>Điện thoại</span>
+                <span>Mobile</span>
               </button>
 
               {/* Nút xem Màn hình TV */}
@@ -361,7 +363,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                 title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn /tv)"
               >
                 <Tv size={15} color="#2563eb" />
-                <span>Màn hình TV</span>
+                <span>TV</span>
               </button>
 
               {/* Notification Button */}
@@ -443,7 +445,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div style={{ textAlign: "left", whiteSpace: "nowrap" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", lineHeight: 1.1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", lineHeight: 1.1, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={user?.full_name || user?.username}>
                     {user?.full_name || user?.username}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>

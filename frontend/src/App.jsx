@@ -107,11 +107,11 @@ function MainContent() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
       <Navbar activeTab={activeTab} setActiveTab={navigateToTab} />
       <NotificationModal />
 
-      <main style={{ flex: 1, paddingBottom: 40 }}>
+      <main style={{ flex: 1, paddingBottom: 40, width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
         {activeTab === "schedule" && <SchedulePage />}
         {activeTab === "tasks" && <TasksPage />}
         {activeTab === "competency" && <CompetencyScorecardPage />}
