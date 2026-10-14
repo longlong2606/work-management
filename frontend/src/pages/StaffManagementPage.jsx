@@ -34,6 +34,10 @@ import {
 } from "lucide-react";
 
 export function StaffManagementPage({ onNavigateToCompetency }) {
+  const auth = useAuth() || {};
+  const isAdmin = auth.isAdmin ?? false;
+  const canManageStaff = auth.canManageStaff ?? false;
+  const isRoleAdmin = isAdmin || Boolean(canManageStaff);
   const [activeTab, setActiveTab] = useState("staff"); // "staff" | "departments" | "roles"
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
