@@ -22,12 +22,27 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') 
 echo       -^> Cac cong mang da san sang!
 echo.
 
+rem Xac dinh thu muc Backend
+set BACKEND_DIR=%~dp0backend
+if not exist "%BACKEND_DIR%" set BACKEND_DIR=%~dp0..\work-managementackend
+if not exist "%BACKEND_DIR%" set BACKEND_DIR=C:\Projects\work-management\backend
+
+rem Xac dinh thu muc Frontend
+set FRONTEND_DIR=%~dp0frontend
+if not exist "%FRONTEND_DIR%" (
+    if exist "%~dp0package.json" (
+        set FRONTEND_DIR=%~dp0
+    ) else (
+        set FRONTEND_DIR=C:\Projects\work-management\frontend
+    )
+)
+
 echo [3/4] Dang khoi chay Backend API (.NET 10 tren cong 8000)...
-start "1. Backend API (:8000)" cmd /k "cd /d %~dp0backend && dotnet run"
+start "1. Backend API (:8000)" cmd /k "cd /d %BACKEND_DIR% && dotnet run"
 timeout /t 3 /nobreak >nul
 
 echo [4/4] Dang khoi chay Web App Tong Hop (tren cong 5173)...
-start "2. Web App Unified (:5173)" cmd /k "cd /d %~dp0frontend && npm run dev"
+start "2. Web App Unified (:5173)" cmd /k "cd /d %FRONTEND_DIR% && npm run dev"
 timeout /t 3 /nobreak >nul
 
 echo.
