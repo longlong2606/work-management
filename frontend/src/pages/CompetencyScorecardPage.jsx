@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import {
@@ -18,7 +18,12 @@ import {
   UserCheck,
   CheckCircle2,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Check
 } from "lucide-react";
 
 export function CompetencyScorecardPage() {
@@ -126,6 +131,45 @@ export function CompetencyScorecardPage() {
   // Search & filter
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+
+  // Member Dropdown state
+  const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsMemberDropdownOpen(false);
+      }
+    };
+    if (isMemberDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMemberDropdownOpen]);
+
+  // Quick navigation helpers: prev / next member
+  const currentMemberIndex = useMemo(() => {
+    const idx = members.findIndex((m) => m.id === selectedMemberId);
+    return idx >= 0 ? idx : 0;
+  }, [members, selectedMemberId]);
+
+  const handlePrevMember = (e) => {
+    e.stopPropagation();
+    if (members.length === 0) return;
+    const newIdx = (currentMemberIndex - 1 + members.length) % members.length;
+    setSelectedMemberId(members[newIdx].id);
+  };
+
+  const handleNextMember = (e) => {
+    e.stopPropagation();
+    if (members.length === 0) return;
+    const newIdx = (currentMemberIndex + 1) % members.length;
+    setSelectedMemberId(members[newIdx].id);
+  };
 
   // Save changes to localStorage và Đồng bộ trực tiếp về Database Backend
   const saveMembers = (newMembers) => {
@@ -476,17 +520,19 @@ export function CompetencyScorecardPage() {
       {/* ======================================================== */}
       {viewMode === "scorecard" && (
         <div style={{ width: "100%" }}>
-          {/* Member Roster Filter Row */}
+          {/* MEMBER SELECTION DROPDOWN LIST (Thay thế thanh cuộn ngang bằng danh sách chọn thông minh) */}
           <div
+            ref={dropdownRef}
             style={{
               background: "#ffffff",
               borderRadius: 16,
-              padding: "14px 18px",
+              padding: "12px 18px",
               marginBottom: 20,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
               border: "1px solid #e2e8f0",
               width: "100%",
               boxSizing: "border-box",
+              position: "relative",
             }}
           >
             <div
@@ -496,144 +542,341 @@ export function CompetencyScorecardPage() {
                 justifyContent: "space-between",
                 flexWrap: "wrap",
                 gap: 12,
-                marginBottom: 12,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Users size={16} color="#475569" />
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1e293b" }}>
-                  Chọn Thành Viên ({members.length})
-                </span>
-              </div>
-
-              {/* Search & Role Filters */}
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ position: "relative" }}>
-                  <Search
-                    size={13}
-                    color="#94a3b8"
-                    style={{ position: "absolute", left: 10, top: 9 }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Tìm theo tên..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      padding: "6px 10px 6px 30px",
-                      borderRadius: 8,
-                      border: "1px solid #cbd5e1",
-                      fontSize: 12,
-                      width: 160,
-                      outline: "none",
-                    }}
-                  />
+              {/* Left: Dropdown Trigger Button */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: 1, minWidth: 260 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Users size={18} color="#2563eb" />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#475569" }}>
+                    Chọn Thành Viên:
+                  </span>
                 </div>
 
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {[
-                    { id: "all", label: "Tất cả" },
-                    { id: "admin", label: "Admin" },
-                    { id: "core", label: "Core" },
-                    { id: "leader", label: "Leader" },
-                    { id: "contributor", label: "Contributor" },
-                    { id: "learning", label: "Learning" },
-                  ].map((rf) => (
-                    <button
-                      key={rf.id}
-                      onClick={() => setRoleFilter(rf.id)}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        border: "none",
-                        background: roleFilter === rf.id ? "#1e293b" : "#f1f5f9",
-                        color: roleFilter === rf.id ? "#ffffff" : "#475569",
-                      }}
-                    >
-                      {rf.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Member Horizontal Scroll Pills */}
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                overflowX: "auto",
-                paddingBottom: 6,
-                WebkitOverflowScrolling: "touch",
-              }}
-            >
-              {filteredMembers.map((m) => {
-                const isSelected = m.id === selectedMemberId;
-                const st = calculateMemberStats(m.scores);
-                const tier = getRankTier(st.overallAvg);
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => setSelectedMemberId(m.id)}
+                {/* The Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsMemberDropdownOpen(!isMemberDropdownOpen)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "6px 14px 6px 8px",
+                    borderRadius: 12,
+                    border: isMemberDropdownOpen ? "2px solid #2563eb" : "1.5px solid #cbd5e1",
+                    background: isMemberDropdownOpen ? "#eff6ff" : "#f8fafc",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    boxShadow: isMemberDropdownOpen ? "0 4px 14px rgba(37, 99, 235, 0.15)" : "0 1px 3px rgba(0,0,0,0.04)",
+                  }}
+                  title="Nhấp để mở danh sách toàn bộ thành viên"
+                >
+                  <img
+                    src={currentMember.avatar}
+                    alt={currentMember.name}
                     style={{
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "7px 12px",
-                      borderRadius: 12,
-                      cursor: "pointer",
-                      border: isSelected ? "2px solid #2563eb" : "1px solid #e2e8f0",
-                      background: isSelected ? "#eff6ff" : "#f8fafc",
-                      transition: "all 0.15s ease",
-                      boxShadow: isSelected ? "0 4px 12px rgba(37, 99, 235, 0.12)" : "none",
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: `2px solid ${currentTier.color}`,
                     }}
-                  >
-                    <img
-                      src={m.avatar}
-                      alt={m.name}
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: `2px solid ${tier.color}`,
-                      }}
-                    />
-                    <div style={{ textAlign: "left" }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: isSelected ? "#1d4ed8" : "#1e293b",
-                        }}
-                      >
-                        {m.name}
-                      </div>
-                      <div style={{ fontSize: 10, color: "#64748b" }}>{m.role}</div>
+                  />
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
+                      {currentMember.name}
                     </div>
-                    {/* Rank letter stamp */}
-                    <div
-                      style={{
-                        padding: "2px 6px",
-                        borderRadius: 6,
-                        background: tier.bg,
-                        border: `1px solid ${tier.border}`,
-                        color: tier.textColor,
-                        fontWeight: 900,
-                        fontSize: 12,
-                        fontFamily: "Impact, sans-serif",
-                      }}
-                    >
-                      {tier.rank}
+                    <div style={{ fontSize: 11, color: "#64748b" }}>
+                      {currentMember.role}
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* Rank Stamp Badge */}
+                  <div
+                    style={{
+                      padding: "2px 7px",
+                      borderRadius: 6,
+                      background: currentTier.bg,
+                      border: `1px solid ${currentTier.border}`,
+                      color: currentTier.textColor,
+                      fontWeight: 900,
+                      fontSize: 12,
+                      fontFamily: "Impact, sans-serif",
+                      marginLeft: 4,
+                    }}
+                  >
+                    {currentTier.rank}
+                  </div>
+
+                  {/* Score */}
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#059669", marginLeft: 2 }}>
+                    {currentStats.overallAvg.toFixed(1)}/10
+                  </span>
+
+                  {/* Chevron Icon */}
+                  {isMemberDropdownOpen ? (
+                    <ChevronUp size={16} color="#2563eb" style={{ marginLeft: 4 }} />
+                  ) : (
+                    <ChevronDown size={16} color="#64748b" style={{ marginLeft: 4 }} />
+                  )}
+                </button>
+              </div>
+
+              {/* Right: Quick Switcher (< Trước | Vị trí | Sau >) */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={handlePrevMember}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#334155",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  title="Chuyển về nhân sự trước đó"
+                >
+                  <ChevronLeft size={14} /> Trước
+                </button>
+
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", padding: "0 4px" }}>
+                  {currentMemberIndex + 1} / {members.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleNextMember}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#334155",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  title="Chuyển sang nhân sự kế tiếp"
+                >
+                  Sau <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
+
+            {/* FLOATING DROPDOWN MENU (Hiển thị toàn bộ thành viên khi nhấp) */}
+            {isMemberDropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  width: "100%",
+                  maxWidth: 640,
+                  background: "#ffffff",
+                  borderRadius: 16,
+                  boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
+                  border: "1.5px solid #cbd5e1",
+                  zIndex: 1050,
+                  overflow: "hidden",
+                  animation: "fadeInDown 0.15s ease",
+                }}
+              >
+                {/* Search & Filter Header in Dropdown */}
+                <div style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc" }}>
+                  <div style={{ position: "relative", marginBottom: 8 }}>
+                    <Search
+                      size={14}
+                      color="#94a3b8"
+                      style={{ position: "absolute", left: 10, top: 10 }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Tìm theo tên, chức vụ, phòng ban..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px 8px 32px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        fontSize: 12.5,
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+
+                  {/* Filter chips */}
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {[
+                      { id: "all", label: `Tất cả (${members.length})` },
+                      { id: "admin", label: "Admin" },
+                      { id: "core", label: "Core" },
+                      { id: "leader", label: "Leader" },
+                      { id: "contributor", label: "Contributor" },
+                      { id: "learning", label: "Learning" },
+                    ].map((rf) => (
+                      <button
+                        key={rf.id}
+                        type="button"
+                        onClick={() => setRoleFilter(rf.id)}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          border: "none",
+                          background: roleFilter === rf.id ? "#1e293b" : "#ffffff",
+                          color: roleFilter === rf.id ? "#ffffff" : "#475569",
+                          border: roleFilter === rf.id ? "none" : "1px solid #e2e8f0",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {rf.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* List of Members */}
+                <div
+                  style={{
+                    maxHeight: 340,
+                    overflowY: "auto",
+                    padding: "8px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  {filteredMembers.length === 0 ? (
+                    <div style={{ padding: "24px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                      Không tìm thấy nhân sự phù hợp với từ khóa "{searchTerm}".
+                    </div>
+                  ) : (
+                    filteredMembers.map((m) => {
+                      const isSelected = m.id === selectedMemberId;
+                      const st = calculateMemberStats(m.scores);
+                      const tier = getRankTier(st.overallAvg);
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => {
+                            setSelectedMemberId(m.id);
+                            setIsMemberDropdownOpen(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            cursor: "pointer",
+                            border: isSelected ? "1.5px solid #2563eb" : "1px solid transparent",
+                            background: isSelected ? "#eff6ff" : "transparent",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          {/* Left: Avatar + Name + Dept */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                            <img
+                              src={m.avatar}
+                              alt={m.name}
+                              style={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: `2px solid ${tier.color}`,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <div style={{ minWidth: 0, textAlign: "left" }}>
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 800,
+                                  color: isSelected ? "#1d4ed8" : "#0f172a",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {m.name}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {m.role} • {m.department}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Score + Rank Stamp + Checkmark */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "#059669" }}>
+                              {st.overallAvg.toFixed(1)}/10
+                            </span>
+
+                            <div
+                              style={{
+                                padding: "2px 6px",
+                                borderRadius: 6,
+                                background: tier.bg,
+                                border: `1px solid ${tier.border}`,
+                                color: tier.textColor,
+                                fontWeight: 900,
+                                fontSize: 11,
+                                fontFamily: "Impact, sans-serif",
+                              }}
+                            >
+                              {tier.rank}
+                            </div>
+
+                            {isSelected && <Check size={16} color="#2563eb" style={{ flexShrink: 0 }} />}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Footer hint */}
+                <div
+                  style={{
+                    padding: "8px 14px",
+                    borderTop: "1px solid #f1f5f9",
+                    background: "#f8fafc",
+                    fontSize: 11,
+                    color: "#64748b",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Hiển thị {filteredMembers.length} / {members.length} nhân sự</span>
+                  <span style={{ color: "#2563eb", fontWeight: 700 }}>Chọn để đổi bảng điểm</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Main 2-Column / 1-Column Responsive Grid: Radar Chart + 18 Criteria */}
