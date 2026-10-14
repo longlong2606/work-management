@@ -325,6 +325,15 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
             try { conn.Execute("ALTER TABLE roles ADD COLUMN can_evaluate INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute(@"CREATE TABLE IF NOT EXISTS competency_evaluations (
+                user_id INTEGER PRIMARY KEY,
+                scores_json TEXT NOT NULL DEFAULT '{}',
+                desired_direction TEXT DEFAULT '',
+                commitment_level TEXT DEFAULT '',
+                evidence_notes TEXT DEFAULT '',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );"); } catch { }
 
             // 0. Synchronize standard 5 Roles (Admin > Core > Leader > Contributor > Learning)
             var defaultRoles = new[]

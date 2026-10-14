@@ -414,4 +414,12 @@ export const api = {
     request(`/subtasks/${id}`, {
       method: "DELETE",
     }),
+
+  // Competency Evaluations
+  getCompetencies: () => request("/competencies"),
+  updateCompetency: (userId, data) =>
+    request(`/competencies/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 };

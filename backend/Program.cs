@@ -814,6 +814,58 @@ app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext 
 });
 
 
+// ================= COMPETENCY EVALUATIONS =================
+app.MapGet("/api/competencies", (HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var list = conn.Query<CompetencyEvaluationDto>(@"
+        SELECT u.id, u.username, u.full_name, u.role, u.department, u.status,
+               COALESCE(ce.scores_json, '{}') as scores_json,
+               COALESCE(ce.desired_direction, '') as desired_direction,
+               COALESCE(ce.commitment_level, '') as commitment_level,
+               COALESCE(ce.evidence_notes, '') as evidence_notes,
+               ce.updated_at
+        FROM users u
+        LEFT JOIN competency_evaluations ce ON ce.user_id = u.id
+        WHERE u.status = 'active'
+        ORDER BY u.id ASC");
+    return Results.Ok(list);
+});
+
+app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (currentUser.role == "learning") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @userId", new { userId });
+    if (exists == 0) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+
+    conn.Execute(@"
+        INSERT INTO competency_evaluations (user_id, scores_json, desired_direction, commitment_level, evidence_notes, updated_at)
+        VALUES (@userId, @scores, @dir, @commit, @notes, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            scores_json = EXCLUDED.scores_json,
+            desired_direction = EXCLUDED.desired_direction,
+            commitment_level = EXCLUDED.commitment_level,
+            evidence_notes = EXCLUDED.evidence_notes,
+            updated_at = CURRENT_TIMESTAMP",
+        new {
+            userId,
+            scores = req.scores_json ?? "{}",
+            dir = req.desired_direction ?? "",
+            commit = req.commitment_level ?? "",
+            notes = req.evidence_notes ?? ""
+        });
+
+    return Results.Ok(new { message = "Lưu đánh giá năng lực thành công!" });
+});
+
 // ================= ROLES MANAGEMENT =================
 app.MapGet("/api/roles", (HttpContext ctx) =>
 {

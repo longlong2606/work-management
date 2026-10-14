@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 import {
   COMPETENCY_GROUPS,
   INITIAL_MEMBERS,
@@ -24,7 +25,54 @@ export function CompetencyScorecardPage() {
   const auth = useAuth();
   const canEvaluate = auth?.canEvaluate ?? true;
 
-  // Members state (persisted to localStorage)
+  // Helper chuyển đổi User thực tế từ Backend Database sang Member đánh giá
+  const mapUserToMember = (u) => {
+    let scores = {};
+    try {
+      scores = typeof u.scores_json === "string" ? JSON.parse(u.scores_json || "{}") : (u.scores_json || {});
+    } catch {
+      scores = {};
+    }
+
+    const defaultScores = {};
+    for (let i = 1; i <= 18; i++) {
+      defaultScores[`c${i}`] = 6;
+    }
+    const mergedScores = { ...defaultScores, ...scores };
+
+    const roleMap = {
+      admin: "Quản trị viên (Admin)",
+      core: "Quản lý Cốt cán (Core)",
+      leader: "Trưởng nhóm (Lead)",
+      contributor: "Thành viên (Contributor)",
+      learning: "Học việc (Learning)",
+    };
+
+    const roleLevelMap = {
+      admin: "Lead",
+      core: "Lead",
+      leader: "Lead",
+      contributor: "Chính thức",
+      learning: "Thực tập",
+    };
+
+    return {
+      id: String(u.id),
+      userId: u.id,
+      name: u.full_name || u.username,
+      username: u.username,
+      role: roleMap[u.role] || u.role || "Thành viên",
+      roleLevel: roleLevelMap[u.role] || "Thành viên",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || u.username)}&background=2563eb&color=fff&bold=true`,
+      department: u.department || "Ban Kỹ Thuật & Vận Hành",
+      desiredDirection: u.desired_direction || "Phát triển chuyên môn và tích cực đóng góp cho các dự án phòng máy Lab.",
+      commitmentLevel: u.commitment_level || "100% Toàn thời gian & đúng ca trực",
+      evidenceNotes: u.evidence_notes || "Tích cực hoàn thành tốt các ca trực và checklist được giao.",
+      scores: mergedScores,
+    };
+  };
+
+  // Members state (Khởi tạo từ cache hoặc mẫu, sau đó đồng bộ với Database nhân sự)
   const [members, setMembers] = useState(() => {
     try {
       const saved = localStorage.getItem("lab_competency_members");
@@ -35,9 +83,36 @@ export function CompetencyScorecardPage() {
   });
 
   // Selected member for scorecard
-  const [selectedMemberId, setSelectedMemberId] = useState("TV01");
+  const [selectedMemberId, setSelectedMemberId] = useState(() => {
+    return members[0]?.id || "1";
+  });
   // Comparison member for head-to-head mode
-  const [compareMemberId, setCompareMemberId] = useState("TV02");
+  const [compareMemberId, setCompareMemberId] = useState(() => {
+    return members[1]?.id || members[0]?.id || "1";
+  });
+
+  // Tự động kết nối và tải danh sách nhân sự thực tế từ Backend Database
+  useEffect(() => {
+    const fetchRealStaffData = async () => {
+      try {
+        const res = await api.getCompetencies();
+        if (Array.isArray(res) && res.length > 0) {
+          const mapped = res.map(mapUserToMember);
+          setMembers(mapped);
+          try {
+            localStorage.setItem("lab_competency_members", JSON.stringify(mapped));
+          } catch {}
+
+          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : mapped[0].id));
+          setCompareMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : (mapped[1] ? mapped[1].id : mapped[0].id)));
+        }
+      } catch (err) {
+        console.error("Không thể tải danh sách nhân sự từ server, dùng cache offline:", err);
+      }
+    };
+
+    fetchRealStaffData();
+  }, []);
 
   // View modes: "scorecard" | "compare"
   const [viewMode, setViewMode] = useState("scorecard");
@@ -52,13 +127,26 @@ export function CompetencyScorecardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  // Save changes to localStorage
+  // Save changes to localStorage và Đồng bộ trực tiếp về Database Backend
   const saveMembers = (newMembers) => {
     setMembers(newMembers);
     try {
       localStorage.setItem("lab_competency_members", JSON.stringify(newMembers));
     } catch (e) {
       console.error("Failed to save to localStorage", e);
+    }
+
+    // Đồng bộ điểm lên cơ sở dữ liệu cho nhân sự đang được chấm
+    const activeMemberObj = newMembers.find((m) => m.id === currentMember?.id);
+    if (activeMemberObj && activeMemberObj.userId) {
+      api.updateCompetency(activeMemberObj.userId, {
+        scores_json: JSON.stringify(activeMemberObj.scores),
+        desired_direction: activeMemberObj.desiredDirection || "",
+        commitment_level: activeMemberObj.commitmentLevel || "",
+        evidence_notes: activeMemberObj.evidenceNotes || "",
+      }).catch((err) => {
+        console.error("Lỗi đồng bộ điểm lên database:", err);
+      });
     }
   };
 

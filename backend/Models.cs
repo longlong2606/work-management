@@ -298,3 +298,25 @@ public record UpdateDepartmentRequest(
     string? color = "#3b82f6"
 );
 
+
+public class CompetencyEvaluationDto
+{
+    public long id { get; set; }
+    public string username { get; set; } = "";
+    public string full_name { get; set; } = "";
+    public string role { get; set; } = "";
+    public string? department { get; set; } = "";
+    public string status { get; set; } = "active";
+    public string scores_json { get; set; } = "{}";
+    public string? desired_direction { get; set; }
+    public string? commitment_level { get; set; }
+    public string? evidence_notes { get; set; }
+    public string? updated_at { get; set; }
+}
+
+public record UpdateCompetencyRequest(
+    string? scores_json,
+    string? desired_direction,
+    string? commitment_level,
+    string? evidence_notes
+);
