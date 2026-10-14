@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../services/api";
 
 const AuthContext = createContext(null);
@@ -53,12 +53,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem("wm_user", JSON.stringify(merged));
   };
 
-  const isAdmin = user?.role === "admin";
-  const isManager = user?.role === "admin" || user?.role === "manager";
-  const isLeader = user?.role === "admin" || user?.role === "manager" || user?.role === "leader";
-  const isSupervisor = user?.role === "admin" || user?.role === "manager" || user?.role === "leader" || user?.role === "supervisor";
-  const canManageStaff = user?.role === "admin" || user?.role === "manager";
-  const canManageSchedule = user?.role === "admin" || user?.role === "manager" || user?.role === "leader";
+  // 5 Chuẩn Role theo phân cấp: Admin > Core > Leader > Contributor > Learning
+  const role = user?.role || "contributor";
+  const isAdmin = role === "admin";
+  const isCore = role === "admin" || role === "core" || role === "manager";
+  const isLeader = isCore || role === "leader" || role === "supervisor";
+  const isContributor = isLeader || role === "contributor" || role === "technician" || role === "staff";
+  const isLearning = !!user;
+
+  // Quyền hạn theo phân cấp 5 role
+  const canManageStaff = isCore; // Admin & Core có toàn quyền quản lý nhân sự
+  const canManageSchedule = isLeader; // Admin, Core & Leader có quyền phân và duyệt ca
+  const canManageTasks = isLeader; // Admin, Core & Leader có quyền tạo và điều phối nhiệm vụ
+
+  // Alias tương thích ngược
+  const isManager = isCore;
+  const isSupervisor = isLeader;
 
   return (
     <AuthContext.Provider value={{ 
@@ -66,11 +76,15 @@ export function AuthProvider({ children }) {
       login, 
       logout, 
       isAdmin, 
+      isCore,
       isManager,
       isLeader, 
       isSupervisor,
+      isContributor,
+      isLearning,
       canManageStaff,
       canManageSchedule,
+      canManageTasks,
       loading, 
       updateCurrentUser 
     }}>

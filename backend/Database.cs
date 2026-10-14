@@ -324,17 +324,14 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
 
-            // 0. Synchronize standard Roles
+            // 0. Synchronize standard 5 Roles (Admin > Core > Leader > Contributor > Learning)
             var defaultRoles = new[]
             {
-                new { id = "admin", name = "Quản trị viên (Admin)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
-                new { id = "manager", name = "Quản lý (Manager)", desc = "Quản lý nhân sự, phân công ca, duyệt đề xuất và theo dõi vận hành", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
-                new { id = "leader", name = "Trưởng ca / Tổ trưởng (Leader)", desc = "Điều hành ca trực, giao và duyệt nhiệm vụ checklist, điểm danh nhân viên", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0 },
-                new { id = "supervisor", name = "Giám sát viên (Supervisor)", desc = "Giám sát quy trình ca trực, kiểm tra báo cáo và lịch sử vận hành", color = "#d97706", is_sys = 1, cms = 0, cmt = 1, cmu = 0 },
-                new { id = "technician", name = "Kỹ thuật viên (Technician)", desc = "Trực kỹ thuật chuyên môn, xử lý sự cố thiết bị và thực hiện nhiệm vụ", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
-                new { id = "staff", name = "Nhân viên trực (Staff)", desc = "Nhận ca trực, thực hiện checklist nhiệm vụ, đổi ca và báo vắng", color = "#3b82f6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
-                new { id = "intern", name = "Thực tập sinh (Intern)", desc = "Tham gia trực hỗ trợ, học việc, thực hiện công việc được phân công", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
-                new { id = "viewer", name = "Người xem (Viewer)", desc = "Chỉ xem lịch trực và màn hình TV kiosk, không thao tác sửa đổi", color = "#6b7280", is_sys = 1, cms = 0, cmt = 0, cmu = 0 }
+                new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
+                new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, quản lý nhân sự, lịch phân ca và điều phối toàn bộ dự án", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
+                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Trưởng ca / Project Lead / Research Lead, điều hành ca trực, giao nhiệm vụ và kiểm duyệt checklist", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0 },
+                new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
+                new { id = "learning", name = "Learning (Học viên / Thực tập sinh)", desc = "Học viên, thực tập sinh mới, tham gia học việc, hỗ trợ ca trực theo hướng dẫn của mentor", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 }
             };
             foreach (var r in defaultRoles)
             {

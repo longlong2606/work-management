@@ -30,14 +30,18 @@ import {
 } from "lucide-react";
 
 const ROLE_LABELS = {
-  admin: { label: "Quản trị viên", color: "#7c3aed", bg: "#ede9fe" },
-  manager: { label: "Quản lý", color: "#2563eb", bg: "#dbeafe" },
-  leader: { label: "Trưởng ca", color: "#059669", bg: "#d1fae5" },
-  supervisor: { label: "Giám sát viên", color: "#d97706", bg: "#fef3c7" },
-  technician: { label: "Kỹ thuật viên", color: "#0891b2", bg: "#cffafe" },
-  staff: { label: "Nhân viên", color: "#3b82f6", bg: "#eff6ff" },
-  intern: { label: "Thực tập sinh", color: "#8b5cf6", bg: "#f3e8ff" },
-  viewer: { label: "Người xem", color: "#6b7280", bg: "#f3f4f6" },
+  admin: { label: "Admin (Quản trị viên)", color: "#7c3aed", bg: "#ede9fe" },
+  core: { label: "Core (Thành viên Cốt cán)", color: "#2563eb", bg: "#dbeafe" },
+  leader: { label: "Leader (Trưởng nhóm)", color: "#059669", bg: "#d1fae5" },
+  contributor: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
+  learning: { label: "Learning (Học viên)", color: "#8b5cf6", bg: "#f3e8ff" },
+  // Tương thích ngược
+  manager: { label: "Core (Thành viên Cốt cán)", color: "#2563eb", bg: "#dbeafe" },
+  supervisor: { label: "Leader (Trưởng nhóm)", color: "#059669", bg: "#d1fae5" },
+  technician: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
+  staff: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
+  intern: { label: "Learning (Học viên)", color: "#8b5cf6", bg: "#f3e8ff" },
+  viewer: { label: "Learning (Học viên)", color: "#8b5cf6", bg: "#f3e8ff" },
 };
 
 const TAB_TITLES = {

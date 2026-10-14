@@ -39,7 +39,8 @@ function formatDeadline(deadlineStr) {
 }
 
 export function TasksPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isCore, isLeader } = useAuth();
+  const hasAdminRights = isAdmin || isCore;
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'my_tasks', 'needs_review', 'finished'
@@ -843,7 +844,7 @@ export function TasksPage() {
               const totalSub = subtasks.length;
               const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
-              const isLeaderOrAdmin = isAdmin || taskDetail.task.leader_id === user?.id;
+              const isLeaderOrAdmin = isAdmin || isCore || isLeader || taskDetail.task.leader_id === user?.id;
 
               return (
                 <div

@@ -53,7 +53,7 @@ function getDaysOfWeek(mondayStr) {
 export function SchedulePage() {
   const { user } = useAuth();
   const { fetchUnreadCount } = useNotifications();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "core" || user?.role === "manager";
 
   const [viewMode, setViewMode] = useState("week"); // 'week' | 'day' | 'my'
   const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0]);

@@ -114,7 +114,7 @@ export function CompetencyScorecardPage() {
         m.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchRole =
         roleFilter === "all" ||
-        m.roleLevel.toLowerCase() === roleFilter.toLowerCase();
+        (roleFilter === "leader" ? (m.roleLevel.toLowerCase() === "lead" || m.roleLevel.toLowerCase() === "leader") : m.roleLevel.toLowerCase() === roleFilter.toLowerCase());
       return matchSearch && matchRole;
     });
   }, [members, searchTerm, roleFilter]);
@@ -371,8 +371,9 @@ export function CompetencyScorecardPage() {
                 <div style={{ display: "flex", gap: 4 }}>
                   {[
                     { id: "all", label: "Tất cả" },
-                    { id: "lead", label: "Lead" },
+                    { id: "admin", label: "Admin" },
                     { id: "core", label: "Core" },
+                    { id: "leader", label: "Leader" },
                     { id: "contributor", label: "Contributor" },
                     { id: "learning", label: "Learning" },
                   ].map((rf) => (

@@ -35,6 +35,16 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
+  // Sắp xếp 5 role chuẩn: admin > core > leader > contributor > learning
+  const ROLE_HIERARCHY = { admin: 1, core: 2, leader: 3, contributor: 4, learning: 5 };
+  const sortedRoles = useMemo(() => {
+    return [...roles].sort((a, b) => {
+      const ordA = ROLE_HIERARCHY[a.id] || 99;
+      const ordB = ROLE_HIERARCHY[b.id] || 99;
+      return ordA - ordB;
+    });
+  }, [roles]);
+
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ text: "", type: "success" });
 
@@ -51,7 +61,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("staff");
+  const [role, setRole] = useState("contributor");
   const [department, setDepartment] = useState("Tổ Trực Vận Hành");
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,7 +78,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editDepartment, setEditDepartment] = useState("");
-  const [editRole, setEditRole] = useState("staff");
+  const [editRole, setEditRole] = useState("contributor");
   const [editStatus, setEditStatus] = useState("active");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -610,7 +620,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                   style={{ height: 40 }}
                 >
                   <option value="">🛡️ Tất cả vai trò ({roles.length})</option>
-                  {roles.map((r) => (
+                  {sortedRoles.map((r) => (
                     <option key={r.id} value={r.id}>{r.display_name}</option>
                   ))}
                 </select>
