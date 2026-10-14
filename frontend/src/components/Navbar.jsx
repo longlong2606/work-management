@@ -126,6 +126,7 @@ export function Navbar({ activeTab, setActiveTab }) {
           zIndex: 100,
           boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.04)",
           width: "100%",
+          overflow: "visible",
         }}
       >
         <div
@@ -135,6 +136,7 @@ export function Navbar({ activeTab, setActiveTab }) {
             margin: "0 auto",
             padding: "0 14px",
             boxSizing: "border-box",
+            overflow: "visible",
           }}
         >
           {/* ========================================================= */}
@@ -169,7 +171,7 @@ export function Navbar({ activeTab, setActiveTab }) {
             </div>
 
             {/* NAVIGATION TABS DESKTOP */}
-            <nav style={{ display: "flex", alignItems: "center", gap: 3, flex: 1, minWidth: 0, overflowX: "auto", scrollbarWidth: "none" }}>
+            <nav style={{ display: "flex", alignItems: "center", gap: 3, position: "relative", overflow: "visible" }}>
               {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -251,17 +253,17 @@ export function Navbar({ activeTab, setActiveTab }) {
                       style={{
                         position: "absolute",
                         top: "calc(100% + 8px)",
-                        right: 0,
-                        width: 260,
+                        left: 0,
+                        width: 275,
                         backgroundColor: "#ffffff",
                         borderRadius: 14,
-                        border: "1px solid #e2e8f0",
-                        boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.12), 0 6px 12px -4px rgba(0, 0, 0, 0.06)",
-                        padding: "6px",
-                        zIndex: 200,
+                        border: "1px solid #cbd5e1",
+                        boxShadow: "0 16px 36px -6px rgba(15, 23, 42, 0.2), 0 6px 14px -3px rgba(15, 23, 42, 0.08)",
+                        padding: "8px",
+                        zIndex: 1000,
                         display: "flex",
                         flexDirection: "column",
-                        gap: 3,
+                        gap: 4,
                       }}
                     >
                       <div style={{ padding: "6px 10px 4px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>

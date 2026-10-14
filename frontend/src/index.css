@@ -408,7 +408,8 @@ html, body {
   max-width: 100%;
   height: 64px;
   gap: 10px;
-  overflow: hidden;
+  position: relative;
+  overflow: visible !important;
 }
 
 .navbar-mobile {
@@ -429,7 +430,8 @@ html, body {
   max-width: 100%;
   height: 64px;
   gap: 10px;
-  overflow: hidden;
+  position: relative;
+  overflow: visible !important;
 }
 
   .navbar-mobile {
@@ -790,11 +792,8 @@ div[style*="overflow-x: auto"] {
   display: flex;
   align-items: center;
   gap: 3px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  flex: 1;
-  min-width: 0;
+  position: relative;
+  overflow: visible;
 }
 .navbar-desktop nav::-webkit-scrollbar {
   display: none;
