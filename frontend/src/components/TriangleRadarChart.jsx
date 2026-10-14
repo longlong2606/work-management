@@ -2,7 +2,7 @@ import React from "react";
 
 // Helper to determine rank tier from a 0-10 or 0-100 score
 export function getRankTier(score) {
-  const s = score > 10 ? score / 10 : score;
+  const s = score > 10 ? score / 10 : Number(score) || 0;
   if (s >= 8.5) {
     return {
       rank: "S",
@@ -75,24 +75,30 @@ export function TriangleRadarChart({
   activeGroup = null,
   onGroupClick = null,
 }) {
-  const cx = 230;
-  const cy = 230;
-  const maxR = 135; // Maximum radius of the triangle
+  // Center coordinates in a 520x520 viewBox for ample breathing room
+  const cx = 260;
+  const cy = 260;
 
-  // 3 Vertices Angles (radians)
-  // Vertex 0: Top (Management) -> -90 deg (-pi/2)
-  // Vertex 1: Bottom Right (Engineering) -> 30 deg (pi/6)
-  // Vertex 2: Bottom Left (Research) -> 150 deg (5pi/6)
+  // Radii
+  const rOuter = 215; // Outer circle ring
+  const rInner = 175; // Inner circle ring (tachometer track boundary)
+  const maxR = 145;   // Maximum radius of concentric triangle (100% / 10 points)
+
+  // 3 Angles (radians)
+  // Vertex 0: Top (Management & PM) -> -90 deg (-pi/2)
+  // Vertex 1: Bottom Right (Engineering & System) -> 30 deg (pi/6)
+  // Vertex 2: Bottom Left (Research & AI) -> 150 deg (5pi/6)
   const angles = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6];
 
-  // Concentric levels (20%, 40%, 60%, 80%, 100%)
+  // Helper to calculate (x, y) given angle and radius
+  const getPoint = (angle, radius) => [
+    cx + radius * Math.cos(angle),
+    cy + radius * Math.sin(angle)
+  ];
+
+  // Concentric levels: 20%, 40%, 60%, 80%, 100%
   const levels = [0.2, 0.4, 0.6, 0.8, 1.0];
 
-  const getPoint = (angle, radius) => {
-    return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
-  };
-
-  // Build triangle points string for a given level
   const getLevelPolygon = (fraction) => {
     return angles
       .map((angle) => {
@@ -113,7 +119,7 @@ export function TriangleRadarChart({
   const p3 = getPoint(angles[2], (s3 / 10) * maxR);
   const dataPolygon = `${p1[0].toFixed(1)},${p1[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} ${p3[0].toFixed(1)},${p3[1].toFixed(1)}`;
 
-  // Compare data if provided
+  // Compare data polygon if provided
   let comparePolygon = null;
   let cp1 = null, cp2 = null, cp3 = null;
   let cmpOverall = null;
@@ -136,20 +142,31 @@ export function TriangleRadarChart({
   const tier2 = getRankTier(s2);
   const tier3 = getRankTier(s3);
 
-  // Outer tachometer/speedometer circular ring ticks (60 ticks)
+  // Outer tachometer circular ring ticks (72 ticks around the full circle)
   const dialTicks = [];
-  const numTicks = 60;
+  const numTicks = 72;
   for (let i = 0; i < numTicks; i++) {
     const rad = (i * 2 * Math.PI) / numTicks;
-    const isMajor = i % 5 === 0;
-    const r1 = isMajor ? 188 : 191;
-    const r2 = 196;
-    const x1 = cx + r1 * Math.cos(rad);
-    const y1 = cy + r1 * Math.sin(rad);
-    const x2 = cx + r2 * Math.cos(rad);
-    const y2 = cy + r2 * Math.sin(rad);
+    const isMajor = i % 6 === 0;
+    const rStart = isMajor ? rInner + 2 : rInner + 8;
+    const rEnd = rOuter - 2;
+    const x1 = cx + rStart * Math.cos(rad);
+    const y1 = cy + rStart * Math.sin(rad);
+    const x2 = cx + rEnd * Math.cos(rad);
+    const y2 = cy + rEnd * Math.sin(rad);
     dialTicks.push({ x1, y1, x2, y2, isMajor, key: i });
   }
+
+  // Exact positions on the tachometer track (radius 195) for the 3 Big Manga Rank Letters
+  const rTrack = (rInner + rOuter) / 2; // ~195
+  const rankPos1 = getPoint(angles[0], rTrack); // Top: (260, 65)
+  const rankPos2 = getPoint(angles[1], rTrack); // Bottom-Right: (428.8, 357.5)
+  const rankPos3 = getPoint(angles[2], rTrack); // Bottom-Left: (91.2, 357.5)
+
+  // Label positions outside the dial
+  const labelPos1 = { x: 260, y: 22 };
+  const labelPos2 = { x: 440, y: 445 };
+  const labelPos3 = { x: 80, y: 445 };
 
   return (
     <div
@@ -166,12 +183,12 @@ export function TriangleRadarChart({
       }}
     >
       <svg
-        viewBox="0 0 460 460"
+        viewBox="0 0 520 520"
         style={{
           width: "100%",
           height: "auto",
           overflow: "visible",
-          filter: "drop-shadow(0 10px 25px rgba(0,0,0,0.06))",
+          filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.06))",
         }}
       >
         <defs>
@@ -181,33 +198,42 @@ export function TriangleRadarChart({
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
+          {/* Manga Halftone Screentone Pattern */}
+          <pattern id="mangaHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.2" opacity="0.35" />
+          </pattern>
+
           {/* Linear gradient for radar polygon fill */}
           <linearGradient id="triangleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.45" />
-            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.38" />
-            <stop offset="100%" stopColor="#059669" stopOpacity="0.42" />
+            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.5" />
+            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="#059669" stopOpacity="0.48" />
           </linearGradient>
 
           {/* Comparison gradient */}
           <linearGradient id="compareGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f97316" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.38" />
+            <stop offset="0%" stopColor="#f97316" stopOpacity="0.38" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.42" />
           </linearGradient>
 
-          {/* Radial subtle background */}
+          {/* Dial track subtle background */}
           <radialGradient id="centerDialBg" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="70%" stopColor="#f8fafc" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.75" />
+            <stop offset="65%" stopColor="#f8fafc" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.8" />
           </radialGradient>
         </defs>
 
-        {/* 1. OUTER TACHOMETER CIRCULAR DIAL RING (Anime Blue Lock Style) */}
-        <circle cx={cx} cy={cy} r={200} fill="none" stroke="#cbd5e1" strokeWidth="1.5" />
-        <circle cx={cx} cy={cy} r={186} fill="none" stroke="#e2e8f0" strokeWidth="1" />
-        <circle cx={cx} cy={cy} r={185} fill="url(#centerDialBg)" />
+        {/* ======================================================== */}
+        {/* 1. BLUE LOCK TACHOMETER CIRCULAR DIAL                    */}
+        {/* ======================================================== */}
+        {/* Outer and Inner Circle Track */}
+        <circle cx={cx} cy={cy} r={rOuter + 3} fill="none" stroke="#0f172a" strokeWidth="3" />
+        <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke="#64748b" strokeWidth="1.2" />
+        <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="#0f172a" strokeWidth="2" />
+        <circle cx={cx} cy={cy} r={rInner - 1} fill="url(#centerDialBg)" />
 
-        {/* Dial ticks */}
+        {/* Tachometer Dial Ticks (60-72 radial lines) */}
         {dialTicks.map((t) => (
           <line
             key={t.key}
@@ -215,52 +241,71 @@ export function TriangleRadarChart({
             y1={t.y1}
             x2={t.x2}
             y2={t.y2}
-            stroke={t.isMajor ? "#475569" : "#cbd5e1"}
-            strokeWidth={t.isMajor ? 1.8 : 1}
+            stroke={t.isMajor ? "#0f172a" : "#94a3b8"}
+            strokeWidth={t.isMajor ? 2 : 1}
           />
         ))}
 
+        {/* ======================================================== */}
         {/* 2. CONCENTRIC TRIANGLE GRID LEVELS (20%, 40%, 60%, 80%, 100%) */}
-        {levels.map((lvl, idx) => (
-          <g key={lvl}>
-            <polygon
-              points={getLevelPolygon(lvl)}
-              fill={idx % 2 === 0 ? "rgba(241, 245, 249, 0.45)" : "transparent"}
-              stroke={lvl === 1.0 ? "#94a3b8" : "#cbd5e1"}
-              strokeWidth={lvl === 1.0 ? 1.5 : 1}
-              strokeDasharray={lvl === 1.0 ? "none" : "3 3"}
-            />
-            {/* Axis scale number indicator on top axis */}
-            <text
-              x={cx + 6}
-              y={cy - maxR * lvl + 3}
-              fontSize="9"
-              fill="#94a3b8"
-              fontWeight="600"
-              fontFamily="system-ui, -apple-system, sans-serif"
-            >
-              {(lvl * 10).toFixed(0)}
-            </text>
-          </g>
-        ))}
+        {/* ======================================================== */}
+        {levels.map((lvl, idx) => {
+          const isMax = lvl === 1.0;
+          return (
+            <g key={lvl}>
+              <polygon
+                points={getLevelPolygon(lvl)}
+                fill={idx % 2 === 0 ? "rgba(241, 245, 249, 0.55)" : "transparent"}
+                stroke={isMax ? "#0f172a" : "#cbd5e1"}
+                strokeWidth={isMax ? 2 : 1}
+                strokeDasharray={isMax ? "none" : "3 3"}
+              />
+            </g>
+          );
+        })}
 
-        {/* 3. 3 SPOKE AXIS LINES (Center to 3 Vertices) */}
+        {/* Small "100" or "10" indicator at each 100% vertex (Manga reference style) */}
         {angles.map((angle, idx) => {
           const [vx, vy] = getPoint(angle, maxR);
+          const offsetX = idx === 0 ? 0 : idx === 1 ? -12 : 12;
+          const offsetY = idx === 0 ? 12 : -6;
+          return (
+            <text
+              key={`max-100-${idx}`}
+              x={vx + offsetX}
+              y={vy + offsetY}
+              fontSize="9"
+              fill="#64748b"
+              fontWeight="800"
+              fontFamily="Impact, Arial Black, sans-serif"
+              textAnchor="middle"
+            >
+              100
+            </text>
+          );
+        })}
+
+        {/* ======================================================== */}
+        {/* 3. 3 SPOKE AXIS LINES (From Center to Inner Ring)        */}
+        {/* ======================================================== */}
+        {angles.map((angle, idx) => {
+          const [endX, endY] = getPoint(angle, rInner);
           return (
             <line
-              key={idx}
+              key={`spoke-${idx}`}
               x1={cx}
               y1={cy}
-              x2={vx}
-              y2={vy}
-              stroke="#64748b"
+              x2={endX}
+              y2={endY}
+              stroke="#475569"
               strokeWidth="1.5"
             />
           );
         })}
 
-        {/* 4. COMPARISON MEMBER RADAR POLYGON (IF ACTIVE) */}
+        {/* ======================================================== */}
+        {/* 4. COMPARISON MEMBER RADAR POLYGON (IF ACTIVE)           */}
+        {/* ======================================================== */}
         {comparePolygon && (
           <g>
             <polygon
@@ -268,108 +313,122 @@ export function TriangleRadarChart({
               fill="url(#compareGradient)"
               stroke="#ea580c"
               strokeWidth="2.5"
-              strokeDasharray="4 2"
+              strokeDasharray="5 3"
             />
             {[cp1, cp2, cp3].map((pt, idx) => (
               <circle
                 key={`cmp-dot-${idx}`}
                 cx={pt[0]}
                 cy={pt[1]}
-                r={4}
+                r={4.5}
                 fill="#ffffff"
                 stroke="#ea580c"
-                strokeWidth="2"
+                strokeWidth="2.5"
               />
             ))}
           </g>
         )}
 
-        {/* 5. ACTIVE MEMBER RADAR POLYGON (TAM GIÁC NĂNG LỰC) */}
+        {/* ======================================================== */}
+        {/* 5. ACTIVE MEMBER RADAR POLYGON (MANGA HALFTONE + GLOW)   */}
+        {/* ======================================================== */}
+        {/* Screentone Hatch Layer */}
+        <polygon
+          points={dataPolygon}
+          fill="url(#mangaHatch)"
+          style={{ transition: "all 0.35s ease" }}
+        />
+        {/* Color Glow Layer */}
         <polygon
           points={dataPolygon}
           fill="url(#triangleGradient)"
-          stroke="#2563eb"
+          stroke="#0f172a"
           strokeWidth="3"
           filter="url(#radarGlow)"
           style={{ transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
 
-        {/* Vertex markers with white core and glowing stroke */}
+        {/* Vertex Points & Number Badges */}
         {[
-          { pt: p1, val: s1, tier: tier1, angle: angles[0], gid: "group1" },
-          { pt: p2, val: s2, tier: tier2, angle: angles[1], gid: "group2" },
-          { pt: p3, val: s3, tier: tier3, angle: angles[2], gid: "group3" },
+          { pt: p1, val: s1, tier: tier1, angle: angles[0], gid: "group1", textAnchor: "middle", offsetX: 0, offsetY: -12 },
+          { pt: p2, val: s2, tier: tier2, angle: angles[1], gid: "group2", textAnchor: "start", offsetX: 10, offsetY: 4 },
+          { pt: p3, val: s3, tier: tier3, angle: angles[2], gid: "group3", textAnchor: "end", offsetX: -10, offsetY: 4 },
         ].map((v, idx) => {
           const isSelected = activeGroup === v.gid;
           return (
             <g
-              key={`vertex-${idx}`}
+              key={`vertex-group-${idx}`}
               onClick={() => onGroupClick && onGroupClick(v.gid)}
               style={{ cursor: "pointer" }}
             >
+              {/* Outer Glow Ring */}
               <circle
                 cx={v.pt[0]}
                 cy={v.pt[1]}
-                r={isSelected ? 8.5 : 6.5}
+                r={isSelected ? 9 : 6.5}
                 fill="#ffffff"
-                stroke={isSelected ? "#1e40af" : v.tier.color}
-                strokeWidth={isSelected ? 4 : 3}
+                stroke={isSelected ? "#2563eb" : "#0f172a"}
+                strokeWidth={isSelected ? 3.5 : 2.5}
                 style={{ transition: "all 0.25s ease" }}
               />
-              {/* Value capsule badge on vertex */}
-              <rect
-                x={v.pt[0] - 16}
-                y={idx === 0 ? v.pt[1] - 22 : v.pt[1] + 8}
-                width={32}
-                height={16}
-                rx={8}
-                fill="#0f172a"
-                opacity={isSelected ? "0.95" : "0.85"}
-              />
+
+              {/* Exact Numerical Score (Manga style bold text e.g. 72 or 7.2) */}
               <text
-                x={v.pt[0]}
-                y={idx === 0 ? v.pt[1] - 11 : v.pt[1] + 19}
-                textAnchor="middle"
-                fontSize="10"
-                fontWeight="800"
-                fill="#ffffff"
-                fontFamily="system-ui, sans-serif"
+                x={v.pt[0] + v.offsetX}
+                y={v.pt[1] + v.offsetY}
+                textAnchor={v.textAnchor}
+                fontSize="13"
+                fontWeight="900"
+                fill="#0f172a"
+                fontFamily="Impact, Arial Black, sans-serif"
+                style={{ filter: "drop-shadow(0 1px 2px #ffffff)" }}
               >
-                {v.val.toFixed(1)}
+                {Math.round(v.val * 10)}
               </text>
             </g>
           );
         })}
 
-        {/* 6. CENTER CIRCLE WITH OVERALL SCORE & RANK */}
+        {/* ======================================================== */}
+        {/* 6. CENTER CIRCLE WITH OVERALL SCORE (OVR BADGE)          */}
+        {/* ======================================================== */}
         <g style={{ cursor: "pointer" }}>
           <circle
             cx={cx}
             cy={cy}
             r={34}
             fill="#ffffff"
+            stroke="#0f172a"
+            strokeWidth="3"
+            filter="drop-shadow(0 4px 10px rgba(0,0,0,0.15))"
+          />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={30}
+            fill="#ffffff"
             stroke={overallTier.color}
-            strokeWidth="3.5"
-            filter="drop-shadow(0 3px 8px rgba(0,0,0,0.12))"
+            strokeWidth="2"
           />
           <text
             x={cx}
             y={cy - 12}
             textAnchor="middle"
             fontSize="8"
-            fontWeight="800"
+            fontWeight="900"
             fill="#64748b"
-            letterSpacing="0.8px"
+            letterSpacing="1px"
+            fontFamily="system-ui, sans-serif"
           >
-            OVERALL
+            OVR
           </text>
           <text
             x={cx}
             y={cy + 8}
             textAnchor="middle"
-            fontSize="18"
+            fontSize="20"
             fontWeight="900"
-            fill={overallTier.color}
+            fill="#0f172a"
             fontFamily="Impact, Arial Black, sans-serif"
           >
             {overallScore}
@@ -378,191 +437,192 @@ export function TriangleRadarChart({
             x={cx}
             y={cy + 22}
             textAnchor="middle"
-            fontSize="9"
-            fontWeight="800"
-            fill="#1e293b"
+            fontSize="10"
+            fontWeight="900"
+            fill={overallTier.color}
+            fontFamily="Impact, sans-serif"
           >
             HẠNG {overallTier.rank}
           </text>
         </g>
 
         {/* ======================================================== */}
-        {/* 7. THREE RADIAL CATEGORY LABELS & BLUE-LOCK RANK LETTERS */}
+        {/* 7. MANGA RANK LETTERS S / A / B / C / D ON TACHOMETER    */}
+        {/*    (Placed exactly inside the circular track)           */}
         {/* ======================================================== */}
 
-        {/* TOP: NHÓM 1 - QUẢN LÝ & ĐỐI NGOẠI */}
+        {/* TOP: NHÓM 1 RANK LETTER */}
         <g
           onClick={() => onGroupClick && onGroupClick("group1")}
           style={{ cursor: interactive ? "pointer" : "default" }}
         >
-          {/* Active highlight background if selected */}
-          {activeGroup === "group1" && (
-            <rect x={cx - 85} y={10} width={170} height={85} rx={12} fill="rgba(37, 99, 235, 0.08)" stroke="#2563eb" strokeWidth="1" strokeDasharray="3 2" />
-          )}
-          {/* Category Title */}
+          <circle
+            cx={rankPos1[0]}
+            cy={rankPos1[1]}
+            r={20}
+            fill="#ffffff"
+            stroke="#0f172a"
+            strokeWidth="2.5"
+          />
           <text
-            x={cx}
-            y={24}
+            x={rankPos1[0]}
+            y={rankPos1[1] + 10}
             textAnchor="middle"
-            fontSize="12.5"
-            fontWeight="900"
-            letterSpacing="0.5px"
-            fill="#1e3a8a"
-            fontFamily="system-ui, sans-serif"
-          >
-            QUẢN LÝ & ĐỐI NGOẠI
-          </text>
-          <text
-            x={cx}
-            y={38}
-            textAnchor="middle"
-            fontSize="9.5"
-            fontWeight="600"
-            fill="#64748b"
-          >
-            Dự Án • Đào Tạo • Đối Ngoại
-          </text>
-          {/* Big Stylized Blue-Lock Rank Letter */}
-          <text
-            x={cx}
-            y={68}
-            textAnchor="middle"
-            fontSize="32"
+            fontSize="30"
             fontWeight="900"
             fill={tier1.color}
             stroke="#0f172a"
-            strokeWidth="1.2"
+            strokeWidth="1.5"
             fontFamily="Impact, Arial Black, sans-serif"
-            letterSpacing="1px"
           >
             {tier1.rank}
           </text>
-          {/* Score display */}
-          <text
-            x={cx}
-            y={82}
-            textAnchor="middle"
-            fontSize="11"
-            fontWeight="800"
-            fill="#334155"
-          >
-            {s1.toFixed(1)} <tspan fontSize="9" fill="#94a3b8">/ 10</tspan>
-          </text>
         </g>
 
-        {/* BOTTOM RIGHT: NHÓM 2 - KỸ THUẬT & HỆ THỐNG */}
+        {/* BOTTOM-RIGHT: NHÓM 2 RANK LETTER */}
         <g
           onClick={() => onGroupClick && onGroupClick("group2")}
           style={{ cursor: interactive ? "pointer" : "default" }}
         >
-          {activeGroup === "group2" && (
-            <rect x={280} y={315} width={170} height={100} rx={12} fill="rgba(5, 150, 105, 0.08)" stroke="#059669" strokeWidth="1" strokeDasharray="3 2" />
-          )}
-          {/* Category Title */}
+          <circle
+            cx={rankPos2[0]}
+            cy={rankPos2[1]}
+            r={20}
+            fill="#ffffff"
+            stroke="#0f172a"
+            strokeWidth="2.5"
+          />
           <text
-            x={365}
-            y={330}
+            x={rankPos2[0]}
+            y={rankPos2[1] + 10}
             textAnchor="middle"
-            fontSize="12.5"
-            fontWeight="900"
-            letterSpacing="0.5px"
-            fill="#065f46"
-            fontFamily="system-ui, sans-serif"
-          >
-            KỸ THUẬT & HỆ THỐNG
-          </text>
-          <text
-            x={365}
-            y={344}
-            textAnchor="middle"
-            fontSize="9.5"
-            fontWeight="600"
-            fill="#64748b"
-          >
-            Lập Trình • AI/Agent • Deploy
-          </text>
-          {/* Big Stylized Rank Letter */}
-          <text
-            x={365}
-            y={384}
-            textAnchor="middle"
-            fontSize="34"
+            fontSize="30"
             fontWeight="900"
             fill={tier2.color}
             stroke="#0f172a"
-            strokeWidth="1.2"
+            strokeWidth="1.5"
             fontFamily="Impact, Arial Black, sans-serif"
           >
             {tier2.rank}
           </text>
-          {/* Score display */}
-          <text
-            x={365}
-            y={400}
-            textAnchor="middle"
-            fontSize="11.5"
-            fontWeight="800"
-            fill="#334155"
-          >
-            {s2.toFixed(1)} <tspan fontSize="9" fill="#94a3b8">/ 10</tspan>
-          </text>
         </g>
 
-        {/* BOTTOM LEFT: NHÓM 3 - RESEARCH & AI */}
+        {/* BOTTOM-LEFT: NHÓM 3 RANK LETTER */}
         <g
           onClick={() => onGroupClick && onGroupClick("group3")}
           style={{ cursor: interactive ? "pointer" : "default" }}
         >
-          {activeGroup === "group3" && (
-            <rect x={10} y={315} width={170} height={100} rx={12} fill="rgba(124, 58, 237, 0.08)" stroke="#7c3aed" strokeWidth="1" strokeDasharray="3 2" />
-          )}
-          {/* Category Title */}
+          <circle
+            cx={rankPos3[0]}
+            cy={rankPos3[1]}
+            r={20}
+            fill="#ffffff"
+            stroke="#0f172a"
+            strokeWidth="2.5"
+          />
           <text
-            x={95}
-            y={330}
+            x={rankPos3[0]}
+            y={rankPos3[1] + 10}
             textAnchor="middle"
-            fontSize="12.5"
-            fontWeight="900"
-            letterSpacing="0.5px"
-            fill="#581c87"
-            fontFamily="system-ui, sans-serif"
-          >
-            RESEARCH & AI
-          </text>
-          <text
-            x={95}
-            y={344}
-            textAnchor="middle"
-            fontSize="9.5"
-            fontWeight="600"
-            fill="#64748b"
-          >
-            Nghiên Cứu • Data • Bài Báo
-          </text>
-          {/* Big Stylized Rank Letter */}
-          <text
-            x={95}
-            y={384}
-            textAnchor="middle"
-            fontSize="34"
+            fontSize="30"
             fontWeight="900"
             fill={tier3.color}
             stroke="#0f172a"
-            strokeWidth="1.2"
+            strokeWidth="1.5"
             fontFamily="Impact, Arial Black, sans-serif"
           >
             {tier3.rank}
           </text>
-          {/* Score display */}
+        </g>
+
+        {/* ======================================================== */}
+        {/* 8. CATEGORY LABELS OUTSIDE THE CIRCLE (CLEAN & NON-OVERLAPPING) */}
+        {/* ======================================================== */}
+
+        {/* TOP: QUẢN LÝ & ĐỐI NGOẠI */}
+        <g
+          onClick={() => onGroupClick && onGroupClick("group1")}
+          style={{ cursor: interactive ? "pointer" : "default" }}
+        >
           <text
-            x={95}
-            y={400}
+            x={labelPos1.x}
+            y={labelPos1.y}
             textAnchor="middle"
-            fontSize="11.5"
-            fontWeight="800"
-            fill="#334155"
+            fontSize="14"
+            fontWeight="900"
+            letterSpacing="1px"
+            fill="#0f172a"
+            fontFamily="Impact, Arial Black, sans-serif"
           >
-            {s3.toFixed(1)} <tspan fontSize="9" fill="#94a3b8">/ 10</tspan>
+            QUẢN LÝ & ĐỐI NGOẠI
+          </text>
+          <text
+            x={labelPos1.x}
+            y={labelPos1.y + 14}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="700"
+            fill="#64748b"
+          >
+            Dự Án • Đào Tạo • Đối Ngoại
+          </text>
+        </g>
+
+        {/* BOTTOM-RIGHT: KỸ THUẬT & HỆ THỐNG */}
+        <g
+          onClick={() => onGroupClick && onGroupClick("group2")}
+          style={{ cursor: interactive ? "pointer" : "default" }}
+        >
+          <text
+            x={labelPos2.x}
+            y={labelPos2.y}
+            textAnchor="middle"
+            fontSize="14"
+            fontWeight="900"
+            letterSpacing="1px"
+            fill="#0f172a"
+            fontFamily="Impact, Arial Black, sans-serif"
+          >
+            KỸ THUẬT & HỆ THỐNG
+          </text>
+          <text
+            x={labelPos2.x}
+            y={labelPos2.y + 14}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="700"
+            fill="#64748b"
+          >
+            Lập Trình • AI/Agent • Deploy
+          </text>
+        </g>
+
+        {/* BOTTOM-LEFT: RESEARCH & AI */}
+        <g
+          onClick={() => onGroupClick && onGroupClick("group3")}
+          style={{ cursor: interactive ? "pointer" : "default" }}
+        >
+          <text
+            x={labelPos3.x}
+            y={labelPos3.y}
+            textAnchor="middle"
+            fontSize="14"
+            fontWeight="900"
+            letterSpacing="1px"
+            fill="#0f172a"
+            fontFamily="Impact, Arial Black, sans-serif"
+          >
+            RESEARCH & AI
+          </text>
+          <text
+            x={labelPos3.x}
+            y={labelPos3.y + 14}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="700"
+            fill="#64748b"
+          >
+            Nghiên Cứu • Data • Bài Báo
           </text>
         </g>
       </svg>
@@ -573,10 +633,10 @@ export function TriangleRadarChart({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 16,
-          fontSize: 11,
-          fontWeight: 700,
-          marginTop: -6,
+          gap: 12,
+          fontSize: 11.5,
+          fontWeight: 800,
+          marginTop: 6,
           flexWrap: "wrap",
         }}
       >
@@ -586,14 +646,15 @@ export function TriangleRadarChart({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            color: "#1e40af",
+            color: "#1d4ed8",
             cursor: "pointer",
-            padding: "3px 8px",
-            borderRadius: 6,
-            background: activeGroup === "group1" ? "#dbeafe" : "transparent"
+            padding: "4px 8px",
+            borderRadius: 8,
+            background: activeGroup === "group1" ? "#dbeafe" : "#eff6ff",
+            border: "1px solid #bfdbfe"
           }}
         >
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#2563eb" }} />
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb" }} />
           Quản Lý: {s1.toFixed(1)}/10 ({tier1.rank})
         </span>
         <span
@@ -602,14 +663,15 @@ export function TriangleRadarChart({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            color: "#065f46",
+            color: "#047857",
             cursor: "pointer",
-            padding: "3px 8px",
-            borderRadius: 6,
-            background: activeGroup === "group2" ? "#d1fae5" : "transparent"
+            padding: "4px 8px",
+            borderRadius: 8,
+            background: activeGroup === "group2" ? "#d1fae5" : "#ecfdf5",
+            border: "1px solid #a7f3d0"
           }}
         >
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#059669" }} />
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669" }} />
           Kỹ Thuật: {s2.toFixed(1)}/10 ({tier2.rank})
         </span>
         <span
@@ -618,14 +680,15 @@ export function TriangleRadarChart({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            color: "#6b21a8",
+            color: "#6d28d9",
             cursor: "pointer",
-            padding: "3px 8px",
-            borderRadius: 6,
-            background: activeGroup === "group3" ? "#ede9fe" : "transparent"
+            padding: "4px 8px",
+            borderRadius: 8,
+            background: activeGroup === "group3" ? "#ede9fe" : "#f5f3ff",
+            border: "1px solid #ddd6fe"
           }}
         >
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#7c3aed" }} />
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }} />
           Research: {s3.toFixed(1)}/10 ({tier3.rank})
         </span>
 
@@ -636,13 +699,13 @@ export function TriangleRadarChart({
               alignItems: "center",
               gap: 6,
               color: "#c2410c",
-              padding: "3px 8px",
-              borderRadius: 6,
-              background: "#ffedd5",
-              border: "1px dashed #f97316"
+              padding: "4px 8px",
+              borderRadius: 8,
+              background: "#fff7ed",
+              border: "1.5px dashed #ea580c"
             }}
           >
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: "#ea580c" }} />
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#ea580c" }} />
             {compareData.name || "Đối thủ"}: {cmpOverall}/10
           </span>
         )}
