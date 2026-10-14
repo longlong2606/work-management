@@ -30,7 +30,7 @@ import {
   Briefcase
 } from "lucide-react";
 
-export function StaffManagementPage() {
+export function StaffManagementPage({ onNavigateToCompetency }) {
   const [activeTab, setActiveTab] = useState("staff"); // "staff" | "departments" | "roles"
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);

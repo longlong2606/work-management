@@ -10,16 +10,17 @@ import { ShiftNotesPage } from "./pages/ShiftNotesPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
 import { TasksPage } from "./pages/TasksPage";
 import { StaffManagementPage } from "./pages/StaffManagementPage";
+import { CompetencyScorecardPage } from "./pages/CompetencyScorecardPage";
 import { EmailOutboxPage } from "./pages/EmailOutboxPage";
 import { EmailSettingsPage } from "./pages/EmailSettingsPage";
 import { TvDisplayPage } from "./pages/TvDisplayPage";
 
-const VALID_TABS = ["schedule", "tasks", "history", "notes", "feedback", "staff", "emails", "smtp"];
+const VALID_TABS = ["schedule", "tasks", "competency", "history", "notes", "feedback", "staff", "emails", "smtp"];
 
 function getTabFromUrl() {
   if (typeof window === "undefined") return "schedule";
 
-  // 1. Pathname check (ví dụ: /tv, /schedule, /tasks, /staff, ...)
+  // 1. Pathname check (ví dụ: /tv, /schedule, /tasks, /competency, /staff, ...)
   const path = window.location.pathname.replace(/^\/+/, "").split("/")[0].toLowerCase();
   if (path === "tv") {
     return "tv";
@@ -31,7 +32,7 @@ function getTabFromUrl() {
     return path;
   }
 
-  // 2. Hash check (fallback cho bookmark hoặc host tĩnh: #/tv, #/schedule, #staff)
+  // 2. Hash check (fallback cho bookmark hoặc host tĩnh: #/tv, #/schedule, #competency)
   const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
   if (hash === "tv") {
     return "tv";
@@ -113,10 +114,11 @@ function MainContent() {
       <main style={{ flex: 1, paddingBottom: 40 }}>
         {activeTab === "schedule" && <SchedulePage />}
         {activeTab === "tasks" && <TasksPage />}
+        {activeTab === "competency" && <CompetencyScorecardPage />}
         {activeTab === "history" && <ShiftHistoryPage />}
         {activeTab === "notes" && <ShiftNotesPage />}
         {activeTab === "feedback" && <FeedbackPage />}
-        {activeTab === "staff" && canManageStaff && <StaffManagementPage />}
+        {activeTab === "staff" && canManageStaff && <StaffManagementPage onNavigateToCompetency={() => navigateToTab("competency")} />}
         {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
         {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
       </main>
@@ -130,7 +132,7 @@ function MainContent() {
         fontSize: 12,
         color: "var(--text-dim)"
       }}>
-        WorkShiftPro &copy; 2026 - Hệ Thống Quản Lý 9 Ca Làm Việc & Cổng Thông Tin Doanh Nghiệp
+        WorkShiftPro &copy; 2026 - Hệ Thống Quản Lý 9 Ca Làm Việc & Đánh Giá Năng Lực Thành Viên
       </footer>
     </div>
   );
