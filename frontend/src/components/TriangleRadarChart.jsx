@@ -390,61 +390,9 @@ export function TriangleRadarChart({
         })}
 
         {/* ======================================================== */}
-        {/* 6. CENTER CIRCLE WITH OVERALL SCORE (OVR BADGE)          */}
+        {/* 6. CENTER PIVOT DOT (Bỏ vòng tròn OVR theo yêu cầu)     */}
         {/* ======================================================== */}
-        <g style={{ cursor: "pointer" }}>
-          <circle
-            cx={cx}
-            cy={cy}
-            r={34}
-            fill="#ffffff"
-            stroke="#0f172a"
-            strokeWidth="3"
-            filter="drop-shadow(0 4px 10px rgba(0,0,0,0.15))"
-          />
-          <circle
-            cx={cx}
-            cy={cy}
-            r={30}
-            fill="#ffffff"
-            stroke={overallTier.color}
-            strokeWidth="2"
-          />
-          <text
-            x={cx}
-            y={cy - 12}
-            textAnchor="middle"
-            fontSize="8"
-            fontWeight="900"
-            fill="#64748b"
-            letterSpacing="1px"
-            fontFamily="system-ui, sans-serif"
-          >
-            OVR
-          </text>
-          <text
-            x={cx}
-            y={cy + 8}
-            textAnchor="middle"
-            fontSize="20"
-            fontWeight="900"
-            fill="#0f172a"
-            fontFamily="Impact, Arial Black, sans-serif"
-          >
-            {overallScore}
-          </text>
-          <text
-            x={cx}
-            y={cy + 22}
-            textAnchor="middle"
-            fontSize="10"
-            fontWeight="900"
-            fill={overallTier.color}
-            fontFamily="Impact, sans-serif"
-          >
-            HẠNG {overallTier.rank}
-          </text>
-        </g>
+        <circle cx={cx} cy={cy} r={3} fill="#475569" />
 
         {/* ======================================================== */}
         {/* 7. MANGA RANK LETTERS S / A / B / C / D ON TACHOMETER    */}
