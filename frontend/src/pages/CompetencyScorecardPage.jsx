@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   COMPETENCY_GROUPS,
   INITIAL_MEMBERS,
@@ -8,27 +8,13 @@ import { TriangleRadarChart, getRankTier } from "../components/TriangleRadarChar
 import {
   Award,
   Search,
-  Filter,
   Users,
-  TrendingUp,
-  FileText,
   Sliders,
-  CheckCircle2,
-  AlertCircle,
   HelpCircle,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  Share2,
   RefreshCw,
-  Eye,
   GitCompare,
-  Sparkles,
-  Shield,
-  Briefcase,
-  Target,
-  ArrowRight,
-  UserCheck
+  UserCheck,
+  ChevronRight
 } from "lucide-react";
 
 export function CompetencyScorecardPage() {
@@ -47,7 +33,7 @@ export function CompetencyScorecardPage() {
   // Comparison member for head-to-head mode
   const [compareMemberId, setCompareMemberId] = useState("TV02");
 
-  // View modes: "scorecard" | "compare" | "matrix"
+  // View modes: "scorecard" | "compare"
   const [viewMode, setViewMode] = useState("scorecard");
 
   // Grading / Edit mode state
@@ -72,7 +58,7 @@ export function CompetencyScorecardPage() {
 
   // Reset to original PDF default
   const handleResetData = () => {
-    if (window.confirm("Bạn có chắc chắn muốn đặt lại toàn bộ điểm về dữ liệu gốc từ tài liệu PDF không?")) {
+    if (window.confirm("Bạn có chắc chắn muốn đặt lại toàn bộ điểm về dữ liệu gốc từ tài liệu đánh giá không?")) {
       saveMembers(INITIAL_MEMBERS);
     }
   };
@@ -132,59 +118,6 @@ export function CompetencyScorecardPage() {
       return matchSearch && matchRole;
     });
   }, [members, searchTerm, roleFilter]);
-
-  // CSV Export for Full Matrix
-  const handleExportCSV = () => {
-    const headers = [
-      "Mã TV",
-      "Họ tên",
-      "Vai trò / Cấp độ",
-      "Nhóm 1 (Tổng 60)",
-      "TB Nhóm 1",
-      "Nhóm 2 (Tổng 60)",
-      "TB Nhóm 2",
-      "Nhóm 3 (Tổng 60)",
-      "TB Nhóm 3",
-      "Tổng điểm (180)",
-      "TB Toàn Bộ (1-10)",
-      "Xếp Hạng",
-      "Bằng chứng / Nhận xét",
-      "Hướng phát triển mong muốn",
-      "Mức độ cam kết"
-    ];
-
-    const rows = members.map((m) => {
-      const st = calculateMemberStats(m.scores);
-      const tier = getRankTier(st.overallAvg);
-      return [
-        `"${m.id}"`,
-        `"${m.name}"`,
-        `"${m.role}"`,
-        st.group1.sum,
-        st.group1.avg,
-        st.group2.sum,
-        st.group2.avg,
-        st.group3.sum,
-        st.group3.avg,
-        st.total,
-        st.overallAvg,
-        `"${tier.rank} - ${tier.title}"`,
-        `"${m.evidenceNotes || ""}"`,
-        `"${m.desiredDirection || ""}"`,
-        `"${m.commitmentLevel || ""}"`
-      ].join(",");
-    });
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Bang_Diem_Danh_Gia_Nang_Luc_Lab_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 16px" }}>
@@ -256,10 +189,10 @@ export function CompetencyScorecardPage() {
                 }}
               >
                 <Award size={14} color="#a78bfa" />
-                BLUE LOCK RADAR MATRIX
+                BLUE LOCK RADAR
               </span>
               <span style={{ fontSize: 12, color: "#94a3b8" }}>
-                3 Nhóm Năng Lực Chuẩn Lab • 18 Tiêu Chí Đánh Giá
+                Biểu Đồ Tam Giác 3 Trụ Cột • 18 Tiêu Chí Năng Lực Thành Viên
               </span>
             </div>
             <h1
@@ -274,7 +207,7 @@ export function CompetencyScorecardPage() {
               BẢNG ĐIỂM ĐÁNH GIÁ NĂNG LỰC THÀNH VIÊN
             </h1>
             <p style={{ margin: 0, fontSize: 13, color: "#cbd5e1", maxWidth: 680 }}>
-              Biểu đồ radar tam giác phản ánh 3 trụ cột cốt lõi: <strong>Quản Lý Dự Án & Đối Ngoại</strong> (Đỉnh trên), <strong>Kỹ Thuật & Hệ Thống</strong> (Góc phải) và <strong>Research & AI</strong> (Góc trái).
+              Biểu đồ tam giác phản ánh 3 trụ cột năng lực của Lab: <strong>Quản Lý Dự Án & Đối Ngoại</strong> (Đỉnh trên), <strong>Kỹ Thuật & Hệ Thống</strong> (Góc phải) và <strong>Research & AI</strong> (Góc trái).
             </p>
           </div>
 
@@ -301,24 +234,25 @@ export function CompetencyScorecardPage() {
               {isGradingMode ? "Đang bật chấm điểm" : "Chế độ chấm điểm"}
             </button>
             <button
-              onClick={handleExportCSV}
+              onClick={handleResetData}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 8,
-                padding: "9px 16px",
+                gap: 6,
+                padding: "9px 14px",
                 borderRadius: 12,
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: 700,
                 cursor: "pointer",
-                background: "rgba(255, 255, 255, 0.12)",
-                color: "#ffffff",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
+                background: "rgba(255, 255, 255, 0.08)",
+                color: "#e2e8f0",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
                 transition: "all 0.2s ease",
               }}
+              title="Khôi phục lại điểm gốc ban đầu"
             >
-              <Download size={15} />
-              Xuất CSV
+              <RefreshCw size={14} />
+              Đặt lại điểm gốc
             </button>
           </div>
         </div>
@@ -340,7 +274,7 @@ export function CompetencyScorecardPage() {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "8px 16px",
+              padding: "8px 18px",
               borderRadius: 10,
               fontSize: 13,
               fontWeight: 700,
@@ -352,7 +286,7 @@ export function CompetencyScorecardPage() {
             }}
           >
             <Award size={15} color={viewMode === "scorecard" ? "#7c3aed" : "currentColor"} />
-            Thẻ Điểm Cá Nhân (Blue Lock)
+            Thẻ Điểm Cá Nhân (Blue Lock Radar)
           </button>
           <button
             onClick={() => setViewMode("compare")}
@@ -360,7 +294,7 @@ export function CompetencyScorecardPage() {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "8px 16px",
+              padding: "8px 18px",
               borderRadius: 10,
               fontSize: 13,
               fontWeight: 700,
@@ -373,26 +307,6 @@ export function CompetencyScorecardPage() {
           >
             <GitCompare size={15} color={viewMode === "compare" ? "#f97316" : "currentColor"} />
             So Sánh Đối Đầu (2 Thành Viên)
-          </button>
-          <button
-            onClick={() => setViewMode("matrix")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 16px",
-              borderRadius: 10,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              background: viewMode === "matrix" ? "#ffffff" : "transparent",
-              color: viewMode === "matrix" ? "#0f172a" : "#cbd5e1",
-              border: "none",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <FileText size={15} color={viewMode === "matrix" ? "#059669" : "currentColor"} />
-            Bảng Ma Trận Toàn Bộ Lab (16 TV)
           </button>
         </div>
       </div>
@@ -426,7 +340,7 @@ export function CompetencyScorecardPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Users size={18} color="#475569" />
                 <span style={{ fontSize: 14, fontWeight: 800, color: "#1e293b" }}>
-                  Danh Sách Thành Viên Lab ({members.length})
+                  Chọn Thành Viên ({members.length})
                 </span>
               </div>
 
@@ -1344,274 +1258,6 @@ export function CompetencyScorecardPage() {
                   : `${compareMember.name} có điểm tổng thể nhỉnh hơn ${currentMember.name} (+${(compareStats.overallAvg - currentStats.overallAvg).toFixed(1)} điểm).`}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* VIEW 3: FULL MATRIX TABLE VIEW (MA TRẬN 16 THÀNH VIÊN)     */}
-      {/* ======================================================== */}
-      {viewMode === "matrix" && (
-        <div style={{ background: "#ffffff", borderRadius: 20, padding: 24, boxShadow: "0 4px 16px rgba(0,0,0,0.05)" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: 20, fontWeight: 900, color: "#0f172a", margin: "0 0 4px 0" }}>
-                MA TRẬN ĐÁNH GIÁ NĂNG LỰC TOÀN BỘ LAB (TÀI LIỆU CHUẨN)
-              </h2>
-              <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>
-                Dữ liệu đồng bộ từ bảng tổng kết 18 tiêu chí của 16 thành viên • Màu sắc phân cấp trực quan
-              </p>
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={handleResetData}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "7px 12px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
-                  color: "#475569",
-                }}
-              >
-                <RefreshCw size={13} />
-                Khôi phục gốc PDF
-              </button>
-              <button
-                onClick={handleExportCSV}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "7px 14px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "none",
-                  background: "#059669",
-                  color: "#ffffff",
-                }}
-              >
-                <Download size={13} />
-                Tải bảng CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Table Container */}
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: "#0f172a", color: "#ffffff" }}>
-                  <th style={{ padding: "12px 10px", textAlign: "left", borderRadius: "10px 0 0 0" }}>Mã TV</th>
-                  <th style={{ padding: "12px 10px", textAlign: "left" }}>Họ Tên</th>
-                  <th style={{ padding: "12px 10px", textAlign: "left" }}>Vai Trò Hiện Tại</th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#1e3a8a" }}>
-                    Nhóm 1 (Tối đa 60)
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#1e40af" }}>
-                    TB Nhóm 1
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#065f46" }}>
-                    Nhóm 2 (Tối đa 60)
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#047857" }}>
-                    TB Nhóm 2
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#581c87" }}>
-                    Nhóm 3 (Tối đa 60)
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#6b21a8" }}>
-                    TB Nhóm 3
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#334155" }}>
-                    Tổng Điểm (180)
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", background: "#1e293b" }}>
-                    TB Toàn Bộ
-                  </th>
-                  <th style={{ padding: "12px 10px", textAlign: "center" }}>Hạng</th>
-                  <th style={{ padding: "12px 10px", textAlign: "center", borderRadius: "0 10px 0 0" }}>Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m, idx) => {
-                  const st = calculateMemberStats(m.scores);
-                  const tier = getRankTier(st.overallAvg);
-
-                  // Helper for heatmap cell background
-                  const getScoreBg = (score) => {
-                    if (score >= 7.0) return "rgba(16, 185, 129, 0.15)";
-                    if (score >= 4.0) return "rgba(245, 158, 11, 0.15)";
-                    if (score > 0) return "rgba(239, 68, 68, 0.12)";
-                    return "transparent";
-                  };
-
-                  return (
-                    <tr
-                      key={m.id}
-                      style={{
-                        borderBottom: "1px solid #e2e8f0",
-                        background: idx % 2 === 0 ? "#ffffff" : "#f8fafc",
-                        transition: "background 0.15s ease",
-                      }}
-                    >
-                      <td style={{ padding: "10px", fontWeight: 700, color: "#64748b" }}>{m.id}</td>
-                      <td style={{ padding: "10px", fontWeight: 800, color: "#0f172a" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <img
-                            src={m.avatar}
-                            alt=""
-                            style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover" }}
-                          />
-                          <span>{m.name}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px", color: "#475569" }}>
-                        <span
-                          style={{
-                            padding: "2px 8px",
-                            borderRadius: 6,
-                            background:
-                              m.roleLevel === "Lead"
-                                ? "#ede9fe"
-                                : m.roleLevel === "Core"
-                                ? "#dbeafe"
-                                : "#f1f5f9",
-                            color:
-                              m.roleLevel === "Lead"
-                                ? "#6d28d9"
-                                : m.roleLevel === "Core"
-                                ? "#1d4ed8"
-                                : "#475569",
-                            fontWeight: 700,
-                            fontSize: 11,
-                          }}
-                        >
-                          {m.role}
-                        </span>
-                      </td>
-
-                      {/* Nhóm 1 */}
-                      <td style={{ padding: "10px", textAlign: "center", fontWeight: 700 }}>
-                        {st.group1.sum > 0 ? st.group1.sum : "--"}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          textAlign: "center",
-                          fontWeight: 800,
-                          background: getScoreBg(st.group1.avg),
-                          color: st.group1.avg >= 7 ? "#047857" : st.group1.avg >= 4 ? "#b45309" : "#b91c1c",
-                        }}
-                      >
-                        {st.group1.avg > 0 ? st.group1.avg : "--"}
-                      </td>
-
-                      {/* Nhóm 2 */}
-                      <td style={{ padding: "10px", textAlign: "center", fontWeight: 700 }}>
-                        {st.group2.sum > 0 ? st.group2.sum : "--"}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          textAlign: "center",
-                          fontWeight: 800,
-                          background: getScoreBg(st.group2.avg),
-                          color: st.group2.avg >= 7 ? "#047857" : st.group2.avg >= 4 ? "#b45309" : "#b91c1c",
-                        }}
-                      >
-                        {st.group2.avg > 0 ? st.group2.avg : "--"}
-                      </td>
-
-                      {/* Nhóm 3 */}
-                      <td style={{ padding: "10px", textAlign: "center", fontWeight: 700 }}>
-                        {st.group3.sum > 0 ? st.group3.sum : "--"}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          textAlign: "center",
-                          fontWeight: 800,
-                          background: getScoreBg(st.group3.avg),
-                          color: st.group3.avg >= 7 ? "#047857" : st.group3.avg >= 4 ? "#b45309" : "#b91c1c",
-                        }}
-                      >
-                        {st.group3.avg > 0 ? st.group3.avg : "--"}
-                      </td>
-
-                      {/* Grand Total & Average */}
-                      <td style={{ padding: "10px", textAlign: "center", fontWeight: 800 }}>
-                        {st.total > 0 ? st.total : "--"}
-                      </td>
-                      <td style={{ padding: "10px", textAlign: "center", fontWeight: 900, fontSize: 13, color: "#0f172a" }}>
-                        {st.overallAvg > 0 ? st.overallAvg : "--"}
-                      </td>
-
-                      {/* Rank Stamp */}
-                      <td style={{ padding: "10px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "3px 8px",
-                            borderRadius: 6,
-                            background: tier.bg,
-                            border: `1px solid ${tier.border}`,
-                            color: tier.textColor,
-                            fontWeight: 900,
-                            fontSize: 12,
-                            fontFamily: "Impact, sans-serif",
-                          }}
-                        >
-                          {tier.rank}
-                        </span>
-                      </td>
-
-                      {/* Action */}
-                      <td style={{ padding: "10px", textAlign: "center" }}>
-                        <button
-                          onClick={() => {
-                            setSelectedMemberId(m.id);
-                            setViewMode("scorecard");
-                          }}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            padding: "4px 8px",
-                            borderRadius: 6,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            background: "#eff6ff",
-                            color: "#2563eb",
-                            border: "1px solid #bfdbfe",
-                          }}
-                        >
-                          <Eye size={12} />
-                          Xem thẻ
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
         </div>
       )}
