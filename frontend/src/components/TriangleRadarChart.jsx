@@ -8,11 +8,11 @@ export function getRankTier(score) {
       rank: "S",
       title: "Master (Xuất sắc)",
       desc: "Chuyên sâu, có thể dẫn dắt & đào tạo người khác",
-      color: "#eab308",
-      glow: "rgba(234, 179, 8, 0.45)",
-      bg: "#fef9c3",
-      border: "#fde047",
-      textColor: "#854d0e"
+      color: "#f59e0b",
+      glow: "rgba(245, 158, 11, 0.45)",
+      bg: "#fef3c7",
+      border: "#fbbf24",
+      textColor: "#92400e"
     };
   }
   if (s >= 7.0) {
@@ -23,7 +23,7 @@ export function getRankTier(score) {
       color: "#8b5cf6",
       glow: "rgba(139, 92, 246, 0.45)",
       bg: "#f5f3ff",
-      border: "#ddd6fe",
+      border: "#c4b5fd",
       textColor: "#5b21b6"
     };
   }
@@ -35,7 +35,7 @@ export function getRankTier(score) {
       color: "#10b981",
       glow: "rgba(16, 185, 129, 0.45)",
       bg: "#ecfdf5",
-      border: "#a7f3d0",
+      border: "#6ee7b7",
       textColor: "#065f46"
     };
   }
@@ -47,7 +47,7 @@ export function getRankTier(score) {
       color: "#f97316",
       glow: "rgba(249, 115, 22, 0.45)",
       bg: "#fff7ed",
-      border: "#fed7aa",
+      border: "#fdba74",
       textColor: "#9a3412"
     };
   }
@@ -58,7 +58,7 @@ export function getRankTier(score) {
     color: "#ef4444",
     glow: "rgba(239, 68, 68, 0.45)",
     bg: "#fef2f2",
-    border: "#fecaca",
+    border: "#fca5a5",
     textColor: "#991b1b"
   };
 }
@@ -70,19 +70,20 @@ export function TriangleRadarChart({
   compareData = null, // Optional comparison member { group1Score, group2Score, group3Score, name, color }
   memberName = "Thành viên",
   role = "Research Lead",
-  size = 460,
+  size = 480,
   interactive = true,
   activeGroup = null,
   onGroupClick = null,
 }) {
-  // Center coordinates in a 520x520 viewBox for ample breathing room
-  const cx = 260;
-  const cy = 260;
+  // Center coordinates in a 580x520 viewBox for generous breathing room
+  const cx = 290;
+  const cy = 250;
 
   // Radii
-  const rOuter = 215; // Outer circle ring
-  const rInner = 175; // Inner circle ring (tachometer track boundary)
-  const maxR = 145;   // Maximum radius of concentric triangle (100% / 10 points)
+  const rOuter = 205; // Outer decorative tech ring
+  const rTrack = 188; // Radar orbit track
+  const rInner = 168; // Inner circle boundary
+  const maxR = 142;   // Maximum radius of concentric triangle (100% / 10 points)
 
   // 3 Angles (radians)
   // Vertex 0: Top (Management & PM) -> -90 deg (-pi/2)
@@ -142,31 +143,15 @@ export function TriangleRadarChart({
   const tier2 = getRankTier(s2);
   const tier3 = getRankTier(s3);
 
-  // Outer tachometer circular ring ticks (72 ticks around the full circle)
-  const dialTicks = [];
-  const numTicks = 72;
-  for (let i = 0; i < numTicks; i++) {
-    const rad = (i * 2 * Math.PI) / numTicks;
-    const isMajor = i % 6 === 0;
-    const rStart = isMajor ? rInner + 2 : rInner + 8;
-    const rEnd = rOuter - 2;
-    const x1 = cx + rStart * Math.cos(rad);
-    const y1 = cy + rStart * Math.sin(rad);
-    const x2 = cx + rEnd * Math.cos(rad);
-    const y2 = cy + rEnd * Math.sin(rad);
-    dialTicks.push({ x1, y1, x2, y2, isMajor, key: i });
-  }
+  // Exact positions on the track for the 3 Modern Glass Rank Badges
+  const rankPos1 = getPoint(angles[0], rTrack); // Top
+  const rankPos2 = getPoint(angles[1], rTrack); // Bottom-Right
+  const rankPos3 = getPoint(angles[2], rTrack); // Bottom-Left
 
-  // Exact positions on the tachometer track (radius 195) for the 3 Big Manga Rank Letters
-  const rTrack = (rInner + rOuter) / 2; // ~195
-  const rankPos1 = getPoint(angles[0], rTrack); // Top: (260, 65)
-  const rankPos2 = getPoint(angles[1], rTrack); // Bottom-Right: (428.8, 357.5)
-  const rankPos3 = getPoint(angles[2], rTrack); // Bottom-Left: (91.2, 357.5)
-
-  // Label positions outside the dial
-  const labelPos1 = { x: 260, y: 22 };
-  const labelPos2 = { x: 440, y: 445 };
-  const labelPos3 = { x: 80, y: 445 };
+  // Label positions outside the dial with generous margins to avoid any clipping
+  const labelPos1 = { x: cx, y: 18 };
+  const labelPos2 = { x: 442, y: 462 };
+  const labelPos3 = { x: 138, y: 462 };
 
   return (
     <div
@@ -183,91 +168,119 @@ export function TriangleRadarChart({
       }}
     >
       <svg
-        viewBox="0 0 520 520"
+        viewBox="0 0 580 520"
         style={{
           width: "100%",
           height: "auto",
           overflow: "visible",
-          filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.06))",
+          filter: "drop-shadow(0 12px 32px rgba(15, 23, 42, 0.05))",
         }}
       >
         <defs>
-          {/* Glowing filter for radar polygon */}
-          <filter id="radarGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
+          {/* Futuristic Soft Neon Blur Filter */}
+          <filter id="neonAura" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
-          {/* Manga Halftone Screentone Pattern */}
-          <pattern id="mangaHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="1.2" opacity="0.35" />
-          </pattern>
+          {/* Clean Drop Shadow for Glass Badges */}
+          <filter id="glassShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.10" />
+          </filter>
 
-          {/* Linear gradient for radar polygon fill */}
-          <linearGradient id="triangleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.5" />
-            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.42" />
-            <stop offset="100%" stopColor="#059669" stopOpacity="0.48" />
+          <filter id="nodeShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0f172a" floodOpacity="0.15" />
+          </filter>
+
+          {/* Modern Vibrant Gradient for Radar Polygon */}
+          <linearGradient id="cyberPolygonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.52" />
+            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.50" />
+          </linearGradient>
+
+          {/* Neon Border Gradient */}
+          <linearGradient id="cyberBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="50%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#0891b2" />
           </linearGradient>
 
           {/* Comparison gradient */}
-          <linearGradient id="compareGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f97316" stopOpacity="0.38" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.42" />
+          <linearGradient id="compareGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f97316" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.50" />
           </linearGradient>
 
-          {/* Dial track subtle background */}
-          <radialGradient id="centerDialBg" cx="50%" cy="50%" r="50%">
+          {/* Center radar ambient glow */}
+          <radialGradient id="radarAmbient" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="65%" stopColor="#f8fafc" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.8" />
+            <stop offset="65%" stopColor="#f8fafc" stopOpacity="0.60" />
+            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.10" />
           </radialGradient>
         </defs>
 
         {/* ======================================================== */}
-        {/* 1. BLUE LOCK TACHOMETER CIRCULAR DIAL                    */}
+        {/* 1. MODERN SLEEK TECH RADAR COMPASS RINGS                 */}
         {/* ======================================================== */}
-        {/* Outer and Inner Circle Track */}
-        <circle cx={cx} cy={cy} r={rOuter + 3} fill="none" stroke="#0f172a" strokeWidth="3" />
-        <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke="#64748b" strokeWidth="1.2" />
-        <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="#0f172a" strokeWidth="2" />
-        <circle cx={cx} cy={cy} r={rInner - 1} fill="url(#centerDialBg)" />
+        {/* Outer ambient glow disc */}
+        <circle cx={cx} cy={cy} r={rOuter} fill="url(#radarAmbient)" stroke="#e2e8f0" strokeWidth="1.2" />
 
-        {/* Tachometer Dial Ticks (60-72 radial lines) */}
-        {dialTicks.map((t) => (
-          <line
-            key={t.key}
-            x1={t.x1}
-            y1={t.y1}
-            x2={t.x2}
-            y2={t.y2}
-            stroke={t.isMajor ? "#0f172a" : "#94a3b8"}
-            strokeWidth={t.isMajor ? 2 : 1}
-          />
-        ))}
+        {/* Orbit track with subtle dashes */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={rTrack}
+          fill="none"
+          stroke="#cbd5e1"
+          strokeWidth="1.2"
+          strokeDasharray="4 6"
+          opacity="0.75"
+        />
+
+        {/* Inner clean ring */}
+        <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="#e2e8f0" strokeWidth="1" />
+
+        {/* Cardinal tech micro-marks (12 sleek pips around the dial) */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          const a = (i * 2 * Math.PI) / 12;
+          const isMain = i % 3 === 0;
+          const [x1, y1] = getPoint(a, rTrack - (isMain ? 6 : 3));
+          const [x2, y2] = getPoint(a, rTrack + (isMain ? 6 : 3));
+          return (
+            <line
+              key={`tech-pip-${i}`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={isMain ? "#64748b" : "#94a3b8"}
+              strokeWidth={isMain ? 1.5 : 1}
+              opacity={isMain ? 0.8 : 0.4}
+            />
+          );
+        })}
 
         {/* ======================================================== */}
-        {/* 2. CONCENTRIC TRIANGLE GRID LEVELS (20%, 40%, 60%, 80%, 100%) */}
+        {/* 2. CONCENTRIC TRIANGLE GRID (20%, 40%, 60%, 80%, 100%)    */}
         {/* ======================================================== */}
         {levels.map((lvl, idx) => {
           const isMax = lvl === 1.0;
           return (
-            <g key={lvl}>
-              <polygon
-                points={getLevelPolygon(lvl)}
-                fill={idx % 2 === 0 ? "rgba(241, 245, 249, 0.55)" : "transparent"}
-                stroke={isMax ? "#0f172a" : "#cbd5e1"}
-                strokeWidth={isMax ? 2 : 1}
-                strokeDasharray={isMax ? "none" : "3 3"}
-              />
-            </g>
+            <polygon
+              key={`level-${lvl}`}
+              points={getLevelPolygon(lvl)}
+              fill={idx % 2 === 0 ? "rgba(241, 245, 249, 0.45)" : "transparent"}
+              stroke={isMax ? "#94a3b8" : "#cbd5e1"}
+              strokeWidth={isMax ? 1.5 : 0.9}
+              strokeDasharray={isMax ? "none" : "3 3"}
+              opacity={isMax ? 0.9 : 0.65}
+            />
           );
         })}
 
-        {/* 100 markers removed to prevent overlap with score labels */}
-
         {/* ======================================================== */}
-        {/* 3. 3 SPOKE AXIS LINES (From Center to Inner Ring)        */}
+        {/* 3. 3 SPOKE AXIS RAYS (Center to Inner Ring)              */}
         {/* ======================================================== */}
         {angles.map((angle, idx) => {
           const [endX, endY] = getPoint(angle, rInner);
@@ -278,22 +291,24 @@ export function TriangleRadarChart({
               y1={cy}
               x2={endX}
               y2={endY}
-              stroke="#475569"
-              strokeWidth="1.5"
+              stroke="#94a3b8"
+              strokeWidth="1.2"
+              strokeDasharray="4 3"
+              opacity="0.8"
             />
           );
         })}
 
         {/* ======================================================== */}
-        {/* 4. COMPARISON MEMBER RADAR POLYGON (IF ACTIVE)           */}
+        {/* 4. COMPARISON MEMBER RADAR (IF ACTIVE)                   */}
         {/* ======================================================== */}
         {comparePolygon && (
           <g>
             <polygon
               points={comparePolygon}
-              fill="url(#compareGradient)"
+              fill="url(#compareGrad)"
               stroke="#ea580c"
-              strokeWidth="2.5"
+              strokeWidth="2.2"
               strokeDasharray="5 3"
             />
             {[cp1, cp2, cp3].map((pt, idx) => (
@@ -301,163 +316,200 @@ export function TriangleRadarChart({
                 key={`cmp-dot-${idx}`}
                 cx={pt[0]}
                 cy={pt[1]}
-                r={4.5}
+                r={4}
                 fill="#ffffff"
                 stroke="#ea580c"
-                strokeWidth="2.5"
+                strokeWidth="2.2"
               />
             ))}
           </g>
         )}
 
         {/* ======================================================== */}
-        {/* 5. ACTIVE MEMBER RADAR POLYGON (MANGA HALFTONE + GLOW)   */}
+        {/* 5. ACTIVE MEMBER RADAR POLYGON (NEON GLOW + CLEAN SHARP) */}
         {/* ======================================================== */}
-        {/* Screentone Hatch Layer */}
+        {/* Ambient Soft Glow Layer */}
         <polygon
           points={dataPolygon}
-          fill="url(#mangaHatch)"
+          fill="url(#cyberPolygonGrad)"
+          filter="url(#neonAura)"
+          opacity="0.45"
           style={{ transition: "all 0.35s ease" }}
         />
-        {/* Color Glow Layer */}
+
+        {/* Sharp High-Precision Layer */}
         <polygon
           points={dataPolygon}
-          fill="url(#triangleGradient)"
-          stroke="#0f172a"
-          strokeWidth="3"
-          filter="url(#radarGlow)"
+          fill="url(#cyberPolygonGrad)"
+          stroke="url(#cyberBorderGrad)"
+          strokeWidth="2.8"
+          strokeLinejoin="round"
           style={{ transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
 
-        {/* Vertex Points & Number Badges */}
+        {/* ======================================================== */}
+        {/* 6. VERTEX TECH NODES & FLOATING SCORE PILLS              */}
+        {/* ======================================================== */}
         {[
-          { pt: p1, val: s1, tier: tier1, angle: angles[0], gid: "group1", textAnchor: "middle", offsetX: 0, offsetY: -12 },
-          { pt: p2, val: s2, tier: tier2, angle: angles[1], gid: "group2", textAnchor: "start", offsetX: 10, offsetY: 4 },
-          { pt: p3, val: s3, tier: tier3, angle: angles[2], gid: "group3", textAnchor: "end", offsetX: -10, offsetY: 4 },
+          { pt: p1, val: s1, tier: tier1, gid: "group1", textAnchor: "middle", offsetX: 0, offsetY: -18 },
+          { pt: p2, val: s2, tier: tier2, gid: "group2", textAnchor: "start", offsetX: 14, offsetY: 4 },
+          { pt: p3, val: s3, tier: tier3, gid: "group3", textAnchor: "end", offsetX: -14, offsetY: 4 },
         ].map((v, idx) => {
           const isSelected = activeGroup === v.gid;
+          const scoreNum = Math.round(v.val * 10);
           return (
             <g
               key={`vertex-group-${idx}`}
               onClick={() => onGroupClick && onGroupClick(v.gid)}
               style={{ cursor: "pointer" }}
             >
-              {/* Outer Glow Ring */}
+              {/* Outer pulsing ring */}
               <circle
                 cx={v.pt[0]}
                 cy={v.pt[1]}
-                r={isSelected ? 9 : 6.5}
-                fill="#ffffff"
-                stroke={isSelected ? "#2563eb" : "#0f172a"}
-                strokeWidth={isSelected ? 3.5 : 2.5}
+                r={isSelected ? 10 : 7.5}
+                fill={isSelected ? "rgba(37, 99, 235, 0.25)" : "rgba(37, 99, 235, 0.15)"}
                 style={{ transition: "all 0.25s ease" }}
               />
 
-              {/* Exact Numerical Score (Manga style bold text e.g. 72 or 7.2) */}
-              <text
-                x={v.pt[0] + v.offsetX}
-                y={v.pt[1] + v.offsetY}
-                textAnchor={v.textAnchor}
-                fontSize="13"
-                fontWeight="900"
-                fill="#0f172a"
-                fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
-                style={{ filter: "drop-shadow(0 1px 2px #ffffff)" }}
-              >
-                {Math.round(v.val * 10)}
-              </text>
+              {/* Middle crisp white ring */}
+              <circle
+                cx={v.pt[0]}
+                cy={v.pt[1]}
+                r={isSelected ? 6 : 4.5}
+                fill="#ffffff"
+                stroke={isSelected ? "#1d4ed8" : "#2563eb"}
+                strokeWidth={2.2}
+                filter="url(#nodeShadow)"
+                style={{ transition: "all 0.25s ease" }}
+              />
+
+              {/* Inner core jewel */}
+              <circle
+                cx={v.pt[0]}
+                cy={v.pt[1]}
+                r={2}
+                fill={isSelected ? "#1d4ed8" : "#2563eb"}
+              />
+
+              {/* Floating Modern Score Badge */}
+              <g transform={`translate(${v.pt[0] + v.offsetX}, ${v.pt[1] + v.offsetY})`}>
+                <rect
+                  x={v.textAnchor === "middle" ? -14 : v.textAnchor === "start" ? 0 : -28}
+                  y={-9}
+                  width="28"
+                  height="18"
+                  rx="6"
+                  fill="#0f172a"
+                  filter="url(#nodeShadow)"
+                />
+                <text
+                  x={v.textAnchor === "middle" ? 0 : v.textAnchor === "start" ? 14 : -14}
+                  y={3.5}
+                  textAnchor="middle"
+                  fontSize="11"
+                  fontWeight="800"
+                  fill="#ffffff"
+                  fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
+                >
+                  {scoreNum}
+                </text>
+              </g>
             </g>
           );
         })}
 
-        {/* ======================================================== */}
-        {/* 6. CENTER PIVOT DOT (Bỏ vòng tròn OVR theo yêu cầu)     */}
-        {/* ======================================================== */}
-        <circle cx={cx} cy={cy} r={3} fill="#475569" />
+        {/* Center Pivot Jewel */}
+        <circle cx={cx} cy={cy} r={6} fill="none" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="2 2" />
+        <circle cx={cx} cy={cy} r={2.5} fill="#3b82f6" />
 
         {/* ======================================================== */}
-        {/* 7. MANGA RANK LETTERS S / A / B / C / D ON TACHOMETER    */}
-        {/*    (Placed exactly inside the circular track)           */}
+        {/* 7. FLOATING GLASS CAPSULE RANK BADGES (S / A / B / C / D) */}
         {/* ======================================================== */}
 
-        {/* TOP: NHÓM 1 RANK LETTER */}
+        {/* TOP: NHÓM 1 RANK BADGE */}
         <g
           onClick={() => onGroupClick && onGroupClick("group1")}
           style={{ cursor: interactive ? "pointer" : "default" }}
+          transform={`translate(${rankPos1[0]}, ${rankPos1[1]})`}
         >
+          {/* Glowing Aura */}
+          <circle cx="0" cy="0" r="22" fill={tier1.bg} opacity="0.6" filter="url(#neonAura)" />
+          {/* Main Glass Circle */}
           <circle
-            cx={rankPos1[0]}
-            cy={rankPos1[1]}
-            r={20}
+            cx="0"
+            cy="0"
+            r="19"
             fill="#ffffff"
-            stroke="#0f172a"
-            strokeWidth="2.5"
+            stroke={tier1.border}
+            strokeWidth="2.2"
+            filter="url(#glassShadow)"
           />
           <text
-            x={rankPos1[0]}
-            y={rankPos1[1] + 10}
+            x="0"
+            y="7"
             textAnchor="middle"
-            fontSize="30"
+            fontSize="21"
             fontWeight="900"
             fill={tier1.color}
-            stroke="#0f172a"
-            strokeWidth="1.5"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier1.rank}
           </text>
         </g>
 
-        {/* BOTTOM-RIGHT: NHÓM 2 RANK LETTER */}
+        {/* BOTTOM-RIGHT: NHÓM 2 RANK BADGE */}
         <g
           onClick={() => onGroupClick && onGroupClick("group2")}
           style={{ cursor: interactive ? "pointer" : "default" }}
+          transform={`translate(${rankPos2[0]}, ${rankPos2[1]})`}
         >
+          <circle cx="0" cy="0" r="22" fill={tier2.bg} opacity="0.6" filter="url(#neonAura)" />
           <circle
-            cx={rankPos2[0]}
-            cy={rankPos2[1]}
-            r={20}
+            cx="0"
+            cy="0"
+            r="19"
             fill="#ffffff"
-            stroke="#0f172a"
-            strokeWidth="2.5"
+            stroke={tier2.border}
+            strokeWidth="2.2"
+            filter="url(#glassShadow)"
           />
           <text
-            x={rankPos2[0]}
-            y={rankPos2[1] + 10}
+            x="0"
+            y="7"
             textAnchor="middle"
-            fontSize="30"
+            fontSize="21"
             fontWeight="900"
             fill={tier2.color}
-            stroke="#0f172a"
-            strokeWidth="1.5"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier2.rank}
           </text>
         </g>
 
-        {/* BOTTOM-LEFT: NHÓM 3 RANK LETTER */}
+        {/* BOTTOM-LEFT: NHÓM 3 RANK BADGE */}
         <g
           onClick={() => onGroupClick && onGroupClick("group3")}
           style={{ cursor: interactive ? "pointer" : "default" }}
+          transform={`translate(${rankPos3[0]}, ${rankPos3[1]})`}
         >
+          <circle cx="0" cy="0" r="22" fill={tier3.bg} opacity="0.6" filter="url(#neonAura)" />
           <circle
-            cx={rankPos3[0]}
-            cy={rankPos3[1]}
-            r={20}
+            cx="0"
+            cy="0"
+            r="19"
             fill="#ffffff"
-            stroke="#0f172a"
-            strokeWidth="2.5"
+            stroke={tier3.border}
+            strokeWidth="2.2"
+            filter="url(#glassShadow)"
           />
           <text
-            x={rankPos3[0]}
-            y={rankPos3[1] + 10}
+            x="0"
+            y="7"
             textAnchor="middle"
-            fontSize="30"
+            fontSize="21"
             fontWeight="900"
             fill={tier3.color}
-            stroke="#0f172a"
-            strokeWidth="1.5"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier3.rank}
@@ -465,7 +517,7 @@ export function TriangleRadarChart({
         </g>
 
         {/* ======================================================== */}
-        {/* 8. CATEGORY LABELS OUTSIDE THE CIRCLE (CLEAN & NON-OVERLAPPING) */}
+        {/* 8. CATEGORY HEADERS (GENEROUS MARGINS - NO CLIPPING)     */}
         {/* ======================================================== */}
 
         {/* TOP: QUẢN LÝ & ĐỐI NGOẠI */}
@@ -477,9 +529,9 @@ export function TriangleRadarChart({
             x={labelPos1.x}
             y={labelPos1.y}
             textAnchor="middle"
-            fontSize="14"
-            fontWeight="900"
-            letterSpacing="1px"
+            fontSize="13.5"
+            fontWeight="800"
+            letterSpacing="0.8px"
             fill="#0f172a"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
@@ -487,11 +539,12 @@ export function TriangleRadarChart({
           </text>
           <text
             x={labelPos1.x}
-            y={labelPos1.y + 14}
+            y={labelPos1.y + 15}
             textAnchor="middle"
-            fontSize="10"
-            fontWeight="700"
+            fontSize="10.5"
+            fontWeight="600"
             fill="#64748b"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             Dự Án • Đào Tạo • Đối Ngoại
           </text>
@@ -506,9 +559,9 @@ export function TriangleRadarChart({
             x={labelPos2.x}
             y={labelPos2.y}
             textAnchor="middle"
-            fontSize="14"
-            fontWeight="900"
-            letterSpacing="1px"
+            fontSize="13.5"
+            fontWeight="800"
+            letterSpacing="0.8px"
             fill="#0f172a"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
@@ -516,11 +569,12 @@ export function TriangleRadarChart({
           </text>
           <text
             x={labelPos2.x}
-            y={labelPos2.y + 14}
+            y={labelPos2.y + 15}
             textAnchor="middle"
-            fontSize="10"
-            fontWeight="700"
+            fontSize="10.5"
+            fontWeight="600"
             fill="#64748b"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             Lập Trình • AI/Agent • Deploy
           </text>
@@ -535,9 +589,9 @@ export function TriangleRadarChart({
             x={labelPos3.x}
             y={labelPos3.y}
             textAnchor="middle"
-            fontSize="14"
-            fontWeight="900"
-            letterSpacing="1px"
+            fontSize="13.5"
+            fontWeight="800"
+            letterSpacing="0.8px"
             fill="#0f172a"
             fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
@@ -545,27 +599,28 @@ export function TriangleRadarChart({
           </text>
           <text
             x={labelPos3.x}
-            y={labelPos3.y + 14}
+            y={labelPos3.y + 15}
             textAnchor="middle"
-            fontSize="10"
-            fontWeight="700"
+            fontSize="10.5"
+            fontWeight="600"
             fill="#64748b"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             Nghiên Cứu • Data • Bài Báo
           </text>
         </g>
       </svg>
 
-      {/* Legend below the chart */}
+      {/* Modern Interactive Pill Legend below the chart */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 12,
-          fontSize: 11.5,
-          fontWeight: 800,
-          marginTop: 6,
+          gap: 10,
+          fontSize: 12,
+          fontWeight: 700,
+          marginTop: 10,
           flexWrap: "wrap",
         }}
       >
@@ -577,15 +632,21 @@ export function TriangleRadarChart({
             gap: 6,
             color: "#1d4ed8",
             cursor: "pointer",
-            padding: "4px 8px",
-            borderRadius: 8,
-            background: activeGroup === "group1" ? "#dbeafe" : "#eff6ff",
-            border: "1px solid #bfdbfe"
+            padding: "5px 12px",
+            borderRadius: 20,
+            background: activeGroup === "group1" ? "#dbeafe" : "#ffffff",
+            border: activeGroup === "group1" ? "1.5px solid #2563eb" : "1px solid #e2e8f0",
+            boxShadow: "0 2px 6px rgba(37, 99, 235, 0.08)",
+            transition: "all 0.2s ease"
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb" }} />
-          Quản Lý: {s1.toFixed(1)}/10 ({tier1.rank})
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb", boxShadow: "0 0 6px rgba(37, 99, 235, 0.6)" }} />
+          Quản Lý: {s1.toFixed(1)}/10
+          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: tier1.bg, color: tier1.textColor, fontWeight: 800 }}>
+            {tier1.rank}
+          </span>
         </span>
+
         <span
           onClick={() => onGroupClick && onGroupClick("group2")}
           style={{
@@ -594,15 +655,21 @@ export function TriangleRadarChart({
             gap: 6,
             color: "#047857",
             cursor: "pointer",
-            padding: "4px 8px",
-            borderRadius: 8,
-            background: activeGroup === "group2" ? "#d1fae5" : "#ecfdf5",
-            border: "1px solid #a7f3d0"
+            padding: "5px 12px",
+            borderRadius: 20,
+            background: activeGroup === "group2" ? "#d1fae5" : "#ffffff",
+            border: activeGroup === "group2" ? "1.5px solid #059669" : "1px solid #e2e8f0",
+            boxShadow: "0 2px 6px rgba(5, 150, 105, 0.08)",
+            transition: "all 0.2s ease"
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669" }} />
-          Kỹ Thuật: {s2.toFixed(1)}/10 ({tier2.rank})
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", boxShadow: "0 0 6px rgba(5, 150, 105, 0.6)" }} />
+          Kỹ Thuật: {s2.toFixed(1)}/10
+          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: tier2.bg, color: tier2.textColor, fontWeight: 800 }}>
+            {tier2.rank}
+          </span>
         </span>
+
         <span
           onClick={() => onGroupClick && onGroupClick("group3")}
           style={{
@@ -611,14 +678,19 @@ export function TriangleRadarChart({
             gap: 6,
             color: "#6d28d9",
             cursor: "pointer",
-            padding: "4px 8px",
-            borderRadius: 8,
-            background: activeGroup === "group3" ? "#ede9fe" : "#f5f3ff",
-            border: "1px solid #ddd6fe"
+            padding: "5px 12px",
+            borderRadius: 20,
+            background: activeGroup === "group3" ? "#ede9fe" : "#ffffff",
+            border: activeGroup === "group3" ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+            boxShadow: "0 2px 6px rgba(124, 58, 237, 0.08)",
+            transition: "all 0.2s ease"
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }} />
-          Research: {s3.toFixed(1)}/10 ({tier3.rank})
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed", boxShadow: "0 0 6px rgba(124, 58, 237, 0.6)" }} />
+          Research: {s3.toFixed(1)}/10
+          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: tier3.bg, color: tier3.textColor, fontWeight: 800 }}>
+            {tier3.rank}
+          </span>
         </span>
 
         {compareData && (
@@ -628,10 +700,11 @@ export function TriangleRadarChart({
               alignItems: "center",
               gap: 6,
               color: "#c2410c",
-              padding: "4px 8px",
-              borderRadius: 8,
+              padding: "5px 12px",
+              borderRadius: 20,
               background: "#fff7ed",
-              border: "1.5px dashed #ea580c"
+              border: "1.5px dashed #ea580c",
+              boxShadow: "0 2px 6px rgba(234, 88, 12, 0.08)"
             }}
           >
             <span style={{ width: 8, height: 8, borderRadius: 2, background: "#ea580c" }} />
