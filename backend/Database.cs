@@ -297,6 +297,7 @@ public static class Database
                 can_manage_schedule INTEGER DEFAULT 0,
                 can_manage_tasks INTEGER DEFAULT 0,
                 can_manage_staff INTEGER DEFAULT 0,
+                can_evaluate INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -323,21 +324,22 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN actual_hours REAL;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
+            try { conn.Execute("ALTER TABLE roles ADD COLUMN can_evaluate INTEGER DEFAULT 0;"); } catch { }
 
             // 0. Synchronize standard 5 Roles (Admin > Core > Leader > Contributor > Learning)
             var defaultRoles = new[]
             {
-                new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
-                new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, quản lý nhân sự, lịch phân ca và điều phối toàn bộ dự án", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1 },
-                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Trưởng ca / Project Lead / Research Lead, điều hành ca trực, giao nhiệm vụ và kiểm duyệt checklist", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0 },
-                new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0 },
-                new { id = "learning", name = "Learning (Học viên / Thực tập sinh)", desc = "Học viên, thực tập sinh mới, tham gia học việc, hỗ trợ ca trực theo hướng dẫn của mentor", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0 }
+                new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1 },
+                new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, quản lý nhân sự, lịch phân ca và điều phối toàn bộ dự án", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1 },
+                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Trưởng ca / Project Lead / Research Lead, điều hành ca trực, giao nhiệm vụ và kiểm duyệt checklist", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0, cev = 1 },
+                new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 1 },
+                new { id = "learning", name = "Learning (Học viên / Thực tập sinh)", desc = "Học viên, thực tập sinh mới, tham gia học việc, hỗ trợ ca trực theo hướng dẫn của mentor", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0 }
             };
             foreach (var r in defaultRoles)
             {
                 conn.Execute(@"
-                    INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff)
-                    VALUES (@id, @name, @desc, @color, @is_sys, @cms, @cmt, @cmu)
+                    INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff, can_evaluate)
+                    VALUES (@id, @name, @desc, @color, @is_sys, @cms, @cmt, @cmu, @cev)
                     ON CONFLICT (id) DO UPDATE SET
                         display_name = EXCLUDED.display_name,
                         description = EXCLUDED.description,
@@ -345,7 +347,8 @@ public static class Database
                         is_system = EXCLUDED.is_system,
                         can_manage_schedule = EXCLUDED.can_manage_schedule,
                         can_manage_tasks = EXCLUDED.can_manage_tasks,
-                        can_manage_staff = EXCLUDED.can_manage_staff", r);
+                        can_manage_staff = EXCLUDED.can_manage_staff,
+                        can_evaluate = EXCLUDED.can_evaluate", r);
             }
 
             // 0.1 Synchronize standard Departments

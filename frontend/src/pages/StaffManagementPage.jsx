@@ -104,6 +104,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [roleCanSchedule, setRoleCanSchedule] = useState(false);
   const [roleCanTasks, setRoleCanTasks] = useState(false);
   const [roleCanStaff, setRoleCanStaff] = useState(false);
+  const [roleCanEvaluate, setRoleCanEvaluate] = useState(false);
   const [roleSubmitting, setRoleSubmitting] = useState(false);
 
   // Delete Confirmation Modal
@@ -344,6 +345,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
     setRoleCanSchedule(false);
     setRoleCanTasks(false);
     setRoleCanStaff(false);
+    setRoleCanEvaluate(false);
     setShowRoleModal(true);
   };
 
@@ -356,6 +358,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
     setRoleCanSchedule(!!r.can_manage_schedule);
     setRoleCanTasks(!!r.can_manage_tasks);
     setRoleCanStaff(!!r.can_manage_staff);
+    setRoleCanEvaluate(!!r.can_evaluate);
     setShowRoleModal(true);
   };
 
@@ -376,6 +379,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_manage_schedule: roleCanSchedule,
           can_manage_tasks: roleCanTasks,
           can_manage_staff: roleCanStaff,
+          can_evaluate: roleCanEvaluate,
         });
         showToastMsg("Cập nhật vai trò thành công!");
       } else {
@@ -387,6 +391,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_manage_schedule: roleCanSchedule,
           can_manage_tasks: roleCanTasks,
           can_manage_staff: roleCanStaff,
+          can_evaluate: roleCanEvaluate,
         });
         showToastMsg("Thêm vai trò mới thành công!");
       }
@@ -1126,6 +1131,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Phân ca trực</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Giao việc</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Quản lý nhân sự</th>
+                    <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Đánh giá năng lực</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Số nhân sự</th>
                     <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
                   </tr>
@@ -1187,6 +1193,14 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         {/* Can staff */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
                           {r.id === "admin" || r.can_manage_staff ? (
+                            <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>—</span>
+                          )}
+                        </td>
+                        {/* Can evaluate */}
+                        <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                          {r.id === "admin" || r.can_evaluate ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -1958,6 +1972,16 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                       style={{ width: 16, height: 16 }}
                     />
                     <span><strong>Quản lý nhân sự & phòng ban:</strong> Cấp tài khoản mới, phân phòng ban, đặt lại mật khẩu</span>
+                  </label>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={roleCanEvaluate}
+                      onChange={(e) => setRoleCanEvaluate(e.target.checked)}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <span><strong>Đánh giá năng lực:</strong> Được chấm điểm bảng năng lực nhân sự, đánh giá tiêu chí và xếp hạng</span>
                   </label>
                 </div>
               </div>

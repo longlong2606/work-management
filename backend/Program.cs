@@ -827,11 +827,12 @@ app.MapGet("/api/roles", (HttpContext ctx) =>
                CASE WHEN r.can_manage_schedule = 1 THEN 1 ELSE 0 END as can_manage_schedule,
                CASE WHEN r.can_manage_tasks = 1 THEN 1 ELSE 0 END as can_manage_tasks,
                CASE WHEN r.can_manage_staff = 1 THEN 1 ELSE 0 END as can_manage_staff,
+               CASE WHEN r.can_evaluate = 1 THEN 1 ELSE 0 END as can_evaluate,
                COUNT(u.id) as user_count,
                r.created_at
         FROM roles r
         LEFT JOIN users u ON u.role = r.id
-        GROUP BY r.id, r.display_name, r.description, r.color, r.is_system, r.can_manage_schedule, r.can_manage_tasks, r.can_manage_staff, r.created_at
+        GROUP BY r.id, r.display_name, r.description, r.color, r.is_system, r.can_manage_schedule, r.can_manage_tasks, r.can_manage_staff, r.can_evaluate, r.created_at
         ORDER BY r.is_system DESC, r.id ASC");
     return Results.Ok(roles);
 });
@@ -853,8 +854,8 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
         return Results.BadRequest(new { detail = "Mã vai trò này đã tồn tại trong hệ thống!" });
 
     conn.Execute(@"
-        INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff)
-        VALUES (@id, @name, @desc, @color, 0, @cms, @cmt, @cmu)",
+        INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff, can_evaluate)
+        VALUES (@id, @name, @desc, @color, 0, @cms, @cmt, @cmu, @cev)",
         new { 
             id = cleanId, 
             name = req.display_name.Trim(), 
@@ -862,7 +863,8 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
             color = string.IsNullOrWhiteSpace(req.color) ? "#3b82f6" : req.color,
             cms = req.can_manage_schedule ? 1 : 0,
             cmt = req.can_manage_tasks ? 1 : 0,
-            cmu = req.can_manage_staff ? 1 : 0
+            cmu = req.can_manage_staff ? 1 : 0,
+            cev = req.can_evaluate ? 1 : 0
         });
 
     return Results.Ok(new { message = "Thêm vai trò mới thành công!", role_id = cleanId });
@@ -881,7 +883,8 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
     conn.Execute(@"
         UPDATE roles
         SET display_name = @name, description = @desc, color = @color,
-            can_manage_schedule = @cms, can_manage_tasks = @cmt, can_manage_staff = @cmu
+            can_manage_schedule = @cms, can_manage_tasks = @cmt, can_manage_staff = @cmu,
+            can_evaluate = @cev
         WHERE id = @id",
         new { 
             name = req.display_name.Trim(), 
@@ -890,6 +893,7 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
             cms = req.can_manage_schedule ? 1 : 0,
             cmt = req.can_manage_tasks ? 1 : 0,
             cmu = req.can_manage_staff ? 1 : 0,
+            cev = req.can_evaluate ? 1 : 0,
             id 
         });
 

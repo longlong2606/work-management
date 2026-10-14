@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   COMPETENCY_GROUPS,
   INITIAL_MEMBERS,
@@ -20,6 +21,9 @@ import {
 } from "lucide-react";
 
 export function CompetencyScorecardPage() {
+  const auth = useAuth();
+  const canEvaluate = auth?.canEvaluate ?? true;
+
   // Members state (persisted to localStorage)
   const [members, setMembers] = useState(() => {
     try {
@@ -227,26 +231,47 @@ export function CompetencyScorecardPage() {
 
           {/* Quick Action Buttons */}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              onClick={() => setIsGradingMode(!isGradingMode)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 14px",
-                borderRadius: 10,
-                fontSize: 12.5,
-                fontWeight: 700,
-                cursor: "pointer",
-                background: isGradingMode ? "#eab308" : "rgba(255, 255, 255, 0.12)",
-                color: isGradingMode ? "#0f172a" : "#ffffff",
-                border: isGradingMode ? "none" : "1px solid rgba(255, 255, 255, 0.2)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <Sliders size={14} />
-              {isGradingMode ? "Đang bật chấm điểm" : "Chế độ chấm điểm"}
-            </button>
+            {canEvaluate ? (
+              <button
+                onClick={() => setIsGradingMode(!isGradingMode)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: isGradingMode ? "#eab308" : "rgba(255, 255, 255, 0.12)",
+                  color: isGradingMode ? "#0f172a" : "#ffffff",
+                  border: isGradingMode ? "none" : "1px solid rgba(255, 255, 255, 0.2)",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <Sliders size={14} />
+                {isGradingMode ? "Đang bật chấm điểm" : "Chế độ chấm điểm"}
+              </button>
+            ) : (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: "rgba(255, 255, 255, 0.08)",
+                  color: "#94a3b8",
+                  border: "1px dashed rgba(255, 255, 255, 0.2)"
+                }}
+                title="Chỉ Quản lý (Admin, Core, Leader) và Contributor mới có quyền chấm điểm đánh giá"
+              >
+                <Sliders size={14} />
+                Chế độ chỉ xem
+              </div>
+            )}
             <button
               onClick={handleResetData}
               style={{

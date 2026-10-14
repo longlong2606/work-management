@@ -244,6 +244,7 @@ public class RoleEntity
     public bool can_manage_schedule { get; set; } = false;
     public bool can_manage_tasks { get; set; } = false;
     public bool can_manage_staff { get; set; } = false;
+    public bool can_evaluate { get; set; } = false;
     public int user_count { get; set; } = 0;
     public string? created_at { get; set; }
 }
@@ -255,7 +256,8 @@ public record CreateRoleRequest(
     string? color = "#3b82f6",
     bool can_manage_schedule = false,
     bool can_manage_tasks = false,
-    bool can_manage_staff = false
+    bool can_manage_staff = false,
+    bool can_evaluate = false
 );
 
 public record UpdateRoleRequest(
@@ -264,7 +266,8 @@ public record UpdateRoleRequest(
     string? color,
     bool can_manage_schedule = false,
     bool can_manage_tasks = false,
-    bool can_manage_staff = false
+    bool can_manage_staff = false,
+    bool can_evaluate = false
 );
 
 public class DepartmentEntity

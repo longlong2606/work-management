@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
   const canManageStaff = isCore; // Admin & Core có toàn quyền quản lý nhân sự
   const canManageSchedule = isLeader; // Admin, Core & Leader có quyền phân và duyệt ca
   const canManageTasks = isLeader; // Admin, Core & Leader có quyền tạo và điều phối nhiệm vụ
+  const canEvaluate = isContributor; // Admin, Core, Leader & Contributor có quyền đánh giá năng lực; Learning thì không
 
   // Alias tương thích ngược
   const isManager = isCore;
@@ -85,6 +86,7 @@ export function AuthProvider({ children }) {
       canManageStaff,
       canManageSchedule,
       canManageTasks,
+      canEvaluate,
       loading, 
       updateCurrentUser 
     }}>
