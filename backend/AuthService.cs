@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Dapper;
@@ -15,6 +15,10 @@ public class UserDto
     public string role { get; set; } = "staff";
     public string? department { get; set; } = "";
     public string status { get; set; } = "active";
+    public bool can_manage_schedule { get; set; }
+    public bool can_manage_tasks { get; set; }
+    public bool can_manage_staff { get; set; }
+    public bool can_evaluate { get; set; }
 }
 
 public class TokenPayload
@@ -92,11 +96,25 @@ public static class AuthService
         if (payload == null) return null;
 
         using var conn = Database.GetConnection();
-        var user = conn.QueryFirstOrDefault<UserDto>(
-            "SELECT id, username, full_name, email, phone, role, department, status FROM users WHERE id = @id",
+        var user = conn.QueryFirstOrDefault<UserDto>(@"
+            SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role
+            WHERE u.id = @id",
             new { id = payload.user_id });
 
         if (user == null || user.status != "active") return null;
+        if (user.role == "admin")
+        {
+            user.can_manage_schedule = true;
+            user.can_manage_tasks = true;
+            user.can_manage_staff = true;
+            user.can_evaluate = true;
+        }
         return user;
     }
 }

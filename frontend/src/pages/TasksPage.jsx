@@ -39,8 +39,8 @@ function formatDeadline(deadlineStr) {
 }
 
 export function TasksPage() {
-  const { user, isAdmin, isCore, isLeader } = useAuth();
-  const hasAdminRights = isAdmin || isCore;
+  const { user, isAdmin, isCore, isLeader, canManageTasks } = useAuth();
+  const hasAdminRights = isAdmin || Boolean(canManageTasks);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'my_tasks', 'needs_review', 'finished'

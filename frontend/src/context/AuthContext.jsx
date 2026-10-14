@@ -30,8 +30,28 @@ export function AuthProvider({ children }) {
 
     const handleLogout = () => logout();
     window.addEventListener("auth_logout", handleLogout);
-    return () => window.removeEventListener("auth_logout", handleLogout);
+
+    const handleRolesUpdated = () => {
+      refreshProfile();
+    };
+    window.addEventListener("roles_updated", handleRolesUpdated);
+
+    return () => {
+      window.removeEventListener("auth_logout", handleLogout);
+      window.removeEventListener("roles_updated", handleRolesUpdated);
+    };
   }, []);
+
+  const refreshProfile = async () => {
+    try {
+      const profile = await api.getProfile();
+      setUser(profile);
+      localStorage.setItem("wm_user", JSON.stringify(profile));
+      return profile;
+    } catch (err) {
+      console.error("Refresh profile failed:", err);
+    }
+  };
 
   const login = async (username, password) => {
     const res = await api.login(username, password);
@@ -61,11 +81,11 @@ export function AuthProvider({ children }) {
   const isContributor = isLeader || role === "contributor" || role === "technician" || role === "staff";
   const isLearning = !!user;
 
-  // Quyền hạn theo phân cấp 5 role
-  const canManageStaff = isCore; // Admin & Core có toàn quyền quản lý nhân sự
-  const canManageSchedule = isLeader; // Admin, Core & Leader có quyền phân và duyệt ca
-  const canManageTasks = isLeader; // Admin, Core & Leader có quyền tạo và điều phối nhiệm vụ
-  const canEvaluate = isContributor; // Admin, Core, Leader & Contributor có quyền đánh giá năng lực; Learning thì không
+  // Quyền hạn thực tế theo phân quyền cấu hình từ Database (Admin luôn có quyền tối cao)
+  const canManageStaff = isAdmin || (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : isCore);
+  const canManageSchedule = isAdmin || (user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : isLeader);
+  const canManageTasks = isAdmin || (user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : isLeader);
+  const canEvaluate = isAdmin || (user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (role !== "learning"));
 
   // Alias tương thích ngược
   const isManager = isCore;
@@ -88,7 +108,8 @@ export function AuthProvider({ children }) {
       canManageTasks,
       canEvaluate,
       loading, 
-      updateCurrentUser 
+      updateCurrentUser,
+      refreshProfile
     }}>
       {children}
     </AuthContext.Provider>

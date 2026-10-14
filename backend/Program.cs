@@ -189,7 +189,7 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề nhiệm vụ không được để trống!" });
@@ -257,7 +257,7 @@ app.MapPost("/api/tasks/{id:long}/postpone", (long id, PostponeTaskRequest req, 
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.reason))
         return Results.BadRequest(new { detail = "Vui lòng nhập lý do tạm hoãn nhiệm vụ!" });
@@ -309,7 +309,7 @@ app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id });
@@ -655,16 +655,32 @@ app.MapPost("/api/auth/forgot-password", (ForgotPasswordRequest req) =>
 app.MapPost("/api/auth/login", (LoginRequest req) =>
 {
     using var conn = Database.GetConnection();
-    var user = conn.QueryFirstOrDefault<UserEntity>(
-        "SELECT id, username, password_hash, full_name, email, phone, role, department, status FROM users WHERE username = @u AND status = 'active'",
+    var user = conn.QueryFirstOrDefault<UserDto>(@"
+        SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
+        FROM users u
+        LEFT JOIN roles r ON r.id = u.role
+        WHERE u.username = @u AND u.status = 'active'",
         new { u = req.username });
 
-    if (user != null) {
-    }
+    var userEntity = conn.QueryFirstOrDefault<UserEntity>(
+        "SELECT id, password_hash FROM users WHERE username = @u AND status = 'active'",
+        new { u = req.username });
 
-    if (user == null || !Database.VerifyPassword(req.password, user.password_hash))
+    if (user == null || userEntity == null || !Database.VerifyPassword(req.password, userEntity.password_hash))
     {
         return Results.BadRequest(new { detail = "Tên đăng nhập hoặc mật khẩu không chính xác" });
+    }
+
+    if (user.role == "admin")
+    {
+        user.can_manage_schedule = true;
+        user.can_manage_tasks = true;
+        user.can_manage_staff = true;
+        user.can_evaluate = true;
     }
 
     var token = AuthService.CreateToken(user.id, user.username, user.role);
@@ -681,7 +697,11 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
             phone = user.phone,
             role = user.role,
             department = user.department,
-            status = user.status
+            status = user.status,
+            can_manage_schedule = user.can_manage_schedule,
+            can_manage_tasks = user.can_manage_tasks,
+            can_manage_staff = user.can_manage_staff,
+            can_evaluate = user.can_evaluate
         }
     });
 });
@@ -758,7 +778,7 @@ app.MapGet("/api/users", (HttpContext ctx) =>
 app.MapPost("/api/users", (CreateUserRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE username = @u", new { u = req.username });
@@ -798,7 +818,7 @@ app.MapPost("/api/users/{id:long}/reset-password", (long id, ResetPasswordReques
 app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @id", new { id });
@@ -840,7 +860,7 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (currentUser.role == "learning") return Results.StatusCode(403);
+    if (!currentUser.can_evaluate && currentUser.role != "admin") return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @userId", new { userId });
@@ -993,7 +1013,7 @@ app.MapGet("/api/departments", (HttpContext ctx) =>
 app.MapPost("/api/departments", (CreateDepartmentRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) 
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.name))
@@ -1022,7 +1042,7 @@ app.MapPost("/api/departments", (CreateDepartmentRequest req, HttpContext ctx) =
 app.MapPut("/api/departments/{id:long}", (long id, UpdateDepartmentRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) 
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.name))
@@ -1053,7 +1073,7 @@ app.MapPut("/api/departments/{id:long}", (long id, UpdateDepartmentRequest req, 
 app.MapDelete("/api/departments/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) 
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
         return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
@@ -1379,7 +1399,7 @@ app.MapPost("/api/shifts/approve-absence", (ApproveAbsenceRequest req, HttpConte
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (currentUser.role != "admin")
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule)
     {
         return Results.Json(new { detail = "Chỉ Quản lý mới có quyền phê duyệt hoặc từ chối đơn báo vắng!" }, statusCode: 403);
     }
@@ -1894,7 +1914,7 @@ app.MapPost("/api/shifts/approve-request", (ApproveShiftActionModel req, HttpCon
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var reg = conn.QueryFirstOrDefault<dynamic>(
@@ -2372,7 +2392,7 @@ app.MapGet("/api/shifts/history", (HttpContext ctx, string? action, string? work
 app.MapPost("/api/shifts/publish", (PublishScheduleRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
+    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_schedule)) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     // 1. Tạo thông báo chung in-app

@@ -28,7 +28,7 @@ import {
 
 export function CompetencyScorecardPage() {
   const auth = useAuth();
-  const canEvaluate = auth?.canEvaluate ?? true;
+  const canEvaluate = Boolean(auth?.canEvaluate);
 
   // Helper chuyển đổi User thực tế từ Backend Database sang Member đánh giá
   const mapUserToMember = (u) => {
@@ -125,6 +125,13 @@ export function CompetencyScorecardPage() {
   // Grading / Edit mode state
   const [isGradingMode, setIsGradingMode] = useState(false);
 
+  // Tự động vô hiệu hoá chế độ chấm điểm nếu tài khoản không có quyền đánh giá
+  useEffect(() => {
+    if (!canEvaluate) {
+      setIsGradingMode(false);
+    }
+  }, [canEvaluate]);
+
   // Active highlighted group on radar ("group1" | "group2" | "group3" | null)
   const [activeGroupFilter, setActiveGroupFilter] = useState(null);
 
@@ -173,6 +180,7 @@ export function CompetencyScorecardPage() {
 
   // Save changes to localStorage và Đồng bộ trực tiếp về Database Backend
   const saveMembers = (newMembers) => {
+    if (!canEvaluate) return;
     setMembers(newMembers);
     try {
       localStorage.setItem("lab_competency_members", JSON.stringify(newMembers));
@@ -196,6 +204,10 @@ export function CompetencyScorecardPage() {
 
   // Reset to original PDF default
   const handleResetData = () => {
+    if (!canEvaluate) {
+      alert("Bạn không có quyền đặt lại điểm đánh giá!");
+      return;
+    }
     if (window.confirm("Bạn có chắc chắn muốn đặt lại toàn bộ điểm về dữ liệu gốc từ tài liệu đánh giá không?")) {
       saveMembers(INITIAL_MEMBERS);
     }
@@ -227,6 +239,7 @@ export function CompetencyScorecardPage() {
 
   // Handle score edit for current member (Xóa 1 chạm là mất sạch, gõ số mới tự nhiên)
   const handleScoreChange = (criterionId, val) => {
+    if (!canEvaluate) return;
     // Nếu người dùng xóa trống ô (bấm Backspace hoặc Delete)
     if (val === "" || val === null || val === undefined) {
       const updated = members.map((m) => {
@@ -1276,7 +1289,10 @@ export function CompetencyScorecardPage() {
                                 </span>
 
                                 <div
-                                  onClick={() => !isGradingMode && setIsGradingMode(true)}
+                                  onClick={() => {
+                                    if (!canEvaluate) return;
+                                    if (!isGradingMode) setIsGradingMode(true);
+                                  }}
                                   style={{
                                     minWidth: 42,
                                     textAlign: "center",
@@ -1287,11 +1303,11 @@ export function CompetencyScorecardPage() {
                                     border: `1px solid ${group.color}35`,
                                     padding: "2px 8px",
                                     borderRadius: 6,
-                                    cursor: isGradingMode ? "default" : "pointer",
+                                    cursor: canEvaluate ? (isGradingMode ? "default" : "pointer") : "default",
                                     userSelect: "none",
                                     transition: "all 0.15s ease",
                                   }}
-                                  title={isGradingMode ? "Điểm hiện tại" : "Nhấp để mở chế độ chấm điểm"}
+                                  title={!canEvaluate ? "Chế độ chỉ xem (Tài khoản không có quyền chấm điểm)" : (isGradingMode ? "Điểm hiện tại" : "Nhấp để mở chế độ chấm điểm")}
                                 >
                                   {score > 0 ? `${score} / 10` : "-- / 10"}
                                 </div>
@@ -1299,7 +1315,7 @@ export function CompetencyScorecardPage() {
                             </div>
 
                             {/* KHUNG GHI SỐ TRỰC TIẾP & BỘ ĐIỀU KHIỂN CHẤM ĐIỂM (Bấm số bàn phím, tự động bôi đen) */}
-                            {isGradingMode ? (
+                            {canEvaluate && isGradingMode ? (
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
                                   Chấm điểm:

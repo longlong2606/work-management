@@ -396,6 +396,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         showToastMsg("Thêm vai trò mới thành công!");
       }
       setShowRoleModal(false);
+      window.dispatchEvent(new CustomEvent("roles_updated", { detail: { roleId: editingRole?.id || roleId } }));
       loadAllData();
     } catch (err) {
       showToastMsg(err.message || "Thao tác vai trò thất bại!", "danger");
