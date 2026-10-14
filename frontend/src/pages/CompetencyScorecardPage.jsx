@@ -93,7 +93,7 @@ export function CompetencyScorecardPage() {
   const currentTier = useMemo(() => getRankTier(currentStats.overallAvg), [currentStats]);
   const compareTier = useMemo(() => getRankTier(compareStats.overallAvg), [compareStats]);
 
-  // Handle score edit for current member (Hỗ trợ gõ trực tiếp & thanh trượt kéo)
+  // Handle score edit for current member (Hỗ trợ gõ trực tiếp số 0 - 10 không bị kẹt số 10)
   const handleScoreChange = (criterionId, val) => {
     // Nếu người dùng xóa trống ô input để chuẩn bị gõ số mới
     if (val === "" || val === null || val === undefined) {
@@ -109,12 +109,27 @@ export function CompetencyScorecardPage() {
         }
         return m;
       });
-      setMembers(updated);
+      saveMembers(updated);
       return;
     }
 
-    let parsed = parseFloat(val);
-    if (isNaN(parsed)) parsed = 0;
+    const strVal = String(val).trim();
+    let parsed = parseFloat(strVal);
+    if (isNaN(parsed)) return;
+
+    // XỬ LÝ THÔNG MINH KHI GÕ BÀN PHÍM:
+    // Nếu ô đang có điểm cũ (ví dụ 8 hoặc 10) mà người dùng gõ thêm số mới (ví dụ bấm 5 thành "85" hoặc "105"):
+    // Chắc chắn người dùng muốn chấm điểm là số vừa gõ (số 5), không bị ép kẹt thành 10!
+    if (parsed > 10 && !strVal.includes(".")) {
+      if (strVal === "10" || strVal.endsWith("10")) {
+        parsed = 10;
+      } else {
+        const lastChar = strVal.slice(-1);
+        const lastDigit = parseFloat(lastChar);
+        parsed = !isNaN(lastDigit) ? lastDigit : 10;
+      }
+    }
+
     // Giới hạn điểm từ 0 đến 10, làm tròn tối đa 1 chữ số thập phân
     const num = Math.min(10, Math.max(0, Math.round(parsed * 10) / 10));
 
@@ -943,7 +958,7 @@ export function CompetencyScorecardPage() {
                                 </div>
                               </div>
 
-                              {/* Numeric score display & Direct input */}
+                              {/* Numeric score display badge */}
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                                 <span
                                   style={{
@@ -958,86 +973,49 @@ export function CompetencyScorecardPage() {
                                   {critTier.title.split(" ")[0]}
                                 </span>
 
-                                {isGradingMode ? (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 3,
-                                      background: "#ffffff",
-                                      padding: "1px 4px",
-                                      borderRadius: 6,
-                                      border: `1.5px solid ${group.color}`,
-                                      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                                    }}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="10"
-                                      step="0.5"
-                                      value={score === "" ? "" : score}
-                                      onChange={(e) => handleScoreChange(crit.id, e.target.value)}
-                                      onBlur={(e) => {
-                                        if (score === "" || isNaN(Number(score))) handleScoreChange(crit.id, 0);
-                                      }}
-                                      style={{
-                                        width: 36,
-                                        height: 24,
-                                        border: "none",
-                                        outline: "none",
-                                        textAlign: "center",
-                                        fontSize: 13,
-                                        fontWeight: 900,
-                                        color: group.color,
-                                        background: "transparent",
-                                        padding: 0,
-                                      }}
-                                      title="Ghi / Nhập trực tiếp số điểm (0 - 10)"
-                                      placeholder="0"
-                                    />
-                                    <span style={{ fontSize: 12, fontWeight: 800, color: "#64748b" }}>/10</span>
-                                  </div>
-                                ) : (
-                                  <div
-                                    onClick={() => setIsGradingMode(true)}
-                                    style={{
-                                      minWidth: 36,
-                                      textAlign: "center",
-                                      fontSize: 14,
-                                      fontWeight: 900,
-                                      color: score > 0 ? "#0f172a" : "#cbd5e1",
-                                      cursor: "pointer",
-                                      padding: "2px 4px",
-                                      borderRadius: 6,
-                                      transition: "background 0.15s ease",
-                                    }}
-                                    title="Nhấp để bật chế độ ghi / chỉnh sửa điểm"
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    {score > 0 ? `${score}/10` : "--"}
-                                  </div>
-                                )}
+                                <div
+                                  onClick={() => !isGradingMode && setIsGradingMode(true)}
+                                  style={{
+                                    minWidth: 42,
+                                    textAlign: "center",
+                                    fontSize: 13.5,
+                                    fontWeight: 900,
+                                    color: score > 0 ? group.color : "#94a3b8",
+                                    background: `${group.color}15`,
+                                    border: `1px solid ${group.color}35`,
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    cursor: isGradingMode ? "default" : "pointer",
+                                    userSelect: "none",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title={isGradingMode ? "Điểm hiện tại" : "Nhấp để mở chế độ chấm điểm"}
+                                >
+                                  {score > 0 ? `${score} / 10` : "-- / 10"}
+                                </div>
                               </div>
                             </div>
 
-                            {/* KHUNG GHI SỐ & THANH KÉO (Gõ phím, tăng/giảm nút hoặc kéo thanh trượt) */}
+                            {/* KHUNG GHI SỐ TRỰC TIẾP & BỘ ĐIỀU KHIỂN CHẤM ĐIỂM (Bấm số bàn phím, tự động bôi đen) */}
                             {isGradingMode ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                                {/* Nút Giảm 1 điểm */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+                                  Chấm điểm:
+                                </span>
+
+                                {/* Nút Giảm 0.5 điểm */}
                                 <button
                                   type="button"
-                                  onClick={() => handleScoreChange(crit.id, Math.max(0, (Number(score) || 0) - 1))}
+                                  onClick={() => handleScoreChange(crit.id, Math.max(0, Math.round(((Number(score) || 0) - 0.5) * 10) / 10))}
                                   style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 6,
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 7,
                                     border: "1.5px solid #cbd5e1",
                                     background: "#ffffff",
                                     color: "#334155",
                                     fontWeight: 900,
-                                    fontSize: 16,
+                                    fontSize: 17,
                                     cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
@@ -1046,62 +1024,17 @@ export function CompetencyScorecardPage() {
                                     flexShrink: 0,
                                     transition: "all 0.15s ease",
                                   }}
-                                  title="Giảm 1 điểm"
+                                  title="Giảm 0.5 điểm"
                                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = group.color; e.currentTarget.style.background = "#f8fafc"; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#ffffff"; }}
                                 >
                                   −
                                 </button>
 
-                                {/* Thanh trượt kéo (đồng bộ real-time) */}
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="10"
-                                  step="0.5"
-                                  value={Number(score) || 0}
-                                  onChange={(e) => handleScoreChange(crit.id, e.target.value)}
-                                  style={{
-                                    flex: 1,
-                                    minWidth: 100,
-                                    accentColor: group.color,
-                                    cursor: "pointer",
-                                    height: 6,
-                                  }}
-                                />
-
-                                {/* Nút Tăng 1 điểm */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleScoreChange(crit.id, Math.min(10, (Number(score) || 0) + 1))}
-                                  style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 6,
-                                    border: "1.5px solid #cbd5e1",
-                                    background: "#ffffff",
-                                    color: "#334155",
-                                    fontWeight: 900,
-                                    fontSize: 16,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    userSelect: "none",
-                                    flexShrink: 0,
-                                    transition: "all 0.15s ease",
-                                  }}
-                                  title="Tăng 1 điểm"
-                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = group.color; e.currentTarget.style.background = "#f8fafc"; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#ffffff"; }}
-                                >
-                                  +
-                                </button>
-
-                                {/* KHUNG Ô GHI SỐ TRỰC TIẾP (Bấm vào để ghi số từ bàn phím) */}
+                                {/* Ô GHI SỐ TRỰC TIẾP (Bấm vào để ghi bất kỳ số nào 0 - 10, tự động bôi đen) */}
                                 <div
                                   style={{
-                                    display: "flex",
+                                    display: "inline-flex",
                                     alignItems: "center",
                                     gap: 3,
                                     background: "#ffffff",
@@ -1118,18 +1051,20 @@ export function CompetencyScorecardPage() {
                                     max="10"
                                     step="0.5"
                                     value={score === "" ? "" : score}
+                                    onFocus={(e) => e.target.select()}
+                                    onClick={(e) => e.target.select()}
                                     onChange={(e) => handleScoreChange(crit.id, e.target.value)}
                                     onBlur={(e) => {
                                       if (score === "" || isNaN(Number(score))) handleScoreChange(crit.id, 0);
                                     }}
                                     placeholder="0"
                                     style={{
-                                      width: 42,
+                                      width: 44,
                                       height: 26,
                                       border: "none",
                                       outline: "none",
                                       textAlign: "center",
-                                      fontSize: 14,
+                                      fontSize: 15,
                                       fontWeight: 900,
                                       color: group.color,
                                       background: "transparent",
@@ -1139,8 +1074,68 @@ export function CompetencyScorecardPage() {
                                   />
                                   <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>/ 10</span>
                                 </div>
+
+                                {/* Nút Tăng 0.5 điểm */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleScoreChange(crit.id, Math.min(10, Math.round(((Number(score) || 0) + 0.5) * 10) / 10))}
+                                  style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 7,
+                                    border: "1.5px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    fontWeight: 900,
+                                    fontSize: 17,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    userSelect: "none",
+                                    flexShrink: 0,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title="Tăng 0.5 điểm"
+                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = group.color; e.currentTarget.style.background = "#f8fafc"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#ffffff"; }}
+                                >
+                                  +
+                                </button>
+
+                                {/* Thanh hiển thị mức điểm trực quan */}
+                                <div
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 80,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    background: "#f1f5f9",
+                                    overflow: "hidden",
+                                    position: "relative",
+                                    marginLeft: 4,
+                                  }}
+                                  title={`Điểm số: ${score || 0}/10`}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, ((Number(score) || 0) / 10) * 100))}%`,
+                                      height: "100%",
+                                      background:
+                                        (Number(score) || 0) >= 8
+                                          ? "linear-gradient(90deg, #10b981, #059669)"
+                                          : (Number(score) || 0) >= 6
+                                          ? "linear-gradient(90deg, #3b82f6, #2563eb)"
+                                          : (Number(score) || 0) >= 4
+                                          ? "linear-gradient(90deg, #f59e0b, #d97706)"
+                                          : "linear-gradient(90deg, #ef4444, #dc2626)",
+                                      borderRadius: 4,
+                                      transition: "width 0.2s ease",
+                                    }}
+                                  />
+                                </div>
                               </div>
-                            ) : (
+                                                        ) : (
                               <div
                                 style={{
                                   height: 5,
