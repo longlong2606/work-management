@@ -81,7 +81,7 @@ export function Navbar({ activeTab, setActiveTab }) {
   const mainNavItems = [
     { id: "schedule", label: "Lịch làm việc", icon: Calendar },
     { id: "tasks", label: "Nhiệm vụ & Dự án", icon: CheckSquare },
-    { id: "competency", label: "Đánh Giá Năng Lực", icon: Award },
+    { id: "competency", label: "Năng lực", icon: Award },
     { id: "notes", label: "Ghi chú ca", icon: FileText },
     { id: "feedback", label: "Góp ý", icon: MessageSquare },
   ];
@@ -922,7 +922,7 @@ export function Navbar({ activeTab, setActiveTab }) {
         {[
           { id: "schedule", label: "Lịch ca", icon: Calendar },
           { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
-    { id: "competency", label: "Đánh Giá Năng Lực", icon: Award },
+    { id: "competency", label: "Năng lực", icon: Award },
           { id: "notes", label: "Ghi chú", icon: FileText },
           { id: "feedback", label: "Góp ý", icon: MessageSquare },
         ].map((item) => {
