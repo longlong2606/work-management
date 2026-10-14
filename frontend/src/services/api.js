@@ -32,7 +32,14 @@ async function request(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorMsg = data.detail || "Đã có lỗi xảy ra, vui lòng thử lại!";
+    const errorMsg =
+      data.detail ||
+      data.message ||
+      (response.status === 403
+        ? "Bạn không có quyền thực hiện thao tác này! Vui lòng kiểm tra lại tài khoản hoặc đăng nhập quyền Quản trị viên."
+        : response.status === 401
+        ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
+        : "Đã có lỗi xảy ra, vui lòng thử lại!");
     throw new Error(errorMsg);
   }
 

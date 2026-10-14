@@ -912,8 +912,10 @@ app.MapGet("/api/roles", (HttpContext ctx) =>
 app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) 
-        return Results.StatusCode(403);
+    if (currentUser == null)
+        return Results.Json(new { detail = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" }, statusCode: 401);
+    if (currentUser.role != "admin" && !currentUser.can_manage_staff) 
+        return Results.Json(new { detail = "Chỉ Quản trị viên hoặc người có quyền Quản lý nhân sự mới được tạo vai trò!" }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.id) || string.IsNullOrWhiteSpace(req.display_name))
         return Results.BadRequest(new { detail = "Mã vai trò và tên hiển thị không được để trống!" });
@@ -930,7 +932,7 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
         VALUES (@id, @name, @desc, @color, 0, @cms, @cmt, @cmu, @cev)",
         new { 
             id = cleanId, 
-            name = req.display_name.Trim(), 
+            name = req.display_name.Trim(),
             desc = req.description ?? "", 
             color = string.IsNullOrWhiteSpace(req.color) ? "#3b82f6" : req.color,
             cms = req.can_manage_schedule ? 1 : 0,
@@ -945,8 +947,10 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
 app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) 
-        return Results.StatusCode(403);
+    if (currentUser == null)
+        return Results.Json(new { detail = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" }, statusCode: 401);
+    if (currentUser.role != "admin" && !currentUser.can_manage_staff) 
+        return Results.Json(new { detail = "Chỉ Quản trị viên hoặc người có quyền Quản lý nhân sự mới được cập nhật vai trò!" }, statusCode: 403);
 
     using var conn = Database.GetConnection();
     var role = conn.QueryFirstOrDefault<RoleEntity>("SELECT * FROM roles WHERE id = @id", new { id });
@@ -959,9 +963,9 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
             can_evaluate = @cev
         WHERE id = @id",
         new { 
-            name = req.display_name.Trim(), 
+            name = string.IsNullOrWhiteSpace(req.display_name) ? role.display_name : req.display_name.Trim(), 
             desc = req.description ?? "", 
-            color = string.IsNullOrWhiteSpace(req.color) ? role.color : req.color,
+            color = string.IsNullOrWhiteSpace(req.color) ? "#3b82f6" : req.color,
             cms = req.can_manage_schedule ? 1 : 0,
             cmt = req.can_manage_tasks ? 1 : 0,
             cmu = req.can_manage_staff ? 1 : 0,
@@ -975,8 +979,10 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
 app.MapDelete("/api/roles/{id}", (string id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || currentUser.role != "admin") 
-        return Results.StatusCode(403);
+    if (currentUser == null)
+        return Results.Json(new { detail = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" }, statusCode: 401);
+    if (currentUser.role != "admin") 
+        return Results.Json(new { detail = "Chỉ Quản trị viên cấp cao nhất mới có quyền xóa vai trò hệ thống!" }, statusCode: 403);
 
     using var conn = Database.GetConnection();
     var role = conn.QueryFirstOrDefault<RoleEntity>("SELECT * FROM roles WHERE id = @id", new { id });

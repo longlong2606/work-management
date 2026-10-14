@@ -1,6 +1,7 @@
 import { CompetencyScorecardPage } from "./CompetencyScorecardPage";
 import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import {
   Award,
   UserPlus, 
@@ -364,6 +365,10 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
 
   const handleSaveRole = async (e) => {
     e.preventDefault();
+    if (!isRoleAdmin) {
+      showToastMsg("Bạn cần đăng nhập bằng tài khoản Quản trị viên (Admin) để lưu cấu hình vai trò!", "danger");
+      return;
+    }
     if (!roleDisplayName.trim() || (!editingRole && !roleId.trim())) {
       showToastMsg("Vui lòng nhập đầy đủ mã và tên vai trò!", "danger");
       return;
@@ -1865,6 +1870,12 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             </div>
 
             <form onSubmit={handleSaveRole}>
+              {!isRoleAdmin && (
+                <div style={{ padding: "10px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", fontSize: 13, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                  <AlertCircle size={16} />
+                  <span>Tài khoản hiện tại không có quyền lưu thay đổi. Vui lòng đăng nhập tài khoản <strong>Admin</strong> để cấu hình vai trò.</span>
+                </div>
+              )}
               <div className="staff-modal-grid-2col" style={{ marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Mã vai trò (ID): *</label>
