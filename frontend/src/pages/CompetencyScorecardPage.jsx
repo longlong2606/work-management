@@ -601,7 +601,7 @@ export function CompetencyScorecardPage() {
                       color: currentTier.textColor,
                       fontWeight: 900,
                       fontSize: 12,
-                      fontFamily: "Impact, sans-serif",
+                      fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                       marginLeft: 4,
                     }}
                   >
@@ -799,7 +799,7 @@ export function CompetencyScorecardPage() {
                                 color: tier.textColor,
                                 fontWeight: 900,
                                 fontSize: 11,
-                                fontFamily: "Impact, sans-serif",
+                                fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                               }}
                             >
                               {tier.rank}
@@ -918,7 +918,7 @@ export function CompetencyScorecardPage() {
                     style={{
                       fontSize: 26,
                       fontWeight: 900,
-                      fontFamily: "Impact, sans-serif",
+                      fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                       color: currentTier.color,
                       lineHeight: 1,
                     }}
@@ -1206,7 +1206,7 @@ export function CompetencyScorecardPage() {
                             color: groupTier.textColor,
                             fontWeight: 900,
                             fontSize: 16,
-                            fontFamily: "Impact, sans-serif",
+                            fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                           }}
                         >
                           {groupTier.rank}
@@ -1540,7 +1540,7 @@ export function CompetencyScorecardPage() {
                 </select>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "Impact", color: "#2563eb" }}>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", color: "#2563eb" }}>
                   {currentTier.rank}
                 </div>
                 <div style={{ fontSize: 10.5, fontWeight: 800, color: "#1e40af" }}>{currentStats.overallAvg}/10</div>
@@ -1606,7 +1606,7 @@ export function CompetencyScorecardPage() {
                 </select>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "Impact", color: "#ea580c" }}>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", color: "#ea580c" }}>
                   {compareTier.rank}
                 </div>
                 <div style={{ fontSize: 10.5, fontWeight: 800, color: "#c2410c" }}>{compareStats.overallAvg}/10</div>

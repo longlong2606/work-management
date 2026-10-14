@@ -264,26 +264,7 @@ export function TriangleRadarChart({
           );
         })}
 
-        {/* Small "100" or "10" indicator at each 100% vertex (Manga reference style) */}
-        {angles.map((angle, idx) => {
-          const [vx, vy] = getPoint(angle, maxR);
-          const offsetX = idx === 0 ? 0 : idx === 1 ? -12 : 12;
-          const offsetY = idx === 0 ? 12 : -6;
-          return (
-            <text
-              key={`max-100-${idx}`}
-              x={vx + offsetX}
-              y={vy + offsetY}
-              fontSize="9"
-              fill="#64748b"
-              fontWeight="800"
-              fontFamily="Impact, Arial Black, sans-serif"
-              textAnchor="middle"
-            >
-              100
-            </text>
-          );
-        })}
+        {/* 100 markers removed to prevent overlap with score labels */}
 
         {/* ======================================================== */}
         {/* 3. 3 SPOKE AXIS LINES (From Center to Inner Ring)        */}
@@ -380,7 +361,7 @@ export function TriangleRadarChart({
                 fontSize="13"
                 fontWeight="900"
                 fill="#0f172a"
-                fontFamily="Impact, Arial Black, sans-serif"
+                fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
                 style={{ filter: "drop-shadow(0 1px 2px #ffffff)" }}
               >
                 {Math.round(v.val * 10)}
@@ -421,7 +402,7 @@ export function TriangleRadarChart({
             fill={tier1.color}
             stroke="#0f172a"
             strokeWidth="1.5"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier1.rank}
           </text>
@@ -449,7 +430,7 @@ export function TriangleRadarChart({
             fill={tier2.color}
             stroke="#0f172a"
             strokeWidth="1.5"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier2.rank}
           </text>
@@ -477,7 +458,7 @@ export function TriangleRadarChart({
             fill={tier3.color}
             stroke="#0f172a"
             strokeWidth="1.5"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             {tier3.rank}
           </text>
@@ -500,7 +481,7 @@ export function TriangleRadarChart({
             fontWeight="900"
             letterSpacing="1px"
             fill="#0f172a"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             QUẢN LÝ & ĐỐI NGOẠI
           </text>
@@ -529,7 +510,7 @@ export function TriangleRadarChart({
             fontWeight="900"
             letterSpacing="1px"
             fill="#0f172a"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             KỸ THUẬT & HỆ THỐNG
           </text>
@@ -558,7 +539,7 @@ export function TriangleRadarChart({
             fontWeight="900"
             letterSpacing="1px"
             fill="#0f172a"
-            fontFamily="Impact, Arial Black, sans-serif"
+            fontFamily="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
           >
             RESEARCH & AI
           </text>
