@@ -333,21 +333,21 @@ export const INITIAL_MEMBERS = [
 export function calculateMemberStats(scores) {
   // Nhóm 1: c1 -> c6
   const g1Keys = ["c1", "c2", "c3", "c4", "c5", "c6"];
-  const g1Vals = g1Keys.map(k => scores[k] || 0);
+  const g1Vals = g1Keys.map(k => Number(scores[k]) || 0);
   const g1Evaluated = g1Vals.filter(v => v > 0);
   const g1Sum = g1Vals.reduce((a, b) => a + b, 0);
   const g1Avg = g1Evaluated.length > 0 ? (g1Sum / g1Evaluated.length) : 0;
 
   // Nhóm 2: c7 -> c12
   const g2Keys = ["c7", "c8", "c9", "c10", "c11", "c12"];
-  const g2Vals = g2Keys.map(k => scores[k] || 0);
+  const g2Vals = g2Keys.map(k => Number(scores[k]) || 0);
   const g2Evaluated = g2Vals.filter(v => v > 0);
   const g2Sum = g2Vals.reduce((a, b) => a + b, 0);
   const g2Avg = g2Evaluated.length > 0 ? (g2Sum / g2Evaluated.length) : 0;
 
   // Nhóm 3: c13 -> c18
   const g3Keys = ["c13", "c14", "c15", "c16", "c17", "c18"];
-  const g3Vals = g3Keys.map(k => scores[k] || 0);
+  const g3Vals = g3Keys.map(k => Number(scores[k]) || 0);
   const g3Evaluated = g3Vals.filter(v => v > 0);
   const g3Sum = g3Vals.reduce((a, b) => a + b, 0);
   const g3Avg = g3Evaluated.length > 0 ? (g3Sum / g3Evaluated.length) : 0;

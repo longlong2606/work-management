@@ -89,9 +89,31 @@ export function CompetencyScorecardPage() {
   const currentTier = useMemo(() => getRankTier(currentStats.overallAvg), [currentStats]);
   const compareTier = useMemo(() => getRankTier(compareStats.overallAvg), [compareStats]);
 
-  // Handle score edit for current member
+  // Handle score edit for current member (Hỗ trợ gõ trực tiếp & thanh trượt kéo)
   const handleScoreChange = (criterionId, val) => {
-    const num = Math.min(10, Math.max(0, parseInt(val, 10) || 0));
+    // Nếu người dùng xóa trống ô input để chuẩn bị gõ số mới
+    if (val === "" || val === null || val === undefined) {
+      const updated = members.map((m) => {
+        if (m.id === currentMember.id) {
+          return {
+            ...m,
+            scores: {
+              ...m.scores,
+              [criterionId]: "",
+            },
+          };
+        }
+        return m;
+      });
+      setMembers(updated);
+      return;
+    }
+
+    let parsed = parseFloat(val);
+    if (isNaN(parsed)) parsed = 0;
+    // Giới hạn điểm từ 0 đến 10, làm tròn tối đa 1 chữ số thập phân
+    const num = Math.min(10, Math.max(0, Math.round(parsed * 10) / 10));
+
     const updated = members.map((m) => {
       if (m.id === currentMember.id) {
         return {
@@ -896,7 +918,7 @@ export function CompetencyScorecardPage() {
                                 </div>
                               </div>
 
-                              {/* Numeric score display */}
+                              {/* Numeric score display & Direct input */}
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                                 <span
                                   style={{
@@ -910,40 +932,188 @@ export function CompetencyScorecardPage() {
                                 >
                                   {critTier.title.split(" ")[0]}
                                 </span>
-                                <div
-                                  style={{
-                                    minWidth: 36,
-                                    textAlign: "center",
-                                    fontSize: 14,
-                                    fontWeight: 900,
-                                    color: score > 0 ? "#0f172a" : "#cbd5e1",
-                                  }}
-                                >
-                                  {score > 0 ? `${score}/10` : "--"}
-                                </div>
+
+                                {isGradingMode ? (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      background: "#ffffff",
+                                      padding: "1px 4px",
+                                      borderRadius: 6,
+                                      border: `1.5px solid ${group.color}`,
+                                      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                                    }}
+                                  >
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="10"
+                                      step="0.5"
+                                      value={score === "" ? "" : score}
+                                      onChange={(e) => handleScoreChange(crit.id, e.target.value)}
+                                      onBlur={(e) => {
+                                        if (score === "" || isNaN(Number(score))) handleScoreChange(crit.id, 0);
+                                      }}
+                                      style={{
+                                        width: 36,
+                                        height: 24,
+                                        border: "none",
+                                        outline: "none",
+                                        textAlign: "center",
+                                        fontSize: 13,
+                                        fontWeight: 900,
+                                        color: group.color,
+                                        background: "transparent",
+                                        padding: 0,
+                                      }}
+                                      title="Ghi / Nhập trực tiếp số điểm (0 - 10)"
+                                      placeholder="0"
+                                    />
+                                    <span style={{ fontSize: 12, fontWeight: 800, color: "#64748b" }}>/10</span>
+                                  </div>
+                                ) : (
+                                  <div
+                                    onClick={() => setIsGradingMode(true)}
+                                    style={{
+                                      minWidth: 36,
+                                      textAlign: "center",
+                                      fontSize: 14,
+                                      fontWeight: 900,
+                                      color: score > 0 ? "#0f172a" : "#cbd5e1",
+                                      cursor: "pointer",
+                                      padding: "2px 4px",
+                                      borderRadius: 6,
+                                      transition: "background 0.15s ease",
+                                    }}
+                                    title="Nhấp để bật chế độ ghi / chỉnh sửa điểm"
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    {score > 0 ? `${score}/10` : "--"}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            {/* Progress bar or Interactive Slider if in Grading Mode */}
+                            {/* KHUNG GHI SỐ & THANH KÉO (Gõ phím, tăng/giảm nút hoặc kéo thanh trượt) */}
                             {isGradingMode ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                                {/* Nút Giảm 1 điểm */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleScoreChange(crit.id, Math.max(0, (Number(score) || 0) - 1))}
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 6,
+                                    border: "1.5px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    fontWeight: 900,
+                                    fontSize: 16,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    userSelect: "none",
+                                    flexShrink: 0,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title="Giảm 1 điểm"
+                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = group.color; e.currentTarget.style.background = "#f8fafc"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#ffffff"; }}
+                                >
+                                  −
+                                </button>
+
+                                {/* Thanh trượt kéo (đồng bộ real-time) */}
                                 <input
                                   type="range"
                                   min="0"
                                   max="10"
-                                  step="1"
-                                  value={score}
+                                  step="0.5"
+                                  value={Number(score) || 0}
                                   onChange={(e) => handleScoreChange(crit.id, e.target.value)}
                                   style={{
                                     flex: 1,
+                                    minWidth: 100,
                                     accentColor: group.color,
                                     cursor: "pointer",
                                     height: 6,
                                   }}
                                 />
-                                <span style={{ fontSize: 11, fontWeight: 800, color: group.color, width: 20 }}>
-                                  {score}
-                                </span>
+
+                                {/* Nút Tăng 1 điểm */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleScoreChange(crit.id, Math.min(10, (Number(score) || 0) + 1))}
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 6,
+                                    border: "1.5px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    fontWeight: 900,
+                                    fontSize: 16,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    userSelect: "none",
+                                    flexShrink: 0,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title="Tăng 1 điểm"
+                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = group.color; e.currentTarget.style.background = "#f8fafc"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#ffffff"; }}
+                                >
+                                  +
+                                </button>
+
+                                {/* KHUNG Ô GHI SỐ TRỰC TIẾP (Bấm vào để ghi số từ bàn phím) */}
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    background: "#ffffff",
+                                    border: `2px solid ${group.color}`,
+                                    borderRadius: 8,
+                                    padding: "2px 8px",
+                                    boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="10"
+                                    step="0.5"
+                                    value={score === "" ? "" : score}
+                                    onChange={(e) => handleScoreChange(crit.id, e.target.value)}
+                                    onBlur={(e) => {
+                                      if (score === "" || isNaN(Number(score))) handleScoreChange(crit.id, 0);
+                                    }}
+                                    placeholder="0"
+                                    style={{
+                                      width: 42,
+                                      height: 26,
+                                      border: "none",
+                                      outline: "none",
+                                      textAlign: "center",
+                                      fontSize: 14,
+                                      fontWeight: 900,
+                                      color: group.color,
+                                      background: "transparent",
+                                      padding: 0,
+                                    }}
+                                    title="Gõ điểm trực tiếp bằng bàn phím (0 - 10)"
+                                  />
+                                  <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>/ 10</span>
+                                </div>
                               </div>
                             ) : (
                               <div
