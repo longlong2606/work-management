@@ -79,10 +79,10 @@ export function Navbar({ activeTab, setActiveTab }) {
 
   // 1. Menu chính
   const mainNavItems = [
-    { id: "schedule", label: "Lịch làm việc", icon: Calendar },
-    { id: "tasks", label: "Nhiệm vụ & Dự án", icon: CheckSquare },
+    { id: "schedule", label: "Lịch ca", icon: Calendar },
+    { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
     { id: "competency", label: "Năng lực", icon: Award },
-    { id: "notes", label: "Ghi chú ca", icon: FileText },
+    { id: "notes", label: "Ghi chú", icon: FileText },
     { id: "feedback", label: "Góp ý", icon: MessageSquare },
   ];
 
@@ -182,10 +182,10 @@ export function Navbar({ activeTab, setActiveTab }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 7,
-                      padding: "7px 11px",
+                      gap: 5,
+                      padding: "6px 9px",
                       borderRadius: 8,
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: isActive ? 700 : 600,
                       cursor: "pointer",
                       border: "none",
@@ -216,10 +216,10 @@ export function Navbar({ activeTab, setActiveTab }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
-                      padding: "8px 12px",
+                      gap: 5,
+                      padding: "6px 9px",
                       borderRadius: 8,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: isSystemActive ? 700 : 600,
                       cursor: "pointer",
                       border: "none",
@@ -321,51 +321,49 @@ export function Navbar({ activeTab, setActiveTab }) {
             </nav>
 
             {/* RIGHT SIDE DESKTOP */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               {/* Nút Mở trên Điện thoại (Mã QR) */}
               <button
                 onClick={() => setShowMobileModal(true)}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "7px 12px",
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1.5px solid #e2e8f0",
                   background: "#f8fafc",
-                  color: "#0f172a",
-                  fontSize: 12,
-                  fontWeight: 700,
+                  color: "#2563eb",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
                 title="Quét mã QR để mở trang web trên điện thoại di động"
               >
-                <Smartphone size={15} color="#2563eb" />
-                <span>Mobile</span>
+                <Smartphone size={16} />
               </button>
 
               {/* Nút xem Màn hình TV */}
               <button
                 onClick={() => setActiveTab("tv")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "7px 12px",
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1.5px solid #bfdbfe",
                   background: "#eff6ff",
                   color: "#1d4ed8",
-                  fontSize: 12,
-                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
                 title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn /tv)"
               >
-                <Tv size={15} color="#2563eb" />
-                <span>TV</span>
+                <Tv size={16} />
               </button>
 
               {/* Notification Button */}
@@ -373,8 +371,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                 onClick={() => setIsOpen(true)}
                 style={{
                   position: "relative",
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1px solid #e2e8f0",
                   background: "#f8fafc",
@@ -383,6 +381,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   justifyContent: "center",
                   cursor: "pointer",
                   transition: "all 0.15s",
+                  flexShrink: 0,
                 }}
                 title="Xem thông báo"
               >
@@ -458,36 +457,19 @@ export function Navbar({ activeTab, setActiveTab }) {
                 </div>
               </div>
 
-              {/* Nút Đổi mật khẩu */}
-              <button
-                onClick={() => setShowProfileModal(true)}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: "1px solid #bfdbfe",
-                  background: "#eff6ff",
-                  color: "#2563eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-                title="Đổi mật khẩu tài khoản"
-              >
-                <Key size={16} />
-              </button>
+
 
               {/* Logout Button */}
               <button
                 onClick={logout}
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   borderRadius: 8,
                   border: "1px solid #fecaca",
                   background: "#fef2f2",
                   color: "#dc2626",
+                  flexShrink: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -700,7 +682,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   border: "1px solid #e2e8f0",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <div
                     style={{
                       width: 36,
@@ -788,7 +770,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                         width: "100%",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                         <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
                         <span>{item.label}</span>
                       </div>
@@ -823,7 +805,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                         width: "100%",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                         <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
                         <span>{item.label}</span>
                       </div>
@@ -851,7 +833,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                     width: "100%",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     <Tv size={16} color="#2563eb" />
                     <span>Màn hình Kiosk TV (/tv)</span>
                   </div>
@@ -880,7 +862,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                     width: "100%",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     <Smartphone size={16} color="#7c3aed" />
                     <span>Mã QR kết nối Điện thoại</span>
                   </div>
