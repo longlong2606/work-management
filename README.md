@@ -45,6 +45,17 @@
 - Tự động nhận diện ca đang diễn ra (highlight vàng rực rỡ) và danh sách nhân sự đang trực.
 - Tự động lấy địa chỉ IP mạng Wi-Fi nội bộ để các thiết bị Smart TV có thể truy cập qua trình duyệt mà không cần cài đặt ứng dụng.
 
+### 3. ✨ Hệ Thống Điểm Cống Hiến (Contribution Points - CP) & Bảng Xếp Hạng
+- **Quy trình 4 bước chuẩn hóa:** `Nhận task hợp lệ → Hoàn thành đúng DoD (Definition of Done) → Nộp minh chứng → Reviewer nghiệm thu`.
+- **Phân bổ tỷ lệ đóng góp (% contribution):** Hỗ trợ nhiều thành viên cùng tham gia 1 checklist (ví dụ: Member A 70%, Member B 30%).
+- **Thưởng hệ số chất lượng (Quality Multiplier):** 1.0x (Đạt chuẩn) hoặc 1.2x (Xuất sắc vượt mong đợi).
+- **Bảng xếp hạng cống hiến thời gian thực (Leaderboard):** Thăng cấp bậc cống hiến theo 4 mốc:
+  - 🥉 *Học việc (Junior):* Dưới 50 CP
+  - 🥈 *Thành viên cốt cán (Active Member):* 50 - 149 CP
+  - 🥇 *Chuyên gia kỹ thuật (Specialist):* 150 - 299 CP
+  - 👑 *Trụ cột xuất sắc (Master Contributor):* Từ 300 CP trở lên
+- **Lịch sử tích lũy minh bạch:** Click vào từng thành viên để xem chi tiết từng mục checklist đã nghiệm thu, tỷ lệ đóng góp và ngày cấp điểm.
+
 ---
 
 ## 🛠️ Công Nghệ Sử Dụng
@@ -138,11 +149,13 @@ npm run dev
 
 ## 🔑 Tài Khoản Đăng Nhập Mặc Định
 
-| Vai trò | Tên đăng nhập | Mật khẩu |
-| :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `admin` | `admin123` |
-| **Trưởng nhóm (Leader)** | `leader1` | `leader123` |
-| **Nhân viên (Staff)** | `longlong` | `User@123` |
+| Vai trò | Tên đăng nhập | Mật khẩu | Điểm CP mẫu | Cấp bậc cống hiến |
+| :--- | :--- | :--- | :---: | :--- |
+| **Quản trị viên (Admin)** | `admin` | `Admin@123` | 0 CP | Quản trị hệ thống |
+| **Trưởng nhóm (Leader)** | `leader1` | `123456` | 0 CP | Quản lý & Nghiệm thu |
+| **Học viên (Huỳnh Vinh Phú)** | `Learner` | `123456` | **60 CP** | 🌟 Thành viên cốt cán |
+| **Kỹ sư (Hoàng Long)** | `longhvn` | `123456` | **48 CP** | Học việc (Junior) |
+| **Kỹ sư (Văn Long)** | `longlong` | `123456` | **12 CP** | Học việc (Junior) |
 
 ---
 
