@@ -47,6 +47,7 @@ const ROLE_LABELS = {
 const TAB_TITLES = {
   schedule: "Lịch ca",
   tasks: "Nhiệm vụ",
+  cp: "Điểm Đóng Góp (CP)",
   competency: "Đánh Giá Năng Lực",
   notes: "Ghi chú",
   feedback: "Góp ý",
@@ -81,6 +82,7 @@ export function Navbar({ activeTab, setActiveTab }) {
   const mainNavItems = [
     { id: "schedule", label: "Lịch ca", icon: Calendar },
     { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
+    { id: "cp", label: "Điểm CP", icon: Sparkles },
     { id: "competency", label: "Năng lực", icon: Award },
     { id: "notes", label: "Ghi chú", icon: FileText },
     { id: "feedback", label: "Góp ý", icon: MessageSquare },

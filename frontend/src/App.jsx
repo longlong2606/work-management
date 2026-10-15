@@ -11,11 +11,12 @@ import { FeedbackPage } from "./pages/FeedbackPage";
 import { TasksPage } from "./pages/TasksPage";
 import { StaffManagementPage } from "./pages/StaffManagementPage";
 import { CompetencyScorecardPage } from "./pages/CompetencyScorecardPage";
+import { CpLeaderboardPage } from "./pages/CpLeaderboardPage";
 import { EmailOutboxPage } from "./pages/EmailOutboxPage";
 import { EmailSettingsPage } from "./pages/EmailSettingsPage";
 import { TvDisplayPage } from "./pages/TvDisplayPage";
 
-const VALID_TABS = ["schedule", "tasks", "competency", "history", "notes", "feedback", "staff", "emails", "smtp"];
+const VALID_TABS = ["schedule", "tasks", "cp", "competency", "history", "notes", "feedback", "staff", "emails", "smtp"];
 
 function getTabFromUrl() {
   if (typeof window === "undefined") return "schedule";
@@ -114,6 +115,7 @@ function MainContent() {
       <main style={{ flex: 1, paddingBottom: 40, width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
         {activeTab === "schedule" && <SchedulePage />}
         {activeTab === "tasks" && <TasksPage />}
+        {activeTab === "cp" && <CpLeaderboardPage />}
         {activeTab === "competency" && <CompetencyScorecardPage />}
         {activeTab === "history" && <ShiftHistoryPage />}
         {activeTab === "notes" && <ShiftNotesPage />}

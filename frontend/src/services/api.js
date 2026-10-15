@@ -412,10 +412,10 @@ export const api = {
     request(`/subtasks/${id}/submit`, {
       method: "POST",
     }),
-  reviewSubtask: (id, approve, comment) =>
+  reviewSubtask: (id, approve, comment, quality_multiplier = 1.0) =>
     request(`/subtasks/${id}/review`, {
       method: "POST",
-      body: JSON.stringify({ approve, comment }),
+      body: JSON.stringify({ approve, comment, quality_multiplier }),
     }),
   deleteSubtask: (id) =>
     request(`/subtasks/${id}`, {
@@ -429,4 +429,8 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+
+  // Contribution Points (CP) System
+  getCpLeaderboard: () => request("/cp/leaderboard"),
+  getUserCpHistory: (userId) => request(`/cp/history/${userId}`),
 };

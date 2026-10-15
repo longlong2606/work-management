@@ -143,7 +143,9 @@ public record SubtaskAssigneeDto(
     long user_id,
     string full_name,
     string username,
-    string? role
+    string? role,
+    int contribution_pct = 0,
+    double cp_earned = 0
 );
 
 public record SubtaskDetailDto(
@@ -161,7 +163,9 @@ public record SubtaskDetailDto(
     string? creator_name,
     string? created_at,
     string? updated_at,
-    List<SubtaskAssigneeDto>? assignees
+    List<SubtaskAssigneeDto>? assignees,
+    int cp_points = 0,
+    double quality_multiplier = 1.0
 );
 
 public record TaskDetailDto(
@@ -215,24 +219,59 @@ public record PostponeTaskRequest(
     string reason
 );
 
+public record AssigneeContribution(long user_id, int contribution_pct);
+
 public record CreateSubtaskRequest(
     string title,
     string? description,
     string? due_at,
-    List<long>? assignee_ids
+    List<long>? assignee_ids,
+    int cp_points = 0,
+    List<AssigneeContribution>? assignee_contributions = null
 );
 
 public record UpdateSubtaskRequest(
     string title,
     string? description,
     string? due_at,
-    List<long>? assignee_ids
+    List<long>? assignee_ids,
+    int cp_points = 0,
+    List<AssigneeContribution>? assignee_contributions = null
 );
 
 public record ReviewSubtaskRequest(
     bool approve,
-    string? comment
+    string? comment,
+    double quality_multiplier = 1.0
 );
+
+// ===== CP SYSTEM DTOs =====
+public class CpUserSummary
+{
+    public long user_id { get; set; }
+    public string username { get; set; } = "";
+    public string full_name { get; set; } = "";
+    public string role { get; set; } = "";
+    public string? department { get; set; }
+    public double total_cp { get; set; }
+    public int subtasks_finished { get; set; }
+    public string tier { get; set; } = "Thành viên";
+    public double next_tier_cp { get; set; } = 50;
+    public double progress_pct { get; set; } = 0;
+}
+
+public class CpTransactionDto
+{
+    public long id { get; set; }
+    public long user_id { get; set; }
+    public string? user_name { get; set; }
+    public long subtask_id { get; set; }
+    public string? subtask_title { get; set; }
+    public double cp_earned { get; set; }
+    public int contribution_pct { get; set; }
+    public double quality_multiplier { get; set; }
+    public string? created_at { get; set; }
+}
 
 public class RoleEntity
 {

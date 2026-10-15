@@ -135,7 +135,9 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         SELECT 
             s.id, s.task_id, s.title, s.description, s.position, s.status,
             s.due_at, s.review_comment, s.submitted_for_review_at, s.finished_at,
-            s.created_by, u.full_name AS creator_name, s.created_at, s.updated_at
+            s.created_by, u.full_name AS creator_name, s.created_at, s.updated_at,
+            COALESCE(s.cp_points, 0) AS cp_points,
+            COALESCE(s.quality_multiplier, 1.0) AS quality_multiplier
         FROM subtasks s
         LEFT JOIN users u ON s.created_by = u.id
         WHERE s.task_id = @id
@@ -146,7 +148,8 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     if (subtaskIds.Any())
     {
         var assignees = conn.Query(@"
-            SELECT sa.subtask_id, u.id AS user_id, u.full_name, u.username, u.role
+            SELECT sa.subtask_id, u.id AS user_id, u.full_name, u.username, u.role,
+                   COALESCE(sa.contribution_pct, 100) AS contribution_pct
             FROM subtask_assignees sa
             JOIN users u ON sa.user_id = u.id
             WHERE sa.subtask_id IN @subtaskIds", new { subtaskIds }).ToList();
@@ -155,7 +158,14 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         {
             long sId = (long)a.subtask_id;
             if (!assigneesDict.ContainsKey(sId)) assigneesDict[sId] = new List<dynamic>();
-            assigneesDict[sId].Add(new { user_id = (long)a.user_id, full_name = (string)a.full_name, username = (string)a.username, role = (string)a.role });
+            int pct = Convert.ToInt32(a.contribution_pct);
+            assigneesDict[sId].Add(new { 
+                user_id = (long)a.user_id, 
+                full_name = (string)a.full_name, 
+                username = (string)a.username, 
+                role = (string)a.role,
+                contribution_pct = pct
+            });
         }
     }
 
@@ -175,6 +185,8 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         creator_name = (string?)s.creator_name,
         created_at = (string?)s.created_at?.ToString(),
         updated_at = (string?)s.updated_at?.ToString(),
+        cp_points = Convert.ToInt32(s.cp_points),
+        quality_multiplier = Convert.ToDouble(s.quality_multiplier),
         assignees = assigneesDict.ContainsKey((long)s.id) ? assigneesDict[(long)s.id] : new List<dynamic>()
     }).ToList();
 
@@ -337,10 +349,11 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
 
     int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
+    int cpPoints = Math.Max(0, req.cp_points);
 
     long subtaskId = conn.ExecuteScalar<long>(@"
-        INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, created_at, updated_at)
-        VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @due_at, @createdBy, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+        VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
         SELECT last_insert_rowid();",
         new
         {
@@ -349,14 +362,26 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
             description = req.description?.Trim(),
             pos,
             due_at = req.due_at?.Trim(),
-            createdBy = currentUser.id
+            createdBy = currentUser.id,
+            cpPoints
         });
 
-    if (req.assignee_ids != null && req.assignee_ids.Any())
+    // Handle Assignees and % contributions
+    if (req.assignee_contributions != null && req.assignee_contributions.Any())
     {
+        foreach (var ac in req.assignee_contributions)
+        {
+            conn.Execute("INSERT OR REPLACE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @pct)",
+                new { subtaskId, uid = ac.user_id, pct = ac.contribution_pct });
+        }
+    }
+    else if (req.assignee_ids != null && req.assignee_ids.Any())
+    {
+        int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
         foreach (var uid in req.assignee_ids)
         {
-            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id) VALUES (@subtaskId, @uid)", new { subtaskId, uid });
+            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct)",
+                new { subtaskId, uid, defaultPct });
         }
     }
 
@@ -387,24 +412,38 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề không được để trống!" });
 
+    int cpPoints = Math.Max(0, req.cp_points);
+
     conn.Execute(@"
         UPDATE subtasks SET 
-            title = @title, description = @description, due_at = @due_at, updated_at = CURRENT_TIMESTAMP
+            title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id",
         new
         {
             id,
             title = req.title.Trim(),
             description = req.description?.Trim(),
-            due_at = req.due_at?.Trim()
+            due_at = req.due_at?.Trim(),
+            cpPoints
         });
 
-    if (req.assignee_ids != null)
+    if (req.assignee_contributions != null && req.assignee_contributions.Any())
     {
         conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+        foreach (var ac in req.assignee_contributions)
+        {
+            conn.Execute("INSERT OR REPLACE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct)",
+                new { id, uid = ac.user_id, pct = ac.contribution_pct });
+        }
+    }
+    else if (req.assignee_ids != null)
+    {
+        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+        int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
         foreach (var uid in req.assignee_ids)
         {
-            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id) VALUES (@id, @uid)", new { id, uid });
+            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct)",
+                new { id, uid, defaultPct });
         }
     }
 
@@ -448,7 +487,7 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.status, s.task_id, t.leader_id 
+        SELECT s.id, s.status, s.task_id, s.cp_points, t.leader_id 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
@@ -462,17 +501,40 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     if (req.approve)
     {
+        double qMultiplier = req.quality_multiplier > 0 ? req.quality_multiplier : 1.0;
         conn.Execute(@"
             UPDATE subtasks SET 
-                status = 'FINISHED', review_comment = @comment, finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                status = 'FINISHED', review_comment = @comment, quality_multiplier = @qMultiplier, finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
             WHERE id = @id",
             new
             {
                 id,
-                comment = string.IsNullOrWhiteSpace(req.comment) ? "Đã nghiệm thu đạt chuẩn" : req.comment.Trim()
+                comment = string.IsNullOrWhiteSpace(req.comment) ? "Đã nghiệm thu đạt chuẩn" : req.comment.Trim(),
+                qMultiplier
             });
 
-        return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist thành công!" });
+        // Award CP to each assignee based on contribution percentage and multiplier
+        int cpPoints = Convert.ToInt32(subtask.cp_points ?? 0);
+        if (cpPoints > 0)
+        {
+            var assignees = conn.Query<dynamic>("SELECT user_id, COALESCE(contribution_pct, 100) AS contribution_pct FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
+            
+            // Clean up any existing transaction for this subtask
+            conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
+
+            foreach (var a in assignees)
+            {
+                long uId = (long)a.user_id;
+                int pct = Convert.ToInt32(a.contribution_pct);
+                double cpEarned = Math.Round(cpPoints * (pct / 100.0) * qMultiplier, 1);
+                conn.Execute(@"
+                    INSERT INTO cp_transactions (user_id, subtask_id, cp_earned, contribution_pct, cp_points_base, quality_multiplier, awarded_at)
+                    VALUES (@uId, @id, @cpEarned, @pct, @cpPoints, @qMultiplier, CURRENT_TIMESTAMP)",
+                    new { uId, id, cpEarned, pct, cpPoints, qMultiplier });
+            }
+        }
+
+        return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!" });
     }
     else
     {
@@ -488,6 +550,9 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                 id,
                 comment = req.comment.Trim()
             });
+
+        // Delete any existing transactions if reopened
+        conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
 
         return Results.Ok(new { message = "Đã yêu cầu thành viên chỉnh sửa lại theo nhận xét!" });
     }
@@ -509,10 +574,106 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
     if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
         return Results.StatusCode(403);
 
+    conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
     conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
     conn.Execute("DELETE FROM subtasks WHERE id = @id", new { id });
 
     return Results.Ok(new { message = "Đã xóa mục checklist thành công!" });
+});
+
+// ===== CP LEADERBOARD & STATS ENDPOINTS =====
+app.MapGet("/api/cp/leaderboard", (HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var list = conn.Query<dynamic>(@"
+        SELECT 
+            u.id AS user_id, 
+            u.username, 
+            u.full_name, 
+            u.role,
+            u.department,
+            COALESCE(SUM(cpt.cp_earned), 0) AS total_cp,
+            COUNT(DISTINCT cpt.subtask_id) AS subtasks_finished
+        FROM users u
+        LEFT JOIN cp_transactions cpt ON u.id = cpt.user_id
+        WHERE u.role != 'guest'
+        GROUP BY u.id, u.username, u.full_name, u.role, u.department
+        ORDER BY total_cp DESC, subtasks_finished DESC, u.full_name ASC").ToList();
+
+    var result = list.Select(u =>
+    {
+        double cp = Convert.ToDouble(u.total_cp);
+        string tier;
+        double nextTierCp;
+        if (cp < 50)
+        {
+            tier = "Học việc (Junior)";
+            nextTierCp = 50;
+        }
+        else if (cp < 150)
+        {
+            tier = "Thành viên cốt cán (Active Member)";
+            nextTierCp = 150;
+        }
+        else if (cp < 300)
+        {
+            tier = "Chuyên gia kỹ thuật (Specialist)";
+            nextTierCp = 300;
+        }
+        else
+        {
+            tier = "Trụ cột xuất sắc (Master Contributor)";
+            nextTierCp = 500;
+        }
+        double progress = nextTierCp > 0 ? Math.Min(100, Math.Round((cp / nextTierCp) * 100, 1)) : 100;
+
+        return new CpUserSummary
+        {
+            user_id = (long)u.user_id,
+            username = (string)u.username,
+            full_name = (string)u.full_name,
+            role = (string)u.role,
+            department = (string?)u.department,
+            total_cp = Math.Round(cp, 1),
+            subtasks_finished = Convert.ToInt32(u.subtasks_finished),
+            tier = tier,
+            next_tier_cp = nextTierCp,
+            progress_pct = progress
+        };
+    }).ToList();
+
+    return Results.Ok(result);
+});
+
+app.MapGet("/api/cp/history/{userId:long}", (long userId, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var history = conn.Query<dynamic>(@"
+        SELECT 
+            cpt.id,
+            cpt.user_id,
+            u.full_name AS user_name,
+            cpt.subtask_id,
+            s.title AS subtask_title,
+            t.title AS task_title,
+            cpt.cp_earned,
+            cpt.contribution_pct,
+            cpt.quality_multiplier,
+            cpt.awarded_at
+        FROM cp_transactions cpt
+        JOIN users u ON cpt.user_id = u.id
+        JOIN subtasks s ON cpt.subtask_id = s.id
+        JOIN tasks t ON s.task_id = t.id
+        WHERE cpt.user_id = @userId
+        ORDER BY cpt.awarded_at DESC", new { userId }).ToList();
+
+    return Results.Ok(history);
 });
 
 if (hasFrontend)

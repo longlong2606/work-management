@@ -1178,6 +1178,21 @@ export function TasksPage() {
                                       >
                                         {statusBadge.label}
                                       </span>
+                                      {sub.cp_points > 0 && (
+                                        <span
+                                          style={{
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            padding: "2px 7px",
+                                            borderRadius: 4,
+                                            background: "#eff6ff",
+                                            color: "#2563eb",
+                                            border: "1px solid #bfdbfe",
+                                          }}
+                                        >
+                                          +{sub.cp_points} CP
+                                        </span>
+                                      )}
                                     </div>
 
                                     {sub.description && (
@@ -1378,6 +1393,11 @@ export function TasksPage() {
               <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
                 Nhận xét / Góp ý nghiệm thu:
               </label>
+              {reviewModalSubtask?.cp_points > 0 && (
+                <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0", fontSize: 13, color: "#166534", lineHeight: 1.4 }}>
+                  ⭐ Mục checklist này có định mức <strong>{reviewModalSubtask.cp_points} CP</strong>. Khi duyệt đạt, hệ thống sẽ tự động ghi nhận và cộng điểm CP cho các thành viên phụ trách!
+                </div>
+              )}
               <textarea
                 rows={3}
                 value={reviewComment}
@@ -1949,6 +1969,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
+  const [cpPoints, setCpPoints] = useState(20);
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1968,6 +1989,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
         description: description.trim(),
         due_at: dueAt ? dueAt.replace("T", " ") : "",
         assignee_ids: selectedAssignees,
+        cp_points: Number(cpPoints) || 0,
       });
       onSuccess();
       onClose();
@@ -2102,24 +2124,48 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
             </small>
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Hạn chót:
-            </label>
-            <input
-              type="datetime-local"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid #cbd5e1",
-                fontSize: 14,
-                boxSizing: "border-box",
-                outlineColor: "#93c5fd",
-              }}
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Điểm cống hiến (CP):
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="5"
+                value={cpPoints}
+                onChange={(e) => setCpPoints(e.target.value)}
+                placeholder="20"
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Hạn chót:
+              </label>
+              <input
+                type="datetime-local"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
+                }}
+              />
+            </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
