@@ -14,15 +14,17 @@ import {
 export function MobileConnectModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
-  // 2 chế độ: "tunnel" (Khuyên dùng - 4G/5G/Mọi nơi) hoặc "lan" (Cùng Wi-Fi)
-  const [connectMode, setConnectMode] = useState("tunnel");
+  // 2 chế độ: "lan" (Cùng Wi-Fi nội bộ) hoặc "tunnel"
+  const [connectMode, setConnectMode] = useState("lan");
   
-  // Public Tunnel URL do cloudflared tạo
+  // Public Tunnel URL
   const TUNNEL_URL = "https://visibility-skip-receives-criterion.trycloudflare.com";
   
-  // Địa chỉ LAN Wi-Fi thực tế
-  const LAN_IP = "192.168.1.161";
-  const [ipAddress, setIpAddress] = useState(LAN_IP);
+  // Địa chỉ LAN Wi-Fi thực tế của máy
+  const currentHost = typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+    ? window.location.hostname 
+    : "192.168.1.18";
+  const [ipAddress, setIpAddress] = useState(currentHost);
   const [port, setPort] = useState(typeof window !== "undefined" ? (window.location.port || "5173") : "5173");
   
   const [qrDataUrl, setQrDataUrl] = useState("");
