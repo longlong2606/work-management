@@ -140,13 +140,54 @@ function MainContent() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: 20, textAlign: "center" }}>
+          <div style={{ background: "#ffffff", padding: 32, borderRadius: 16, border: "1px solid #e2e8f0", maxWidth: 450, boxShadow: "0 10px 25px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#1e293b", margin: "0 0 8px 0" }}>Đã xảy ra sự cố hiển thị</h2>
+            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px 0" }}>Vui lòng bấm tải lại trang để tiếp tục sử dụng hệ thống.</p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.reload();
+              }}
+              style={{ background: "#2563eb", color: "#ffffff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+            >
+              Tải lại trang
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <MainContent />
-      </NotificationProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <NotificationProvider>
+          <MainContent />
+        </NotificationProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
