@@ -48,7 +48,7 @@ const TAB_TITLES = {
   schedule: "Lịch ca",
   tasks: "Nhiệm vụ",
   cp: "Điểm Đóng Góp (CP)",
-  competency: "Đánh Giá Năng Lực",
+  competency: "Năng lực",
   notes: "Ghi chú",
   feedback: "Góp ý",
   staff: "Nhân sự",
