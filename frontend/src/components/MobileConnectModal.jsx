@@ -21,7 +21,7 @@ export function MobileConnectModal({ isOpen, onClose }) {
   const TUNNEL_URL = "https://visibility-skip-receives-criterion.trycloudflare.com";
   
   // Địa chỉ LAN Wi-Fi thực tế của máy
-  const LAN_IP = "192.168.1.18";
+  const LAN_IP = "10.25.32.204";
   const currentHost = typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
     ? window.location.hostname 
     : LAN_IP;
