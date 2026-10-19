@@ -45,8 +45,9 @@ export function CompetencyScorecardPage() {
     }
     const mergedScores = { ...defaultScores, ...scores };
 
-    const roleMap = {
+        const roleMap = {
       admin: "Quản trị viên (Admin)",
+      manager: "Quản lý (Manager)",
       core: "Quản lý Cốt cán (Core)",
       leader: "Trưởng nhóm (Lead)",
       contributor: "Thành viên (Contributor)",
@@ -54,9 +55,10 @@ export function CompetencyScorecardPage() {
     };
 
     const roleLevelMap = {
-      admin: "Lead",
-      core: "Lead",
-      leader: "Lead",
+      admin: "Quản trị",
+      manager: "Quản lý",
+      core: "Cốt cán",
+      leader: "Trưởng nhóm",
       contributor: "Chính thức",
       learning: "Thực tập",
     };
@@ -66,7 +68,7 @@ export function CompetencyScorecardPage() {
       userId: u.id,
       name: u.full_name || u.username,
       username: u.username,
-      role: roleMap[u.role] || u.role || "Thành viên",
+      role: u.role_display_name || roleMap[u.role] || u.role || "Thành viên",
       roleLevel: roleLevelMap[u.role] || "Thành viên",
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || u.username)}&background=2563eb&color=fff&bold=true`,
       department: u.department || "Ban Kỹ Thuật & Vận Hành",
@@ -77,11 +79,13 @@ export function CompetencyScorecardPage() {
     };
   };
 
-  // Members state (Khởi tạo từ cache hoặc mẫu, sau đó đồng bộ với Database nhân sự)
+  // Members state (Khởi tạo từ cache hoặc mẫu, sau đó đồng bộ với Database nhân sự - Quản trị viên không nằm trong danh sách cần chấm điểm)
   const [members, setMembers] = useState(() => {
     try {
       const saved = localStorage.getItem("lab_competency_members");
-      return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
+      const list = saved ? JSON.parse(saved) : INITIAL_MEMBERS;
+      const nonAdmin = Array.isArray(list) ? list.filter((m) => m.role !== "admin" && m.role !== "Quản trị viên (Admin)" && m.roleLevel !== "admin") : INITIAL_MEMBERS;
+      return nonAdmin.length > 0 ? nonAdmin : INITIAL_MEMBERS;
     } catch {
       return INITIAL_MEMBERS;
     }
@@ -96,7 +100,7 @@ export function CompetencyScorecardPage() {
     return members[1]?.id || members[0]?.id || "1";
   });
 
-  // Tự động kết nối và tải danh sách nhân sự thực tế từ Backend Database
+  // Tự động kết nối và tải danh sách nhân sự thực tế từ Backend Database (đã loại trừ Admin)
   useEffect(() => {
     const fetchRealStaffData = async () => {
       try {
@@ -108,8 +112,8 @@ export function CompetencyScorecardPage() {
             localStorage.setItem("lab_competency_members", JSON.stringify(mapped));
           } catch {}
 
-          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : mapped[0].id));
-          setCompareMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : (mapped[1] ? mapped[1].id : mapped[0].id)));
+          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : mapped[0]?.id));
+          setCompareMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : (mapped[1] ? mapped[1].id : mapped[0]?.id)));
         }
       } catch (err) {
         console.error("Không thể tải danh sách nhân sự từ server, dùng cache offline:", err);
@@ -237,7 +241,22 @@ export function CompetencyScorecardPage() {
   const currentTier = useMemo(() => getRankTier(currentStats.overallAvg), [currentStats]);
   const compareTier = useMemo(() => getRankTier(compareStats.overallAvg), [compareStats]);
 
-  // Handle score edit for current member (Xóa 1 chạm là mất sạch, gõ số mới tự nhiên)
+  // Handle quick note edit for current member (Luu va dong bo thang len database)
+  const handleNoteChange = (field, val) => {
+    if (!canEvaluate) return;
+    const updated = members.map((m) => {
+      if (m.id === currentMember.id) {
+        return {
+          ...m,
+          [field]: val,
+        };
+      }
+      return m;
+    });
+    saveMembers(updated);
+  };
+
+    // Handle score edit for current member (Xóa 1 chạm là mất sạch, gõ số mới tự nhiên)
   const handleScoreChange = (criterionId, val) => {
     if (!canEvaluate) return;
     // Nếu người dùng xóa trống ô (bấm Backspace hoặc Delete)
@@ -1072,22 +1091,85 @@ export function CompetencyScorecardPage() {
                   boxSizing: "border-box",
                 }}
               >
-                <div style={{ fontWeight: 800, color: "#9a3412", marginBottom: 3 }}>
-                  📌 Hướng phát triển mong muốn:
+                <div style={{ fontWeight: 800, color: "#9a3412", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>🎯 Hướng phát triển mong muốn:</span>
+                  {canEvaluate && isGradingMode && <span style={{ fontSize: 10, color: "#ea580c", fontWeight: 700 }}>(Chỉnh sửa trực tiếp)</span>}
                 </div>
-                <div style={{ color: "#475569", marginBottom: 8, lineHeight: 1.4 }}>
-                  {currentMember.desiredDirection || "Chưa cập nhật"}
-                </div>
+                {canEvaluate && isGradingMode ? (
+                  <textarea
+                    rows={2}
+                    value={currentMember.desiredDirection || ""}
+                    onChange={(e) => handleNoteChange("desiredDirection", e.target.value)}
+                    placeholder="Nhập hướng phát triển hoặc mục tiêu của nhân sự..."
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 6,
+                      border: "1px solid #fed7aa",
+                      background: "#ffffff",
+                      fontSize: 11.5,
+                      fontFamily: "inherit",
+                      marginBottom: 8,
+                      boxSizing: "border-box",
+                      resize: "vertical"
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: "#475569", marginBottom: 8, lineHeight: 1.4 }}>
+                    {currentMember.desiredDirection || "Chưa cập nhật"}
+                  </div>
+                )}
 
-                <div style={{ fontWeight: 800, color: "#065f46", marginBottom: 3 }}>
-                  🔍 Bằng chứng / Nhận xét quan sát được:
+                <div style={{ fontWeight: 800, color: "#065f46", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>🔍 Bằng chứng / Nhận xét quan sát được:</span>
+                  {canEvaluate && isGradingMode && <span style={{ fontSize: 10, color: "#059669", fontWeight: 700 }}>(Chỉnh sửa trực tiếp)</span>}
                 </div>
-                <div style={{ color: "#475569", lineHeight: 1.4 }}>
-                  {currentMember.evidenceNotes || "Chưa có ghi chú"}
-                </div>
+                {canEvaluate && isGradingMode ? (
+                  <textarea
+                    rows={2}
+                    value={currentMember.evidenceNotes || ""}
+                    onChange={(e) => handleNoteChange("evidenceNotes", e.target.value)}
+                    placeholder="Ghi chú nhận xét hoặc dẫn chứng năng lực..."
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 6,
+                      border: "1px solid #a7f3d0",
+                      background: "#ffffff",
+                      fontSize: 11.5,
+                      fontFamily: "inherit",
+                      marginBottom: 8,
+                      boxSizing: "border-box",
+                      resize: "vertical"
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: "#475569", lineHeight: 1.4 }}>
+                    {currentMember.evidenceNotes || "Chưa có ghi chú"}
+                  </div>
+                )}
 
                 <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px dashed #cbd5e1", fontSize: 10.5, color: "#64748b" }}>
-                  <strong>Mức độ cam kết:</strong> {currentMember.commitmentLevel || "Đang xác nhận"}
+                  <strong>Mức độ cam kết:</strong>{" "}
+                  {canEvaluate && isGradingMode ? (
+                    <input
+                      type="text"
+                      value={currentMember.commitmentLevel || ""}
+                      onChange={(e) => handleNoteChange("commitmentLevel", e.target.value)}
+                      placeholder="Ví dụ: 100% Toàn thời gian & đúng ca trực"
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        fontSize: 11,
+                        marginLeft: 4,
+                        width: "calc(100% - 110px)",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  ) : (
+                    currentMember.commitmentLevel || "Đang xác nhận"
+                  )}
                 </div>
               </div>
             </div>

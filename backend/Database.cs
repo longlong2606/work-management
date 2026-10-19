@@ -337,10 +337,19 @@ public static class Database
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );"); } catch { }
 
+            // Loại trừ dữ liệu đánh giá hoặc điểm CP lịch sử của tài khoản Quản trị viên (Admin)
+            try {
+                conn.Execute(@"
+                    DELETE FROM cp_transactions WHERE user_id IN (SELECT id FROM users WHERE role = 'admin');
+                    DELETE FROM competency_evaluations WHERE user_id IN (SELECT id FROM users WHERE role = 'admin');
+                ");
+            } catch { }
+
             // 0. Synchronize standard 5 Roles (Admin > Core > Leader > Contributor > Learning)
             var defaultRoles = new[]
             {
                 new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1 },
+                new { id = "manager", name = "Manager (Quản lý)", desc = "Quản lý vận hành phòng máy, quản lý nhân sự, phân ca trực, giao nhiệm vụ và chấm điểm đánh giá năng lực", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1 },
                 new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, quản lý nhân sự, lịch phân ca và điều phối toàn bộ dự án", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1 },
                 new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Trưởng ca / Project Lead / Research Lead, điều hành ca trực, giao nhiệm vụ và kiểm duyệt checklist", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0, cev = 1 },
                 new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 1 },

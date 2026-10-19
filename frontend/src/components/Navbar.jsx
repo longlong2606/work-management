@@ -36,7 +36,7 @@ const ROLE_LABELS = {
   contributor: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
   learning: { label: "Learning (Học viên)", color: "#8b5cf6", bg: "#f3e8ff" },
   // Tương thích ngược
-  manager: { label: "Core (Thành viên Cốt cán)", color: "#2563eb", bg: "#dbeafe" },
+  manager: { label: "Manager (Quản lý)", color: "#2563eb", bg: "#dbeafe" },
   supervisor: { label: "Leader (Trưởng nhóm)", color: "#059669", bg: "#d1fae5" },
   technician: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
   staff: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },

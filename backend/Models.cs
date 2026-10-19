@@ -252,6 +252,7 @@ public class CpUserSummary
     public string username { get; set; } = "";
     public string full_name { get; set; } = "";
     public string role { get; set; } = "";
+    public string? role_display_name { get; set; }
     public string? department { get; set; }
     public double total_cp { get; set; }
     public int subtasks_finished { get; set; }

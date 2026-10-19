@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Dapper;
 using Microsoft.Extensions.FileProviders;
 using WorkManagement.Api;
@@ -526,17 +526,23 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                 qMultiplier
             });
 
-        // Award CP to each assignee based on contribution percentage and multiplier
+        // Award CP to each assignee based on contribution percentage and multiplier (Quản trị viên không nhận điểm CP)
         int cpPoints = Convert.ToInt32(subtask.cp_points ?? 0);
         if (cpPoints > 0)
         {
-            var assignees = conn.Query<dynamic>("SELECT user_id, COALESCE(contribution_pct, 100) AS contribution_pct FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
+            var assignees = conn.Query<dynamic>(@"
+                SELECT sa.user_id, COALESCE(sa.contribution_pct, 100) AS contribution_pct, u.role
+                FROM subtask_assignees sa
+                JOIN users u ON sa.user_id = u.id
+                WHERE sa.subtask_id = @id", new { id }).ToList();
             
             // Clean up any existing transaction for this subtask
             conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
 
             foreach (var a in assignees)
             {
+                if ((string)a.role == "admin") continue; // Không tích lũy điểm CP cho Quản trị viên (Admin)
+
                 long uId = (long)a.user_id;
                 int pct = Convert.ToInt32(a.contribution_pct);
                 double cpEarned = Math.Round(cpPoints * (pct / 100.0) * qMultiplier, 1);
@@ -612,7 +618,7 @@ app.MapGet("/api/cp/leaderboard", (HttpContext ctx) =>
             COUNT(DISTINCT cpt.subtask_id) AS subtasks_finished
         FROM users u
         LEFT JOIN cp_transactions cpt ON u.id = cpt.user_id
-        WHERE u.role != 'guest'
+        WHERE u.role NOT IN ('guest', 'admin')
         GROUP BY u.id, u.username, u.full_name, u.role, u.department
         ORDER BY total_cp DESC, subtasks_finished DESC, u.full_name ASC").ToList();
 
@@ -831,10 +837,10 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
     using var conn = Database.GetConnection();
     var user = conn.QueryFirstOrDefault<UserDto>(@"
         SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
+               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
+               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
+               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
+               CASE WHEN u.role IN ('admin', 'manager', 'core', 'leader') THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
         FROM users u
         LEFT JOIN roles r ON r.id = u.role
         WHERE u.username = @u AND u.status = 'active'",
@@ -849,11 +855,24 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
         return Results.BadRequest(new { detail = "Tên đăng nhập hoặc mật khẩu không chính xác" });
     }
 
-    if (user.role == "admin")
+    if (user.role == "admin" || user.role == "manager")
     {
         user.can_manage_schedule = true;
         user.can_manage_tasks = true;
         user.can_manage_staff = true;
+        user.can_evaluate = true;
+    }
+    else if (user.role == "core")
+    {
+        user.can_manage_schedule = true;
+        user.can_manage_tasks = true;
+        user.can_manage_staff = true;
+        user.can_evaluate = true;
+    }
+    else if (user.role == "leader")
+    {
+        user.can_manage_schedule = true;
+        user.can_manage_tasks = true;
         user.can_evaluate = true;
     }
 
@@ -1017,15 +1036,17 @@ app.MapGet("/api/competencies", (HttpContext ctx) =>
     using var conn = Database.GetConnection();
     var list = conn.Query<CompetencyEvaluationDto>(@"
         SELECT u.id, u.username, u.full_name, u.role, u.department, u.status,
+               COALESCE(r.display_name, u.role) as role_display_name,
                COALESCE(ce.scores_json, '{}') as scores_json,
                COALESCE(ce.desired_direction, '') as desired_direction,
                COALESCE(ce.commitment_level, '') as commitment_level,
                COALESCE(ce.evidence_notes, '') as evidence_notes,
                ce.updated_at
         FROM users u
+        LEFT JOIN roles r ON r.id = u.role
         LEFT JOIN competency_evaluations ce ON ce.user_id = u.id
         WHERE u.status = 'active'
-        ORDER BY u.id ASC");
+        ORDER BY CASE WHEN u.role IN ('admin', 'manager', 'core', 'leader') THEN 0 ELSE 1 END, u.id ASC");
     return Results.Ok(list);
 });
 
@@ -1034,12 +1055,12 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (!currentUser.can_evaluate && currentUser.role != "admin") return Results.StatusCode(403);
+    if (!currentUser.can_evaluate && currentUser.role != "admin" && currentUser.role != "manager") return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
-    var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @userId", new { userId });
-    if (exists == 0) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-
+    var targetUser = conn.QueryFirstOrDefault<dynamic>("SELECT id, role FROM users WHERE id = @userId", new { userId });
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+    // Admin & Manager are also allowed to have competency scored
     conn.Execute(@"
         INSERT INTO competency_evaluations (user_id, scores_json, desired_direction, commitment_level, evidence_notes, updated_at)
         VALUES (@userId, @scores, @dir, @commit, @notes, CURRENT_TIMESTAMP)

@@ -168,44 +168,80 @@ export function CpLeaderboardPage() {
             zIndex: 1,
           }}
         >
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.1)",
-              backdropFilter: "blur(10px)",
-              padding: "14px 18px",
-              borderRadius: 12,
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Điểm CP của tôi</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#fbbf24" }}>{myStats.total_cp} <span style={{ fontSize: 13, fontWeight: 500 }}>CP</span></div>
-            <div style={{ fontSize: 11, color: "#93c5fd", marginTop: 4 }}>Cấp bậc: {myStats.tier}</div>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.1)",
-              backdropFilter: "blur(10px)",
-              padding: "14px 18px",
-              borderRadius: 12,
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Tiến độ thăng hạng</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff" }}>
-              {myStats.total_cp} / {myStats.next_tier_cp} CP
-            </div>
-            <div style={{ width: "100%", background: "rgba(255,255,255,0.2)", height: 6, borderRadius: 3, marginTop: 8, overflow: "hidden" }}>
+          {user?.role === "admin" ? (
+            <>
               <div
                 style={{
-                  width: `${Math.min(100, (myStats.total_cp / (myStats.next_tier_cp || 1)) * 100)}%`,
-                  height: "100%",
-                  background: "#10b981",
-                  borderRadius: 3,
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(10px)",
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
                 }}
-              />
-            </div>
-          </div>
+              >
+                <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Vai trò của tôi</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#a78bfa" }}>Quản Trị Viên</div>
+                <div style={{ fontSize: 11, color: "#c4b5fd", marginTop: 4 }}>Hội đồng nghiệm thu & duyệt CP</div>
+              </div>
+
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(10px)",
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Chế độ đánh giá</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#ffffff", marginTop: 2 }}>
+                  Không tính điểm cá nhân
+                </div>
+                <div style={{ fontSize: 11, color: "#93c5fd", marginTop: 4 }}>Dành riêng cho nhân sự thi đua</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(10px)",
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Điểm CP của tôi</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "#fbbf24" }}>{myStats.total_cp} <span style={{ fontSize: 13, fontWeight: 500 }}>CP</span></div>
+                <div style={{ fontSize: 11, color: "#93c5fd", marginTop: 4 }}>Cấp bậc: {myStats.tier}</div>
+              </div>
+
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(10px)",
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 4 }}>Tiến độ thăng hạng</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff" }}>
+                  {myStats.total_cp} / {myStats.next_tier_cp} CP
+                </div>
+                <div style={{ width: "100%", background: "rgba(255,255,255,0.2)", height: 6, borderRadius: 3, marginTop: 8, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${Math.min(100, (myStats.total_cp / (myStats.next_tier_cp || 1)) * 100)}%`,
+                      height: "100%",
+                      background: "#10b981",
+                      borderRadius: 3,
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div
             style={{

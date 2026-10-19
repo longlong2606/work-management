@@ -74,21 +74,22 @@ export function AuthProvider({ children }) {
   };
 
   // 5 Chuẩn Role theo phân cấp: Admin > Core > Leader > Contributor > Learning
-  const role = user?.role || "contributor";
+    const role = user?.role || "contributor";
   const isAdmin = role === "admin";
-  const isCore = role === "admin" || role === "core" || role === "manager";
+  const isManagerRole = role === "manager" || role === "quan_ly";
+  const isCore = isAdmin || isManagerRole || role === "core";
   const isLeader = isCore || role === "leader" || role === "supervisor";
   const isContributor = isLeader || role === "contributor" || role === "technician" || role === "staff";
   const isLearning = !!user;
 
-  // Quyền hạn thực tế theo phân quyền cấu hình từ Database (Admin luôn có quyền tối cao)
-  const canManageStaff = isAdmin || (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : isCore);
-  const canManageSchedule = isAdmin || (user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : isLeader);
-  const canManageTasks = isAdmin || (user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : isLeader);
-  const canEvaluate = isAdmin || (user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (role !== "learning"));
+  // Quyen han thuc te theo Database: Admin & Manager luon co quyen toi cao, hoac quyen theo vai tro role
+  const canManageStaff = isAdmin || isManagerRole || (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : isCore);
+  const canManageSchedule = isAdmin || isManagerRole || (user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : isLeader);
+  const canManageTasks = isAdmin || isManagerRole || (user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : isLeader);
+  const canEvaluate = isAdmin || isManagerRole || (user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (isCore || isLeader));
 
-  // Alias tương thích ngược
-  const isManager = isCore;
+  // Alias tuong thich
+  const isManager = isCore || isManagerRole;
   const isSupervisor = isLeader;
 
   return (
