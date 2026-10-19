@@ -22,9 +22,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
+// Swagger & OpenAPI configuration
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
 app.UseCors("AllowAll");
+
+// Enable Swagger UI
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "WorkManagement API v1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "WorkManagement API - Swagger UI";
+});
 
 // Initialize SQLite database and 9 standard shift templates
 Database.Init();
