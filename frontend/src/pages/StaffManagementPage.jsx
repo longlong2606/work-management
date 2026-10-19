@@ -110,6 +110,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [roleCanTasks, setRoleCanTasks] = useState(false);
   const [roleCanStaff, setRoleCanStaff] = useState(false);
   const [roleCanEvaluate, setRoleCanEvaluate] = useState(false);
+  const [roleCanCp, setRoleCanCp] = useState(false);
   const [roleSubmitting, setRoleSubmitting] = useState(false);
 
   // Delete Confirmation Modal
@@ -351,6 +352,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
     setRoleCanTasks(false);
     setRoleCanStaff(false);
     setRoleCanEvaluate(false);
+    setRoleCanCp(false);
     setShowRoleModal(true);
   };
 
@@ -364,6 +366,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
     setRoleCanTasks(!!r.can_manage_tasks);
     setRoleCanStaff(!!r.can_manage_staff);
     setRoleCanEvaluate(!!r.can_evaluate);
+    setRoleCanCp(!!r.can_manage_cp);
     setShowRoleModal(true);
   };
 
@@ -389,6 +392,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_manage_tasks: roleCanTasks,
           can_manage_staff: roleCanStaff,
           can_evaluate: roleCanEvaluate,
+          can_manage_cp: roleCanCp,
         });
         showToastMsg("Cập nhật vai trò thành công!");
       } else {
@@ -401,6 +405,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_manage_tasks: roleCanTasks,
           can_manage_staff: roleCanStaff,
           can_evaluate: roleCanEvaluate,
+          can_manage_cp: roleCanCp,
         });
         showToastMsg("Thêm vai trò mới thành công!");
       }
@@ -1142,6 +1147,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Giao việc</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Quản lý nhân sự</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Đánh giá năng lực</th>
+                    <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Tính điểm CP</th>
                     <th style={{ padding: "14px 16px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Số nhân sự</th>
                     <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
                   </tr>
@@ -1211,6 +1217,14 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         {/* Can evaluate */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
                           {r.id === "admin" || r.can_evaluate ? (
+                            <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>—</span>
+                          )}
+                        </td>
+                        {/* Can manage CP */}
+                        <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                          {r.id === "admin" || r.can_manage_cp ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -1998,6 +2012,16 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                       style={{ width: 16, height: 16 }}
                     />
                     <span><strong>Đánh giá năng lực:</strong> Được chấm điểm bảng năng lực nhân sự, đánh giá tiêu chí và xếp hạng</span>
+                  </label>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={roleCanCp}
+                      onChange={(e) => setRoleCanCp(e.target.checked)}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <span><strong>Tính điểm CP:</strong> Được quyền tính điểm đóng góp (CP), phân bổ % và chấm điểm chất lượng nhiệm vụ cho nhân sự</span>
                   </label>
                 </div>
               </div>

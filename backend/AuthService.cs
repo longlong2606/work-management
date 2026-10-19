@@ -19,6 +19,7 @@ public class UserDto
     public bool can_manage_tasks { get; set; }
     public bool can_manage_staff { get; set; }
     public bool can_evaluate { get; set; }
+    public bool can_manage_cp { get; set; }
 }
 
 public class TokenPayload
@@ -98,35 +99,24 @@ public static class AuthService
         using var conn = Database.GetConnection();
         var user = conn.QueryFirstOrDefault<UserDto>(@"
             SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
-                   CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
-                   CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
-                   CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
-                   CASE WHEN u.role IN ('admin', 'manager', 'core', 'leader') THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate,
+                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_cp, 0) END AS can_manage_cp
             FROM users u
             LEFT JOIN roles r ON r.id = u.role
             WHERE u.id = @id",
             new { id = payload.user_id });
 
         if (user == null || user.status != "active") return null;
-        if (user.role == "admin" || user.role == "manager")
+        if (user.role == "admin")
         {
             user.can_manage_schedule = true;
             user.can_manage_tasks = true;
             user.can_manage_staff = true;
             user.can_evaluate = true;
-        }
-        else if (user.role == "core")
-        {
-            user.can_manage_schedule = true;
-            user.can_manage_tasks = true;
-            user.can_manage_staff = true;
-            user.can_evaluate = true;
-        }
-        else if (user.role == "leader")
-        {
-            user.can_manage_schedule = true;
-            user.can_manage_tasks = true;
-            user.can_evaluate = true;
+            user.can_manage_cp = true;
         }
         return user;
     }

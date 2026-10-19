@@ -87,6 +87,7 @@ export function AuthProvider({ children }) {
   const canManageSchedule = isAdmin || isManagerRole || (user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : isLeader);
   const canManageTasks = isAdmin || isManagerRole || (user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : isLeader);
   const canEvaluate = isAdmin || isManagerRole || (user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (isCore || isLeader));
+  const canManageCp = isAdmin || isManagerRole || (user?.can_manage_cp !== undefined ? Boolean(user.can_manage_cp) : (isCore || isLeader));
 
   // Alias tuong thich
   const isManager = isCore || isManagerRole;
@@ -108,6 +109,7 @@ export function AuthProvider({ children }) {
       canManageSchedule,
       canManageTasks,
       canEvaluate,
+      canManageCp,
       loading, 
       updateCurrentUser,
       refreshProfile

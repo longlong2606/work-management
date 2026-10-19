@@ -837,10 +837,11 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
     using var conn = Database.GetConnection();
     var user = conn.QueryFirstOrDefault<UserDto>(@"
         SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
-               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
-               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
-               CASE WHEN u.role IN ('admin', 'manager') THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
-               CASE WHEN u.role IN ('admin', 'manager', 'core', 'leader') THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate,
+               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_cp, 0) END AS can_manage_cp
         FROM users u
         LEFT JOIN roles r ON r.id = u.role
         WHERE u.username = @u AND u.status = 'active'",
@@ -855,25 +856,13 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
         return Results.BadRequest(new { detail = "Tên đăng nhập hoặc mật khẩu không chính xác" });
     }
 
-    if (user.role == "admin" || user.role == "manager")
+    if (user.role == "admin")
     {
         user.can_manage_schedule = true;
         user.can_manage_tasks = true;
         user.can_manage_staff = true;
         user.can_evaluate = true;
-    }
-    else if (user.role == "core")
-    {
-        user.can_manage_schedule = true;
-        user.can_manage_tasks = true;
-        user.can_manage_staff = true;
-        user.can_evaluate = true;
-    }
-    else if (user.role == "leader")
-    {
-        user.can_manage_schedule = true;
-        user.can_manage_tasks = true;
-        user.can_evaluate = true;
+        user.can_manage_cp = true;
     }
 
     var token = AuthService.CreateToken(user.id, user.username, user.role);
@@ -894,7 +883,8 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
             can_manage_schedule = user.can_manage_schedule,
             can_manage_tasks = user.can_manage_tasks,
             can_manage_staff = user.can_manage_staff,
-            can_evaluate = user.can_evaluate
+            can_evaluate = user.can_evaluate,
+            can_manage_cp = user.can_manage_cp
         }
     });
 });
@@ -1095,11 +1085,12 @@ app.MapGet("/api/roles", (HttpContext ctx) =>
                CASE WHEN r.can_manage_tasks = 1 THEN 1 ELSE 0 END as can_manage_tasks,
                CASE WHEN r.can_manage_staff = 1 THEN 1 ELSE 0 END as can_manage_staff,
                CASE WHEN r.can_evaluate = 1 THEN 1 ELSE 0 END as can_evaluate,
+               CASE WHEN r.can_manage_cp = 1 THEN 1 ELSE 0 END as can_manage_cp,
                COUNT(u.id) as user_count,
                r.created_at
         FROM roles r
         LEFT JOIN users u ON u.role = r.id
-        GROUP BY r.id, r.display_name, r.description, r.color, r.is_system, r.can_manage_schedule, r.can_manage_tasks, r.can_manage_staff, r.can_evaluate, r.created_at
+        GROUP BY r.id, r.display_name, r.description, r.color, r.is_system, r.can_manage_schedule, r.can_manage_tasks, r.can_manage_staff, r.can_evaluate, r.can_manage_cp, r.created_at
         ORDER BY r.is_system DESC, r.id ASC");
     return Results.Ok(roles);
 });
@@ -1123,8 +1114,8 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
         return Results.BadRequest(new { detail = "Mã vai trò này đã tồn tại trong hệ thống!" });
 
     conn.Execute(@"
-        INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff, can_evaluate)
-        VALUES (@id, @name, @desc, @color, 0, @cms, @cmt, @cmu, @cev)",
+        INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff, can_evaluate, can_manage_cp)
+        VALUES (@id, @name, @desc, @color, 0, @cms, @cmt, @cmu, @cev, @ccp)",
         new { 
             id = cleanId, 
             name = req.display_name.Trim(),
@@ -1133,7 +1124,8 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
             cms = req.can_manage_schedule ? 1 : 0,
             cmt = req.can_manage_tasks ? 1 : 0,
             cmu = req.can_manage_staff ? 1 : 0,
-            cev = req.can_evaluate ? 1 : 0
+            cev = req.can_evaluate ? 1 : 0,
+            ccp = req.can_manage_cp ? 1 : 0
         });
 
     return Results.Ok(new { message = "Thêm vai trò mới thành công!", role_id = cleanId });
@@ -1155,7 +1147,8 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
         UPDATE roles
         SET display_name = @name, description = @desc, color = @color,
             can_manage_schedule = @cms, can_manage_tasks = @cmt, can_manage_staff = @cmu,
-            can_evaluate = @cev
+            can_evaluate = @cev,
+            can_manage_cp = @ccp
         WHERE id = @id",
         new { 
             name = string.IsNullOrWhiteSpace(req.display_name) ? role.display_name : req.display_name.Trim(), 
@@ -1165,6 +1158,7 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
             cmt = req.can_manage_tasks ? 1 : 0,
             cmu = req.can_manage_staff ? 1 : 0,
             cev = req.can_evaluate ? 1 : 0,
+            ccp = req.can_manage_cp ? 1 : 0,
             id 
         });
 
