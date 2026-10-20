@@ -56,7 +56,28 @@ export function SchedulePage() {
   const isAdmin = user?.role === "admin" || Boolean(canManageSchedule);
 
   const [viewMode, setViewMode] = useState("week"); // 'week' | 'day' | 'my'
-  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [currentDate, setCurrentDate] = useState(() => {
+    const d = new Date();
+    if (d.getDay() === 0) {
+      d.setDate(d.getDate() + 1);
+    }
+    return d.toISOString().split("T")[0];
+  });
+
+  // Tự động bỏ qua Chủ nhật (phòng trường hợp chọn hoặc tính toán rơi vào Chủ nhật)
+  useEffect(() => {
+    if (currentDate) {
+      const d = new Date(currentDate);
+      if (d.getDay() === 0) {
+        d.setDate(d.getDate() + 1);
+        const fixed = d.toISOString().split("T")[0];
+        setCurrentDate(fixed);
+        setActiveDay(fixed);
+        const newMon = getMonday(d);
+        if (newMon !== mondayDate) setMondayDate(newMon);
+      }
+    }
+  }, [currentDate, mondayDate]);
   const [mondayDate, setMondayDate] = useState(() => getMonday(new Date()));
   const [weekDays, setWeekDays] = useState(() => getDaysOfWeek(getMonday(new Date())));
 
@@ -851,7 +872,19 @@ export function SchedulePage() {
   const handleDayChange = (days) => {
     const d = new Date(currentDate);
     d.setDate(d.getDate() + days);
-    setCurrentDate(d.toISOString().split("T")[0]);
+    // Bỏ qua Chủ nhật (getDay() === 0):
+    // Tiến tới từ Thứ 7 -> tự động nhảy sang Thứ 2 của tuần tiếp theo (+1 thêm 1 ngày nữa)
+    // Lùi lại từ Thứ 2 -> tự động nhảy về Thứ 7 của tuần trước đó (-1 thêm 1 ngày nữa)
+    if (d.getDay() === 0) {
+      d.setDate(d.getDate() + (days > 0 ? 1 : -1));
+    }
+    const newDateStr = d.toISOString().split("T")[0];
+    setCurrentDate(newDateStr);
+    setActiveDay(newDateStr);
+    const newMonday = getMonday(d);
+    if (newMonday !== mondayDate) {
+      setMondayDate(newMonday);
+    }
   };
 
   const toggleExpandDay = (dateStr) => {
@@ -1312,7 +1345,7 @@ export function SchedulePage() {
               <button
                 onClick={() => handleDayChange(-1)}
                 className="btn btn-secondary btn-sm"
-                title="Ngày trước"
+                title="Ngày trước (Thứ 2 - Thứ 7)"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -1320,8 +1353,23 @@ export function SchedulePage() {
                 type="date"
                 value={currentDate}
                 onChange={(e) => {
-                  setCurrentDate(e.target.value);
-                  setActiveDay(e.target.value);
+                  const val = e.target.value;
+                  if (!val) return;
+                  const chosen = new Date(val);
+                  if (chosen.getDay() === 0) {
+                    // Chủ nhật không có lịch trực -> tự động nhảy sang Thứ Hai
+                    chosen.setDate(chosen.getDate() + 1);
+                    const fixed = chosen.toISOString().split("T")[0];
+                    setCurrentDate(fixed);
+                    setActiveDay(fixed);
+                    const newMon = getMonday(chosen);
+                    if (newMon !== mondayDate) setMondayDate(newMon);
+                  } else {
+                    setCurrentDate(val);
+                    setActiveDay(val);
+                    const newMon = getMonday(chosen);
+                    if (newMon !== mondayDate) setMondayDate(newMon);
+                  }
                 }}
                 style={{
                   padding: "4px 8px",
@@ -1336,15 +1384,21 @@ export function SchedulePage() {
               <button
                 onClick={() => handleDayChange(1)}
                 className="btn btn-secondary btn-sm"
-                title="Ngày sau"
+                title="Ngày sau (Thứ 2 - Thứ 7)"
               >
                 <ChevronRight size={16} />
               </button>
               <button
                 onClick={() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const d = new Date();
+                  if (d.getDay() === 0) {
+                    d.setDate(d.getDate() + 1);
+                  }
+                  const today = d.toISOString().split("T")[0];
                   setCurrentDate(today);
                   setActiveDay(today);
+                  const newMon = getMonday(d);
+                  if (newMon !== mondayDate) setMondayDate(newMon);
                 }}
                 className="btn btn-secondary btn-sm"
                 style={{ fontSize: 12 }}
@@ -2052,10 +2106,15 @@ export function SchedulePage() {
           >
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#1e293b" }}>
-                Chi Tiết 9 Ca Làm Việc Ngày: {currentDate}
+                Chi Tiết 9 Ca Làm Việc: {(() => {
+                  const d = new Date(currentDate);
+                  const dayNames = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+                  const dStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                  return `${dayNames[d.getDay()] || ""} (${dStr})`;
+                })()}
               </h2>
               <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Xem danh sách thành viên trong từng ca trực, ai vắng mặt sẽ hiện màu đỏ kèm lý do.
+                Xem danh sách thành viên trong từng ca trực (Thứ 2 đến Thứ 7, Chủ nhật nghỉ). Ai vắng mặt sẽ hiện màu đỏ kèm lý do.
               </span>
             </div>
             <button
@@ -2069,7 +2128,13 @@ export function SchedulePage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {SHIFTS.map((shift) => {
-              const dayObj = { dateStr: currentDate, displayDate: currentDate, dayName: "Hôm nay" };
+              const curD = new Date(currentDate);
+              const curDayNames = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+              const dayObj = {
+                dateStr: currentDate,
+                displayDate: `${String(curD.getDate()).padStart(2, "0")}/${String(curD.getMonth() + 1).padStart(2, "0")}`,
+                dayName: curDayNames[curD.getDay()] || "Hôm nay",
+              };
               const absentInShift = schedule.filter(
                 (s) =>
                   s.shift_id === shift.id &&
