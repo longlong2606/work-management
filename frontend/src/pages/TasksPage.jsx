@@ -307,7 +307,7 @@ export function TasksPage() {
         </div>
 
         {/* CREATE TASK BUTTON */}
-        {isAdmin && (
+        {hasAdminRights && (
           <button
             onClick={() => setShowCreateTaskModal(true)}
             style={{
@@ -524,7 +524,7 @@ export function TasksPage() {
           <p style={{ fontSize: 13, color: "#64748b", margin: "6px 0 16px 0" }}>
             Hãy chọn bộ lọc khác hoặc Quản trị viên có thể bấm "Tạo Nhiệm Vụ Mới" ở trên.
           </p>
-          {isAdmin && (
+          {hasAdminRights && (
             <button
               onClick={() => setShowCreateTaskModal(true)}
               style={{
@@ -709,10 +709,11 @@ export function TasksPage() {
                     <ChevronRight size={14} />
                   </button>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {isAdmin && task.status !== "POSTPONED" && task.status !== "FINISHED" && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {(hasAdminRights || task.leader_id === user?.id) && task.status !== "POSTPONED" && task.status !== "FINISHED" && (
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setPostponeModalTask(task);
                           setPostponeReason("");
                         }}
@@ -732,9 +733,12 @@ export function TasksPage() {
                       </button>
                     )}
 
-                    {isAdmin && (
+                    {(hasAdminRights || task.leader_id === user?.id) && (
                       <button
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task.id);
+                        }}
                         style={{
                           background: "#fff1f2",
                           border: "1px solid #fecdd3",
@@ -1019,6 +1023,29 @@ export function TasksPage() {
                           </button>
                         )}
 
+                        {(hasAdminRights || isLeaderOrAdmin) && (
+                          <button
+                            onClick={() => handleDeleteTask(taskDetail.task.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              background: "#fff1f2",
+                              color: "#e11d48",
+                              border: "1.5px solid #fecdd3",
+                              padding: "9px 14px",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: "pointer",
+                            }}
+                            title="Xóa vĩnh viễn nhiệm vụ này"
+                          >
+                            <Trash2 size={15} />
+                            <span>Xóa</span>
+                          </button>
+                        )}
                         {taskDetail.task.status !== "POSTPONED" && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => setPostponeModalTask(taskDetail.task)}

@@ -334,15 +334,34 @@ app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
-    conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id });
-    conn.Execute("DELETE FROM subtasks WHERE task_id = @id", new { id });
-    int rows = conn.Execute("DELETE FROM tasks WHERE id = @id", new { id });
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, created_by FROM tasks WHERE id = @id", new { id });
+    if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
-    if (rows == 0) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
-    return Results.Ok(new { message = "Đã xóa nhiệm vụ và toàn bộ checklist liên quan thành công!" });
+    bool isAuthorized = currentUser.role == "admin" 
+        || currentUser.can_manage_tasks 
+        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
+        || (task.created_by != null && (long)task.created_by == currentUser.id);
+
+    if (!isAuthorized) return Results.StatusCode(403);
+
+    using var tx = conn.BeginTransaction();
+    try
+    {
+        conn.Execute("DELETE FROM cp_transactions WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id }, tx);
+        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id }, tx);
+        conn.Execute("DELETE FROM subtasks WHERE task_id = @id", new { id }, tx);
+        int rows = conn.Execute("DELETE FROM tasks WHERE id = @id", new { id }, tx);
+
+        tx.Commit();
+        return Results.Ok(new { message = "Đã xóa nhiệm vụ và toàn bộ checklist liên quan thành công!" });
+    }
+    catch (Exception ex)
+    {
+        tx.Rollback();
+        return Results.Problem(detail: "Lỗi khi xóa nhiệm vụ: " + ex.Message, statusCode: 500);
+    }
 });
 
 // ================= SUBTASKS (CHECKLIST) =================
@@ -584,20 +603,34 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, t.leader_id 
+        SELECT s.id, t.leader_id, t.created_by 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
-    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
+    bool isAuthorized = currentUser.role == "admin" 
+        || currentUser.can_manage_tasks 
+        || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id)
+        || (subtask.created_by != null && (long)subtask.created_by == currentUser.id);
+
+    if (!isAuthorized)
         return Results.StatusCode(403);
 
-    conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
-    conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
-    conn.Execute("DELETE FROM subtasks WHERE id = @id", new { id });
-
-    return Results.Ok(new { message = "Đã xóa mục checklist thành công!" });
+    using var tx = conn.BeginTransaction();
+    try
+    {
+        conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM subtasks WHERE id = @id", new { id }, tx);
+        tx.Commit();
+        return Results.Ok(new { message = "Đã xóa mục checklist thành công!" });
+    }
+    catch (Exception ex)
+    {
+        tx.Rollback();
+        return Results.Problem(detail: "Lỗi khi xóa mục checklist: " + ex.Message, statusCode: 500);
+    }
 });
 
 // ===== CP LEADERBOARD & STATS ENDPOINTS =====
