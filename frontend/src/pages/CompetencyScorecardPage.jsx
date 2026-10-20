@@ -106,13 +106,15 @@ export function CompetencyScorecardPage() {
       try {
         const res = await api.getCompetencies();
         if (Array.isArray(res) && res.length > 0) {
-          const mapped = res.map(mapUserToMember);
+          const nonAdmin = res.filter((u) => u.role !== "admin" && u.username !== "admin");
+          const targetList = nonAdmin.length > 0 ? nonAdmin : res.filter((u) => u.role !== "admin");
+          const mapped = targetList.map(mapUserToMember);
           setMembers(mapped);
           try {
             localStorage.setItem("lab_competency_members", JSON.stringify(mapped));
           } catch {}
 
-          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : mapped[0]?.id));
+          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev && m.role !== "admin") ? prev : mapped[0]?.id));
           setCompareMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : (mapped[1] ? mapped[1].id : mapped[0]?.id)));
         }
       } catch (err) {

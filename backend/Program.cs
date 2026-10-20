@@ -1035,8 +1035,8 @@ app.MapGet("/api/competencies", (HttpContext ctx) =>
         FROM users u
         LEFT JOIN roles r ON r.id = u.role
         LEFT JOIN competency_evaluations ce ON ce.user_id = u.id
-        WHERE u.status = 'active'
-        ORDER BY CASE WHEN u.role IN ('admin', 'manager', 'core', 'leader') THEN 0 ELSE 1 END, u.id ASC");
+        WHERE u.status = 'active' AND u.role != 'admin'
+        ORDER BY CASE WHEN u.role IN ('core', 'leader') THEN 0 ELSE 1 END, u.id ASC");
     return Results.Ok(list);
 });
 
@@ -1050,7 +1050,9 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault<dynamic>("SELECT id, role FROM users WHERE id = @userId", new { userId });
     if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-    // Admin & Manager are also allowed to have competency scored
+    if ((string)targetUser.role == "admin")
+        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
+
     conn.Execute(@"
         INSERT INTO competency_evaluations (user_id, scores_json, desired_direction, commitment_level, evidence_notes, updated_at)
         VALUES (@userId, @scores, @dir, @commit, @notes, CURRENT_TIMESTAMP)
@@ -1382,9 +1384,10 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
-    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy thông tin nhân sự!" });
-
-    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+    if ((string)targetUser.role == "admin")
+        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
+var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
 
     // Gather dates
     var targetDates = new HashSet<string>();
@@ -1513,9 +1516,10 @@ app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
-    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy thông tin nhân sự!" });
-
-    var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+    if ((string)targetUser.role == "admin")
+        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
+var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
     if (shift == null) return Results.NotFound(new { detail = "Không tìm thấy ca làm việc!" });
 
     var existingReg = conn.QueryFirstOrDefault(
@@ -1601,9 +1605,10 @@ app.MapPost("/api/shifts/approve-absence", (ApproveAbsenceRequest req, HttpConte
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = req.user_id });
-    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy thông tin nhân viên!" });
-
-    var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+    if ((string)targetUser.role == "admin")
+        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
+var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
     if (shift == null) return Results.NotFound(new { detail = "Không tìm thấy ca làm việc!" });
 
     var reg = conn.QueryFirstOrDefault(
