@@ -227,37 +227,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                 </div>
               </div>
 
-              {/* CURRENT PAGE BADGE (Clickable to switch tab) */}
-              <button
-                onClick={() => setMenuDrawerOpen(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "4px 11px",
-                  borderRadius: 20,
-                  background: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                  color: "#1d4ed8",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#dbeafe";
-                  e.currentTarget.style.borderColor = "#93c5fd";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#eff6ff";
-                  e.currentTarget.style.borderColor = "#bfdbfe";
-                }}
-                title="Trang hiện tại. Bấm để mở Menu đổi trang"
-              >
-                <CurrentActiveIcon size={14} color="#2563eb" />
-                <span>{TAB_TITLES[activeTab] || activeTab}</span>
-                <ChevronDown size={13} color="#2563eb" />
-              </button>
+
             </div>
 
 
