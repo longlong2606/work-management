@@ -25,8 +25,9 @@ public static class EmailService
         return (host, port, user, password, fromName);
     }
 
-    public static string GenerateScheduleEmailHtml(string recipientName, string weekStart, IEnumerable<dynamic> shiftsSummary, string announcement)
+    public static string GenerateScheduleEmailHtml(string recipientName, string weekStart, IEnumerable<dynamic> shiftsSummary, string announcement, string? appUrl = null)
     {
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
         var rowsHtml = "";
         var hasShifts = false;
 
@@ -96,7 +97,7 @@ public static class EmailService
                         </tbody>
                     </table>
                     <div style=""text-align: center;"">
-                        <a href=""http://localhost:5173"" class=""btn"">Vào Hệ Thống Xác Nhận Ca</a>
+                        <a href=""{targetUrl}"" class=""btn"">Vào Hệ Thống Xác Nhận Ca</a>
                     </div>
                 </div>
                 <div class=""footer"">

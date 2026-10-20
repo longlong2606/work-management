@@ -179,19 +179,22 @@ export const api = {
       method: "POST",
     }),
 
-  publishSchedule: (weekStartOrObj, sendEmail = true, announcement = '') => {
+  publishSchedule: (weekStartOrObj, sendEmail = true, announcement = '', appUrl = '') => {
     let payload = {};
+    const currentOrigin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
     if (typeof weekStartOrObj === 'object' && weekStartOrObj !== null) {
       payload = {
         week_start: weekStartOrObj.week_start,
         send_email: weekStartOrObj.send_email !== undefined ? weekStartOrObj.send_email : true,
         announcement: weekStartOrObj.announcement || '',
+        app_url: weekStartOrObj.app_url || currentOrigin,
       };
     } else {
       payload = {
         week_start: weekStartOrObj,
         send_email: sendEmail,
         announcement,
+        app_url: appUrl || currentOrigin,
       };
     }
     return request('/shifts/publish', {

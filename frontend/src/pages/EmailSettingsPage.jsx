@@ -16,6 +16,7 @@ export function EmailSettingsPage() {
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const [fromName, setFromName] = useState("Hệ Thống Phân Ca WorkShiftPro");
+  const [appUrl, setAppUrl] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
 
   const [testEmail, setTestEmail] = useState("");
@@ -31,6 +32,8 @@ export function EmailSettingsPage() {
         if (data.port) setPort(data.port);
         if (data.user) setUser(data.user);
         if (data.from_name) setFromName(data.from_name);
+        if (data.app_url) setAppUrl(data.app_url);
+        else if (typeof window !== 'undefined') setAppUrl(window.location.origin);
         setHasPassword(data.has_password);
       } catch (err) {
         console.error(err);
@@ -54,6 +57,7 @@ export function EmailSettingsPage() {
         user: user.trim(),
         password: password.trim(),
         from_name: fromName.trim(),
+        app_url: appUrl.trim(),
       });
       showToast("Đã lưu cấu hình SMTP thành công!");
       setHasPassword(Boolean(password.trim()) || hasPassword);
@@ -189,6 +193,40 @@ export function EmailSettingsPage() {
                 onChange={(e) => setFromName(e.target.value)}
                 placeholder="Hệ Thống Phân Ca WorkShiftPro"
               />
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  Đường dẫn Web Hệ Thống (Public App URL):
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAppUrl(window.location.origin)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  Lấy link hiện tại ({window.location.origin})
+                </button>
+              </div>
+              <input
+                type="text"
+                className="form-input"
+                value={appUrl}
+                onChange={(e) => setAppUrl(e.target.value)}
+                placeholder="VD: https://my-domain.com hoặc https://rpm-sets-tough-anything.trycloudflare.com"
+              />
+              <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, display: "block" }}>
+                Đường dẫn này được gắn vào nút <strong>"Vào Hệ Thống Xác Nhận Ca"</strong> trong email gửi đến nhân viên để họ mở được trên điện thoại hoặc từ xa.
+              </span>
             </div>
 
             <button

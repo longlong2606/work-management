@@ -43,7 +43,8 @@ public record ApproveShiftActionModel(long registration_id, string action, strin
 public record PublishScheduleRequest(
     string week_start,
     bool send_email = true,
-    string? announcement = "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ."
+    string? announcement = "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ.",
+    string? app_url = null
 );
 
 public record CreateShiftNoteRequest(
@@ -72,7 +73,8 @@ public record SmtpSettingsRequest(
     int port,
     string user,
     string? password,
-    string? from_name
+    string? from_name,
+    string? app_url = null
 );
 
 public record TestEmailRequest(string recipient_email);

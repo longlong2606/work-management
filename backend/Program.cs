@@ -2640,6 +2640,57 @@ app.MapPost("/api/shifts/publish", (PublishScheduleRequest req, HttpContext ctx)
         var weDate = (wsDate != default ? wsDate.AddDays(6) : DateTime.UtcNow.AddDays(6)).ToString("yyyy-MM-dd");
 
         bool smtpAvailable = true;
+        // Xác định appUrl cho email (URL công khai hệ thống)
+        var appUrl = req.app_url;
+        if (string.IsNullOrWhiteSpace(appUrl) || appUrl.Contains("localhost:5173"))
+        {
+            var savedAppUrl = conn.QueryFirstOrDefault<string>("SELECT value FROM system_settings WHERE key = 'app_url' AND value != ''");
+            if (!string.IsNullOrWhiteSpace(savedAppUrl))
+            {
+                appUrl = savedAppUrl;
+            }
+            else
+            {
+                try
+                {
+                    if (File.Exists("C:/Projects/tunnel_url.txt"))
+                    {
+                        var tUrl = File.ReadAllText("C:/Projects/tunnel_url.txt").Trim();
+                        if (!string.IsNullOrWhiteSpace(tUrl) && tUrl.StartsWith("http")) appUrl = tUrl;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(appUrl) || appUrl.Contains("localhost:5173"))
+        {
+            var origin = ctx.Request.Headers["Origin"].FirstOrDefault();
+            var referer = ctx.Request.Headers["Referer"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(origin) && origin.StartsWith("http") && !origin.Contains("localhost:5173"))
+            {
+                appUrl = origin;
+            }
+            else if (!string.IsNullOrWhiteSpace(referer) && referer.StartsWith("http") && !referer.Contains("localhost:5173") && Uri.TryCreate(referer, UriKind.Absolute, out var rUri))
+            {
+                appUrl = rUri.GetLeftPart(UriPartial.Authority);
+            }
+            else
+            {
+                var proto = ctx.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? ctx.Request.Scheme;
+                var host = ctx.Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? ctx.Request.Host.Value;
+                if (!string.IsNullOrWhiteSpace(host) && !host.Contains("localhost"))
+                {
+                    appUrl = $"{proto}://{host}";
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(appUrl))
+        {
+            appUrl = req.app_url ?? "http://localhost:5173";
+        }
+
         foreach (var u in users)
         {
             var shifts = conn.Query(
@@ -2650,7 +2701,7 @@ app.MapPost("/api/shifts/publish", (PublishScheduleRequest req, HttpContext ctx)
                   ORDER BY sr.work_date ASC, sr.shift_id ASC",
                 new { uid = u.id, ws = req.week_start, we = weDate });
 
-            var html = EmailService.GenerateScheduleEmailHtml(u.full_name, req.week_start, shifts, req.announcement ?? "");
+            var html = EmailService.GenerateScheduleEmailHtml(u.full_name, req.week_start, shifts, req.announcement ?? "", appUrl);
             var subject = $"[WorkShiftPro] Lịch Làm Việc Tuần Mới ({req.week_start})";
 
             if (smtpAvailable)
@@ -3205,13 +3256,29 @@ app.MapGet("/api/settings/smtp", (HttpContext ctx) =>
     if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
 
     var (host, port, user, password, fromName) = EmailService.GetSmtpConfig();
+    using var conn = Database.GetConnection();
+    var appUrl = conn.QueryFirstOrDefault<string>("SELECT value FROM system_settings WHERE key = 'app_url'") ?? "";
+    if (string.IsNullOrWhiteSpace(appUrl))
+    {
+        try
+        {
+            if (File.Exists("C:/Projects/tunnel_url.txt"))
+            {
+                var tUrl = File.ReadAllText("C:/Projects/tunnel_url.txt").Trim();
+                if (!string.IsNullOrWhiteSpace(tUrl) && tUrl.StartsWith("http")) appUrl = tUrl;
+            }
+        }
+        catch { }
+    }
+
     return Results.Ok(new
     {
         host,
         port,
         user,
         from_name = fromName,
-        has_password = !string.IsNullOrEmpty(password)
+        has_password = !string.IsNullOrEmpty(password),
+        app_url = appUrl
     });
 });
 
@@ -3229,8 +3296,12 @@ app.MapPost("/api/settings/smtp", (SmtpSettingsRequest req, HttpContext ctx) =>
     {
         conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_password', @v)", new { v = req.password.Trim() });
     }
+    if (req.app_url != null)
+    {
+        conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('app_url', @v)", new { v = req.app_url.Trim() });
+    }
 
-    return Results.Ok(new { message = "Đã lưu cấu hình SMTP thành công!" });
+    return Results.Ok(new { message = "Đã lưu cấu hình SMTP và đường dẫn hệ thống thành công!" });
 });
 
 app.MapPost("/api/emails/test-send", (TestEmailRequest req, HttpContext ctx) =>
