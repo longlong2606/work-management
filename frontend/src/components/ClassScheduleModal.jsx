@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Trash2,
   Calendar,
-  Sparkles,
   RefreshCw
 } from "lucide-react";
 
@@ -264,22 +263,7 @@ export function ClassScheduleModal({
     reader.readAsText(uploadedFile);
   };
 
-  // Demo sample loader
-  const handleLoadDemo = () => {
-    const today = new Date();
-    const dStr1 = today.toISOString().split("T")[0];
-    const d2 = new Date(today);
-    d2.setDate(today.getDate() + 2);
-    const dStr2 = d2.toISOString().split("T")[0];
 
-    const demoCsv = `course_code,class_name,work_date,ca_hoc,room
-COMP1752,Lập trình hướng đối tượng (Object Oriented Programming),${dStr1},Ca 1,Room 302
-COMP1841,Lập trình web 1 (Web Programming 1),${dStr1},Ca 4,Lab 01
-MATH1179,Toán cho Khoa học máy tính (Mathematics for Computing),${dStr2},Ca 2,Room 405
-COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},Ca 5,Room 201`;
-
-    handleParseCsv(demoCsv, "demo_greenwich_schedule.csv");
-  };
 
   // Download template CSV
   const handleDownloadTemplate = () => {
@@ -564,13 +548,7 @@ COMP1843,Nguyên lý của Bảo mật (Principles of Security),${dStr2},Ca 5,Ro
                     <Download size={15} /> <span>Tải Mẫu CSV Greenwich</span>
                   </button>
 
-                  <button
-                    onClick={handleLoadDemo}
-                    className="btn btn-secondary btn-sm"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", color: "#7c3aed", borderColor: "#ddd6fe" }}
-                  >
-                    <Sparkles size={15} /> <span>Nạp Thử Mẫu Demo</span>
-                  </button>
+
                 </div>
 
                 {fileName && (
