@@ -244,7 +244,9 @@ public record UpdateSubtaskRequest(
 public record ReviewSubtaskRequest(
     bool approve,
     string? comment,
-    double quality_multiplier = 1.0
+    double quality_multiplier = 1.0,
+    bool is_penalty = false,
+    int penalty_points = 0
 );
 
 // ===== CP SYSTEM DTOs =====

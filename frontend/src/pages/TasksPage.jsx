@@ -53,8 +53,10 @@ export function TasksPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showAddSubtaskModal, setShowAddSubtaskModal] = useState(false);
-  const [reviewModalSubtask, setReviewModalSubtask] = useState(null); // { id, title, approve: bool }
+  const [reviewModalSubtask, setReviewModalSubtask] = useState(null); // { id, title, cp_points, mode: 'review' | 'penalty_direct' }
   const [reviewComment, setReviewComment] = useState("");
+  const [reviewPenaltyPoints, setReviewPenaltyPoints] = useState(1);
+  const [reviewActionMode, setReviewActionMode] = useState("approve"); // 'approve' | 'rework' | 'penalty' 
   const [postponeModalTask, setPostponeModalTask] = useState(null);
   const [postponeReason, setPostponeReason] = useState("");
   const [toast, setToast] = useState({ text: "", type: "success" });
@@ -220,19 +222,42 @@ export function TasksPage() {
     }
   };
 
-  const handleReviewSubtask = async (approve) => {
-    if (!approve && !reviewComment.trim()) {
-      showToast("Vui lòng nhập nhận xét / lý do yêu cầu làm lại!", "danger");
+  const handleReviewSubtask = async (actionType) => {
+    // actionType: 'approve' | 'rework' | 'penalty'
+    if ((actionType === 'rework' || actionType === 'penalty') && !reviewComment.trim()) {
+      showToast(actionType === 'penalty' ? "Vui lòng nhập lý do đánh giá không đạt / phạt trừ điểm!" : "Vui lòng nhập nhận xét / lý do yêu cầu làm lại!", "danger");
       return;
     }
     try {
-      const res = await api.reviewSubtask(reviewModalSubtask.id, approve, reviewComment.trim());
-      showToast(res.message || (approve ? "Đã duyệt đạt mục việc!" : "Đã gửi yêu cầu chỉnh sửa lại!"));
+      const isApprove = actionType === 'approve';
+      const isPenalty = actionType === 'penalty';
+      const res = await api.reviewSubtask(
+        reviewModalSubtask.id,
+        isApprove,
+        reviewComment.trim(),
+        1.0,
+        isPenalty,
+        Number(reviewPenaltyPoints) || 0
+      );
+      showToast(res.message || "Đã cập nhật mục việc thành công!");
       setReviewModalSubtask(null);
       setReviewComment("");
+      setReviewPenaltyPoints(1);
+      setReviewActionMode("approve");
       if (taskDetail) refreshTaskDetail(taskDetail.task.id);
     } catch (err) {
-      showToast(err.message || "Lỗi khi duyệt checklist.", "danger");
+      showToast(err.message || "Lỗi khi xử lý mục việc.", "danger");
+    }
+  };
+
+  const handleReopenSubtask = async (subtaskId) => {
+    if (!window.confirm("Bạn có muốn cho phép thành viên làm lại mục việc này và xóa điểm phạt?")) return;
+    try {
+      const res = await api.reviewSubtask(subtaskId, false, "Cho phép làm lại mục việc", 1.0, false, 0);
+      showToast(res.message || "Đã chuyển mục việc về trạng thái Đang làm.");
+      if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+    } catch (err) {
+      showToast(err.message || "Lỗi khi mở lại mục việc.", "danger");
     }
   };
 
@@ -1137,6 +1162,8 @@ export function TasksPage() {
                             statusBadge = { label: "🟡 Chờ duyệt", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
                           } else if (sub.status === "FINISHED") {
                             statusBadge = { label: "🟢 Hoàn thành", bg: "#ecfdf5", color: "#047857", border: "#a7f3d0" };
+                          } else if (sub.status === "FAILED") {
+                            statusBadge = { label: "❌ Không đạt (Bị trừ CP)", bg: "#fef2f2", color: "#b91c1c", border: "#fecaca" };
                           }
 
                           return (
@@ -1145,8 +1172,8 @@ export function TasksPage() {
                               style={{
                                 padding: 14,
                                 borderRadius: 10,
-                                background: sub.status === "FINISHED" ? "#fcfdfd" : sub.status === "REVIEW" ? "#fffbeb" : "#ffffff",
-                                border: sub.status === "REVIEW" ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
+                                background: sub.status === "FINISHED" ? "#fcfdfd" : sub.status === "FAILED" ? "#fff5f5" : sub.status === "REVIEW" ? "#fffbeb" : "#ffffff",
+                                border: sub.status === "FAILED" ? "1.5px solid #f87171" : sub.status === "REVIEW" ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                               }}
                             >
@@ -1157,8 +1184,8 @@ export function TasksPage() {
                                       width: 26,
                                       height: 26,
                                       borderRadius: 6,
-                                      background: sub.status === "FINISHED" ? "#10b981" : "#e2e8f0",
-                                      color: sub.status === "FINISHED" ? "#ffffff" : "#475569",
+                                      background: sub.status === "FINISHED" ? "#10b981" : sub.status === "FAILED" ? "#ef4444" : "#e2e8f0",
+                                      color: sub.status === "FINISHED" || sub.status === "FAILED" ? "#ffffff" : "#475569",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -1167,7 +1194,7 @@ export function TasksPage() {
                                       flexShrink: 0,
                                     }}
                                   >
-                                    {sub.status === "FINISHED" ? <Check size={15} /> : idx + 1}
+                                    {sub.status === "FINISHED" ? <Check size={15} /> : sub.status === "FAILED" ? <X size={15} /> : idx + 1}
                                   </div>
 
                                   <div style={{ flex: 1 }}>
@@ -1195,12 +1222,12 @@ export function TasksPage() {
                                             fontWeight: 800,
                                             padding: "2px 7px",
                                             borderRadius: 4,
-                                            background: "#eff6ff",
-                                            color: "#2563eb",
-                                            border: "1px solid #bfdbfe",
+                                            background: sub.status === "FAILED" ? "#fef2f2" : "#eff6ff",
+                                            color: sub.status === "FAILED" ? "#dc2626" : "#2563eb",
+                                            border: `1px solid ${sub.status === "FAILED" ? "#fecaca" : "#bfdbfe"}`,
                                           }}
                                         >
-                                          +{sub.cp_points} CP
+                                          {sub.status === "FAILED" ? `-${sub.cp_points} CP (Phạt)` : `+${sub.cp_points} CP`}
                                         </span>
                                       )}
                                     </div>
@@ -1209,6 +1236,21 @@ export function TasksPage() {
                                       <p style={{ margin: "4px 0 8px 0", fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
                                         {sub.description}
                                       </p>
+                                    )}
+                                    {sub.review_comment && (
+                                      <div
+                                        style={{
+                                          margin: "4px 0 8px 0",
+                                          padding: "5px 10px",
+                                          borderRadius: 6,
+                                          background: sub.status === "FAILED" ? "#fef2f2" : "#f8fafc",
+                                          borderLeft: `3px solid ${sub.status === "FAILED" ? "#ef4444" : "#3b82f6"}`,
+                                          fontSize: 12,
+                                          color: sub.status === "FAILED" ? "#991b1b" : "#334155",
+                                        }}
+                                      >
+                                        <strong>{sub.status === "FAILED" ? "⚠️ Lý do trừ điểm:" : "Nhận xét:"}</strong> {sub.review_comment}
+                                      </div>
                                     )}
 
                                     {/* ASSIGNEES & DEADLINE */}
@@ -1251,7 +1293,7 @@ export function TasksPage() {
                                 </div>
 
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
                                   {/* 1. Member submits */}
                                   {sub.status === "PROCESSING" && (isAssignedToMe || canManageTaskSubtasks) && (
                                     <button
@@ -1272,15 +1314,46 @@ export function TasksPage() {
                                       title="Nộp Duyệt (Thành Viên)"
                                     >
                                       <Send size={13} />
-                                      <span>Nộp Duyệt (Thành Viên)</span>
+                                      <span>Nộp Duyệt</span>
                                     </button>
                                   )}
 
-                                  {/* 2. Leader reviews */}
+                                  {/* 2. Direct penalty button if member abandons or fails in PROCESSING */}
+                                  {sub.status === "PROCESSING" && canManageTaskSubtasks && (
+                                    <button
+                                      onClick={() => {
+                                        setReviewModalSubtask({ id: sub.id, title: sub.title, cp_points: sub.cp_points, mode: 'penalty_direct' });
+                                        setReviewActionMode('penalty');
+                                        setReviewPenaltyPoints(sub.cp_points || 1);
+                                        setReviewComment("");
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#fff1f2",
+                                        color: "#e11d48",
+                                        border: "1px solid #fecdd3",
+                                        padding: "6px 12px",
+                                        borderRadius: 999,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Đánh giá không hoàn thành và phạt trừ điểm CP"
+                                    >
+                                      <AlertCircle size={13} />
+                                      <span>Không Đạt / Trừ CP</span>
+                                    </button>
+                                  )}
+
+                                  {/* 3. Leader reviews when in REVIEW */}
                                   {sub.status === "REVIEW" && canManageTaskSubtasks && (
                                     <button
                                       onClick={() => {
-                                        setReviewModalSubtask({ id: sub.id, title: sub.title });
+                                        setReviewModalSubtask({ id: sub.id, title: sub.title, cp_points: sub.cp_points, mode: 'review' });
+                                        setReviewActionMode('approve');
+                                        setReviewPenaltyPoints(sub.cp_points || 1);
                                         setReviewComment("");
                                       }}
                                       style={{
@@ -1300,6 +1373,30 @@ export function TasksPage() {
                                     >
                                       <Search size={13} />
                                       <span>Nghiệm Thu (Trưởng Nhóm)</span>
+                                    </button>
+                                  )}
+
+                                  {/* 4. Reopen if FAILED */}
+                                  {sub.status === "FAILED" && canManageTaskSubtasks && (
+                                    <button
+                                      onClick={() => handleReopenSubtask(sub.id)}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#eff6ff",
+                                        color: "#2563eb",
+                                        border: "1px solid #bfdbfe",
+                                        padding: "6px 12px",
+                                        borderRadius: 999,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Cho phép thành viên làm lại và gỡ bỏ điểm phạt"
+                                    >
+                                      <RotateCcw size={13} />
+                                      <span>Cho Làm Lại</span>
                                     </button>
                                   )}
 
@@ -1367,7 +1464,7 @@ export function TasksPage() {
         />
       )}
 
-      {/* ================= MODAL: REVIEW SUBTASK ================= */}
+      {/* ================= MODAL: REVIEW / PENALTY SUBTASK ================= */}
       {reviewModalSubtask && (
         <div
           style={{
@@ -1388,35 +1485,92 @@ export function TasksPage() {
               background: "#ffffff",
               borderRadius: 16,
               width: "100%",
-              maxWidth: 480,
+              maxWidth: 520,
               padding: 24,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-                Nghiệm Thu Mục Việc: {reviewModalSubtask.title}
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                {reviewModalSubtask.mode === 'penalty_direct' ? (
+                  <>
+                    <span style={{ color: "#dc2626" }}>⚠️</span>
+                    <span>Đánh Giá Không Đạt & Phạt Trừ CP</span>
+                  </>
+                ) : (
+                  <>
+                    <span>📋</span>
+                    <span>Nghiệm Thu: {reviewModalSubtask.title}</span>
+                  </>
+                )}
               </h3>
               <button onClick={() => setReviewModalSubtask(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                Nhận xét / Góp ý nghiệm thu:
-              </label>
-              {reviewModalSubtask?.cp_points > 0 && (
-                <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0", fontSize: 13, color: "#166534", lineHeight: 1.4 }}>
-                  ⭐ Mục checklist này có định mức <strong>{reviewModalSubtask.cp_points} CP</strong>. Khi duyệt đạt, hệ thống sẽ tự động ghi nhận và cộng điểm CP cho các thành viên phụ trách!
+            {reviewModalSubtask.mode === 'penalty_direct' ? (
+              <div style={{ marginBottom: 16, padding: "12px 14px", background: "#fef2f2", borderRadius: 10, border: "1px solid #fecaca", fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
+                Mục việc này chưa nộp hoặc quá hạn / không hoàn thành. Đánh dấu <strong>Không Đạt</strong> sẽ trực tiếp <strong>trừ điểm CP</strong> của thành viên phụ trách!
+              </div>
+            ) : (
+              reviewModalSubtask?.cp_points > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0", fontSize: 13, color: "#166534", lineHeight: 1.4 }}>
+                  ⭐ Mục checklist này có định mức <strong>{reviewModalSubtask.cp_points} CP</strong>. Nếu duyệt Đạt sẽ cộng điểm CP, nếu đánh giá Không đạt sẽ trừ điểm tương ứng.
                 </div>
-              )}
+              )
+            )}
+
+            {/* Ô NHẬP ĐIỂM PHẠT NẾU CHỌN PHẠT TRỪ ĐIỂM */}
+            {(reviewModalSubtask.mode === 'penalty_direct' || reviewActionMode === 'penalty') && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#dc2626", marginBottom: 6 }}>
+                  Số điểm CP muốn phạt trừ: <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={reviewPenaltyPoints}
+                    onChange={(e) => setReviewPenaltyPoints(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{
+                      width: "120px",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      border: "1.5px solid #f87171",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "#b91c1c",
+                      boxSizing: "border-box",
+                      background: "#fff5f5"
+                    }}
+                  />
+                  <span style={{ fontSize: 13, color: "#64748b" }}>
+                    (Mỗi thành viên phụ trách sẽ bị trừ điểm theo tỷ lệ phân công)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                {reviewModalSubtask.mode === 'penalty_direct' || reviewActionMode === 'penalty' ? (
+                  <span>Lý do không đạt / phạt trừ điểm: <span style={{ color: "#ef4444" }}>*</span></span>
+                ) : (
+                  <span>Nhận xét / Góp ý nghiệm thu:</span>
+                )}
+              </label>
               <textarea
                 rows={3}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Nhập nhận xét hoặc nội dung hướng dẫn điều chỉnh..."
+                placeholder={
+                  reviewModalSubtask.mode === 'penalty_direct' || reviewActionMode === 'penalty'
+                    ? "Nhập lý do không hoàn thành (VD: Quá hạn không thực hiện, bỏ dở công việc, chất lượng không đạt...)"
+                    : "Nhập nhận xét hoặc nội dung hướng dẫn điều chỉnh..."
+                }
                 style={{
                   width: "100%",
                   padding: "9px 12px",
@@ -1429,40 +1583,105 @@ export function TasksPage() {
               />
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => handleReviewSubtask(false)}
-                style={{
-                  background: "#dc2626",
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "8px 22px",
-                  borderRadius: 999,
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                Yêu Cầu Sửa Lại
-              </button>
-              <button
-                type="button"
-                onClick={() => handleReviewSubtask(true)}
-                style={{
-                  background: "#198754",
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "8px 22px",
-                  borderRadius: 999,
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                Duyệt Đạt & Hoàn Thành
-              </button>
-            </div>
+            {/* CÁC NÚT HÀNH ĐỘNG */}
+            {reviewModalSubtask.mode === 'penalty_direct' ? (
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalSubtask(null)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#f8fafc",
+                    color: "#475569",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReviewSubtask('penalty')}
+                  style={{
+                    background: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "8px 22px",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 4px rgba(220,38,38,0.25)",
+                  }}
+                >
+                  Xác Nhận Phạt Trừ CP
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (reviewActionMode !== 'penalty') {
+                      setReviewActionMode('penalty');
+                    } else {
+                      handleReviewSubtask('penalty');
+                    }
+                  }}
+                  style={{
+                    background: "#fff1f2",
+                    color: "#b91c1c",
+                    border: "1.5px solid #fca5a5",
+                    padding: "8px 16px",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  {reviewActionMode === 'penalty' ? "Xác Nhận Phạt Trừ CP" : "❌ Không Đạt (Trừ CP)"}
+                </button>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleReviewSubtask('rework')}
+                    style={{
+                      background: "#f8fafc",
+                      color: "#475569",
+                      border: "1px solid #cbd5e1",
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Yêu Cầu Sửa Lại
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReviewSubtask('approve')}
+                    style={{
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "8px 20px",
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 4px rgba(22,163,74,0.25)",
+                    }}
+                  >
+                    Duyệt Đạt (+CP)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

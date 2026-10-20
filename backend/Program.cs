@@ -311,23 +311,30 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
     var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
         SELECT 
             COUNT(1) AS total,
-            SUM(CASE WHEN status = 'FINISHED' THEN 1 ELSE 0 END) AS finished
+            SUM(CASE WHEN status IN ('FINISHED', 'FAILED') THEN 1 ELSE 0 END) AS resolved,
+            SUM(CASE WHEN status = 'FINISHED' THEN 1 ELSE 0 END) AS finished,
+            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) AS failed
         FROM subtasks WHERE task_id = @id", new { id });
 
     int total = (int)(subtaskStats?.total ?? 0);
+    int resolved = (int)(subtaskStats?.resolved ?? 0);
     int finished = (int)(subtaskStats?.finished ?? 0);
+    int failed = (int)(subtaskStats?.failed ?? 0);
 
     if (total == 0)
-        return Results.BadRequest(new { detail = "Nhiệm vụ chưa có mục checklist nào. Cần tạo và hoàn thành các mục checklist trước khi kết thúc nhiệm vụ!" });
+        return Results.BadRequest(new { detail = "Nhiệm vụ chưa có mục checklist nào. Cần tạo và xử lý các mục checklist trước khi kết thúc nhiệm vụ!" });
 
-    if (total != finished)
-        return Results.BadRequest(new { detail = $"Còn {total - finished} mục checklist chưa hoàn thành. Cần hoàn thành toàn bộ checklist để kết thúc nhiệm vụ!" });
+    if (total != resolved)
+        return Results.BadRequest(new { detail = $"Còn {total - resolved} mục checklist chưa được nghiệm thu hoặc đánh giá. Cần xử lý toàn bộ checklist trước khi kết thúc nhiệm vụ!" });
 
     conn.Execute(@"
         UPDATE tasks SET status = 'FINISHED', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id", new { id });
 
-    return Results.Ok(new { message = "Chúc mừng! Nhiệm vụ đã hoàn thành xuất sắc toàn bộ mục checklist!" });
+    string finishMsg = failed > 0
+        ? $"Nhiệm vụ đã kết thúc! ({finished} mục đạt, {failed} mục không đạt bị trừ điểm CP)."
+        : "Chúc mừng! Nhiệm vụ đã hoàn thành xuất sắc toàn bộ mục checklist!";
+    return Results.Ok(new { message = finishMsg });
 });
 
 app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
@@ -520,11 +527,56 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
     if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
         return Results.StatusCode(403);
 
-    if ((string)subtask.status != "REVIEW")
-        return Results.BadRequest(new { detail = $"Chỉ có thể duyệt khi mục việc đang ở trạng thái Chờ duyệt (REVIEW). Hiện tại: {subtask.status}" });
+    // TRƯỜNG HỢP 1: Phạt trừ điểm CP do không hoàn thành / vi phạm
+    if (req.is_penalty)
+    {
+        if (string.IsNullOrWhiteSpace(req.comment))
+            return Results.BadRequest(new { detail = "Vui lòng nhập lý do đánh giá không đạt / phạt trừ điểm!" });
 
+        int baseCp = Convert.ToInt32(subtask.cp_points ?? 0);
+        int penalty = req.penalty_points > 0 ? req.penalty_points : Math.Max(1, baseCp);
+
+        conn.Execute(@"
+            UPDATE subtasks SET 
+                status = 'FAILED', review_comment = @comment, updated_at = CURRENT_TIMESTAMP
+            WHERE id = @id",
+            new
+            {
+                id,
+                comment = req.comment.Trim()
+            });
+
+        // Xóa giao dịch cũ nếu có và ghi nhận điểm phạt âm vào cp_transactions
+        conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
+
+        var assignees = conn.Query<dynamic>(@"
+            SELECT sa.user_id, COALESCE(sa.contribution_pct, 100) AS contribution_pct, u.role
+            FROM subtask_assignees sa
+            JOIN users u ON sa.user_id = u.id
+            WHERE sa.subtask_id = @id", new { id }).ToList();
+
+        foreach (var a in assignees)
+        {
+            if ((string)a.role == "admin") continue; // Không phạt trừ Admin
+
+            long uId = (long)a.user_id;
+            int pct = Convert.ToInt32(a.contribution_pct);
+            double cpDeducted = -Math.Round(penalty * (pct / 100.0), 1);
+            conn.Execute(@"
+                INSERT INTO cp_transactions (user_id, subtask_id, cp_earned, contribution_pct, cp_points_base, quality_multiplier, awarded_at)
+                VALUES (@uId, @id, @cpDeducted, @pct, @penalty, 1.0, CURRENT_TIMESTAMP)",
+                new { uId, id, cpDeducted, pct, penalty });
+        }
+
+        return Results.Ok(new { message = $"Đã đánh giá KHÔNG ĐẠT và phạt trừ {penalty} điểm CP của thành viên phụ trách!" });
+    }
+
+    // TRƯỜNG HỢP 2: Duyệt ĐẠT & Hoàn thành (cộng điểm CP)
     if (req.approve)
     {
+        if ((string)subtask.status != "REVIEW")
+            return Results.BadRequest(new { detail = $"Chỉ có thể nghiệm thu đạt khi mục việc đang ở trạng thái Chờ duyệt (REVIEW). Hiện tại: {subtask.status}" });
+
         double qMultiplier = req.quality_multiplier > 0 ? req.quality_multiplier : 1.0;
         conn.Execute(@"
             UPDATE subtasks SET 
@@ -566,6 +618,7 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
         return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!" });
     }
+    // TRƯỜNG HỢP 3: Yêu cầu sửa lại (hoặc cho làm lại từ trạng thái FAILED) -> chuyển về PROCESSING
     else
     {
         if (string.IsNullOrWhiteSpace(req.comment))
@@ -581,10 +634,10 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                 comment = req.comment.Trim()
             });
 
-        // Delete any existing transactions if reopened
+        // Xóa bất kỳ giao dịch CP nào (cả điểm cộng lẫn điểm trừ) khi mở lại để làm
         conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
 
-        return Results.Ok(new { message = "Đã yêu cầu thành viên chỉnh sửa lại theo nhận xét!" });
+        return Results.Ok(new { message = "Đã chuyển mục việc về trạng thái Đang làm để thành viên tiếp tục hoàn thiện!" });
     }
 });
 

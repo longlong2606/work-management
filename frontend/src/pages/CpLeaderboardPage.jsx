@@ -557,15 +557,16 @@ export function CpLeaderboardPage() {
                       <div style={{ fontWeight: 600, color: "#1e293b", fontSize: 14 }}>{item.subtask_title}</div>
                       <span
                         style={{
-                          background: "#dcfce7",
-                          color: "#166534",
+                          background: item.cp_earned < 0 ? "#fef2f2" : "#dcfce7",
+                          color: item.cp_earned < 0 ? "#b91c1c" : "#166534",
                           fontWeight: 700,
                           fontSize: 13,
                           padding: "2px 8px",
                           borderRadius: 6,
+                          border: `1px solid ${item.cp_earned < 0 ? "#fecaca" : "#bbf7d0"}`,
                         }}
                       >
-                        +{item.cp_earned} CP
+                        {item.cp_earned < 0 ? `${item.cp_earned} CP (Phạt)` : `+${item.cp_earned} CP`}
                       </span>
                     </div>
 

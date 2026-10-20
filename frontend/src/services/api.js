@@ -415,10 +415,16 @@ export const api = {
     request(`/subtasks/${id}/submit`, {
       method: "POST",
     }),
-  reviewSubtask: (id, approve, comment, quality_multiplier = 1.0) =>
+  reviewSubtask: (id, approve, comment, quality_multiplier = 1.0, is_penalty = false, penalty_points = 0) =>
     request(`/subtasks/${id}/review`, {
       method: "POST",
-      body: JSON.stringify({ approve, comment, quality_multiplier }),
+      body: JSON.stringify({
+        approve,
+        comment,
+        quality_multiplier,
+        is_penalty,
+        penalty_points: Number(penalty_points) || 0
+      }),
     }),
   deleteSubtask: (id) =>
     request(`/subtasks/${id}`, {
