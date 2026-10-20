@@ -214,7 +214,8 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) 
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền tạo nhiệm vụ lớn! Leader có quyền điều phối và giao subtask chi tiết." }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề nhiệm vụ không được để trống!" });
@@ -305,8 +306,13 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
-    if (currentUser.role != "admin" && (long)task.leader_id != currentUser.id)
-        return Results.StatusCode(403);
+    bool canCreateSubtask = currentUser.role == "admin" 
+        || currentUser.role == "leader" 
+        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
+        || currentUser.can_manage_tasks;
+
+    if (!canCreateSubtask)
+        return Results.Json(new { detail = "Bạn không có quyền giao subtask cho nhiệm vụ này!" }, statusCode: 403);
 
     var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
         SELECT 
@@ -381,8 +387,13 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ cha không tồn tại!" });
 
-    if (currentUser.role != "admin" && (long)task.leader_id != currentUser.id)
-        return Results.StatusCode(403);
+    bool canCreateSubtask = currentUser.role == "admin" 
+        || currentUser.role == "leader" 
+        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
+        || currentUser.can_manage_tasks;
+
+    if (!canCreateSubtask)
+        return Results.Json(new { detail = "Bạn không có quyền giao subtask cho nhiệm vụ này!" }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
@@ -524,8 +535,14 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
-    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
-        return Results.StatusCode(403);
+    bool canReview = currentUser.role == "admin" 
+        || currentUser.role == "leader" 
+        || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id)
+        || currentUser.can_manage_cp
+        || currentUser.can_manage_tasks;
+
+    if (!canReview)
+        return Results.Json(new { detail = "Bạn không có quyền duyệt hoặc tính điểm cho subtask này!" }, statusCode: 403);
 
     // TRƯỜNG HỢP 1: Phạt trừ điểm CP do không hoàn thành / vi phạm
     if (req.is_penalty)

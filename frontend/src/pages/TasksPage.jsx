@@ -38,8 +38,8 @@ function formatDeadline(deadlineStr) {
 }
 
 export function TasksPage() {
-  const { user, isAdmin, isCore, isLeader, canManageTasks } = useAuth();
-  const hasAdminRights = isAdmin || Boolean(canManageTasks);
+  const { user, isAdmin, isCore, isLeader, canManageTasks, canCreateRootTask, canManageSubtasks } = useAuth();
+  const hasAdminRights = canCreateRootTask !== undefined ? canCreateRootTask : isAdmin;
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'my_tasks', 'needs_review', 'finished'
@@ -866,7 +866,7 @@ export function TasksPage() {
               const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
               const isTaskAssignee = Number(taskDetail.task.leader_id) === Number(user?.id);
-              const canManageTaskSubtasks = isAdmin || isTaskAssignee;
+              const canManageTaskSubtasks = isAdmin || isLeader || isTaskAssignee || Boolean(user?.can_manage_tasks);
 
               return (
                 <div
@@ -1031,7 +1031,7 @@ export function TasksPage() {
                           </button>
                         )}
 
-                        {(hasAdminRights || canManageTaskSubtasks) && (
+                        {isAdmin && (
                           <button
                             onClick={() => handleDeleteTask(taskDetail.task.id)}
                             style={{

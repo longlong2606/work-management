@@ -347,12 +347,12 @@ public static class Database
                 ");
             } catch { }
 
-            // 0. Synchronize standard 5 Roles (Admin > Core > Leader > Contributor > Learning)
+            // 0. Synchronize standard 5 Roles (Admin: 5 quyen | Leader: phan ca, subtask, nhan su, danh gia, cp | Core, Contributor, Learning: 0 quyen)
             var defaultRoles = new[]
             {
-                new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, cấu hình email và hệ thống", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1, ccp = 1 },
-                new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, quản lý nhân sự, lịch phân ca và điều phối toàn bộ dự án", color = "#2563eb", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1, ccp = 1 },
-                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Trưởng ca / Project Lead / Research Lead, điều hành ca trực, giao nhiệm vụ và kiểm duyệt checklist", color = "#059669", is_sys = 1, cms = 1, cmt = 1, cmu = 0, cev = 1, ccp = 1 },
+                new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, phân ca, tạo nhiệm vụ lớn, nhân sự, đánh giá, tính điểm CP", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1, ccp = 1 },
+                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Phân ca & duyệt ca, giao subtask checklist, quản lý nhân sự, đánh giá năng lực, tính điểm CP", color = "#059669", is_sys = 1, cms = 1, cmt = 0, cmu = 1, cev = 1, ccp = 1 },
+                new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, tham gia học việc và nhận nhiệm vụ (Không giữ quyền quản trị)", color = "#2563eb", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 },
                 new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 },
                 new { id = "learning", name = "Learning (Học viên / Thực tập sinh)", desc = "Học viên, thực tập sinh mới, tham gia học việc, hỗ trợ ca trực theo hướng dẫn của mentor", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 }
             };
@@ -361,7 +361,15 @@ public static class Database
                 conn.Execute(@"
                     INSERT INTO roles (id, display_name, description, color, is_system, can_manage_schedule, can_manage_tasks, can_manage_staff, can_evaluate, can_manage_cp)
                     VALUES (@id, @name, @desc, @color, @is_sys, @cms, @cmt, @cmu, @cev, @ccp)
-                    ON CONFLICT (id) DO NOTHING", r);
+                    ON CONFLICT (id) DO UPDATE SET
+                        display_name = EXCLUDED.display_name,
+                        description = EXCLUDED.description,
+                        color = EXCLUDED.color,
+                        can_manage_schedule = EXCLUDED.can_manage_schedule,
+                        can_manage_tasks = EXCLUDED.can_manage_tasks,
+                        can_manage_staff = EXCLUDED.can_manage_staff,
+                        can_evaluate = EXCLUDED.can_evaluate,
+                        can_manage_cp = EXCLUDED.can_manage_cp", r);
             }
 
             // 0.1 Synchronize standard Departments

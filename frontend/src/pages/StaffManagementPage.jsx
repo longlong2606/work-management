@@ -1632,7 +1632,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                       onChange={(e) => setRoleCanTasks(e.target.checked)}
                       style={{ width: 16, height: 16 }}
                     />
-                    <span><strong>Giao việc & Duyệt nhiệm vụ:</strong> Tạo task/subtask, duyệt kết quả công việc checklist</span>
+                    <span><strong>Giao nhiệm vụ lớn (Toàn Lab):</strong> Khởi tạo các đầu việc lớn toàn Lab (Lưu ý: Leader luôn có quyền điều phối & giao subtask chi tiết)</span>
                   </label>
 
                   <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13 }}>

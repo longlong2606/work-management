@@ -73,25 +73,33 @@ export function AuthProvider({ children }) {
     localStorage.setItem("wm_user", JSON.stringify(merged));
   };
 
-  // 5 Chuẩn Role theo phân cấp: Admin > Core > Leader > Contributor > Learning
-    const role = user?.role || "contributor";
+    // 5 Chuẩn Role theo phân cấp: Admin > Leader > Core > Contributor > Learning
+  const role = user?.role || "contributor";
   const isAdmin = role === "admin";
+  const isLeader = role === "leader" || role === "supervisor";
+  const isCore = role === "core";
+  const isContributor = role === "contributor" || role === "technician" || role === "staff";
+  const isLearning = role === "learning";
   const isManagerRole = role === "manager" || role === "quan_ly";
-  const isCore = isAdmin || isManagerRole || role === "core";
-  const isLeader = isCore || role === "leader" || role === "supervisor";
-  const isContributor = isLeader || role === "contributor" || role === "technician" || role === "staff";
-  const isLearning = !!user;
 
-  // Quyen han thuc te theo Database: Uu tien tuyet doi gia tri phan quyen tu Server (user.can_...)
-  // Rieng quyen quan ly nhan su luon giu cho Admin de khong bao gio bi mat quyen cau hinh he thong
-  const canManageStaff = isAdmin ? true : (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : (isManagerRole || isCore));
-  const canManageSchedule = user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : (isAdmin || isManagerRole || isLeader);
-  const canManageTasks = user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : (isAdmin || isManagerRole || isLeader);
-  const canEvaluate = user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (isAdmin || isManagerRole || isCore || isLeader);
-  const canManageCp = user?.can_manage_cp !== undefined ? Boolean(user.can_manage_cp) : (isAdmin || isManagerRole || isCore || isLeader);
+  // Quyền hạn thực tế theo Database:
+  // - Admin luôn có đủ 5 quyền tối cao
+  // - Leader có phân ca, quản lý nhân sự, đánh giá năng lực, tính điểm CP; giao subtask (không tạo nhiệm vụ lớn)
+  // - Core, Contributor, Learning không được quyền nào hết (mọi quyền = false)
+  const canManageStaff = isAdmin ? true : Boolean(user?.can_manage_staff);
+  const canManageSchedule = isAdmin ? true : Boolean(user?.can_manage_schedule);
+  const canManageTasks = isAdmin ? true : Boolean(user?.can_manage_tasks);
+  const canEvaluate = isAdmin ? true : Boolean(user?.can_evaluate);
+  const canManageCp = isAdmin ? true : Boolean(user?.can_manage_cp);
 
-  // Alias tuong thich
-  const isManager = isCore || isManagerRole;
+  // Quyền tạo nhiệm vụ lớn: Chỉ Admin
+  const canCreateRootTask = isAdmin;
+
+  // Quyền giao subtask: Admin và Leader (hoặc ai được cấp can_manage_tasks)
+  const canManageSubtasks = isAdmin || isLeader || Boolean(user?.can_manage_tasks);
+
+  // Alias tương thích
+  const isManager = isAdmin || isLeader || isManagerRole;
   const isSupervisor = isLeader;
 
   return (
