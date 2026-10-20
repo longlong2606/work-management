@@ -4,10 +4,10 @@ import { useAuth } from "../context/AuthContext";
 import {
   RefreshCw,
   Award,
-  UserPlus, 
-  ShieldCheck, 
-  UserCheck, 
-  Mail, 
+  UserPlus,
+  ShieldCheck,
+  UserCheck,
+  Mail,
   Key,
   Edit3,
   Lock,
@@ -104,7 +104,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
 
 
   const COLOR_PRESETS = [
-    "#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626", 
+    "#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626",
     "#0891b2", "#ec4899", "#8b5cf6", "#475569"
   ];
 
@@ -153,12 +153,12 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   // Filtered Users
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
-      const matchSearch = !searchTerm || 
+      const matchSearch = !searchTerm ||
         u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.phone?.includes(searchTerm);
-      
+
       const matchDept = !filterDepartment || u.department === filterDepartment;
       const matchRole = !filterRole || u.role === filterRole;
       const matchStatus = !filterStatus || u.status === filterStatus;
@@ -388,259 +388,259 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           )}</div>
       </div>
 
-      
+
 
       <div>
-          {/* Filter Bar */}
-          <div className="glass-card" style={{ padding: "16px 20px", marginBottom: 18 }}>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 12,
-              alignItems: "center"
-            }}>
-              {/* Search */}
-              <div style={{ position: "relative" }}>
-                <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-                <input
-                  type="text"
-                  placeholder="Tìm họ tên, email, sđt..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: 36, height: 40 }}
-                />
-              </div>
-
-              {/* Department Filter */}
-              <div>
-                <select
-                  value={filterDepartment}
-                  onChange={(e) => setFilterDepartment(e.target.value)}
-                  className="form-input"
-                  style={{ height: 40 }}
-                >
-                  <option value="">🏢 Tất cả phòng ban ({departments.length})</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Role Filter */}
-              <div>
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="form-input"
-                  style={{ height: 40 }}
-                >
-                  <option value="">🛡️ Tất cả vai trò ({roles.length})</option>
-                  {sortedRoles.map((r) => (
-                    <option key={r.id} value={r.id}>{r.display_name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Status Filter */}
-              <div>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="form-input"
-                  style={{ height: 40 }}
-                >
-                  <option value="">⚡ Tất cả trạng thái</option>
-                  <option value="active">Đang hoạt động</option>
-                  <option value="inactive">Tạm khóa</option>
-                </select>
-              </div>
+        {/* Filter Bar */}
+        <div className="glass-card" style={{ padding: "16px 20px", marginBottom: 18 }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+            alignItems: "center"
+          }}>
+            {/* Search */}
+            <div style={{ position: "relative" }}>
+              <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder="Tìm họ tên, email, sđt..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: 36, height: 40 }}
+              />
             </div>
 
-            {(searchTerm || filterDepartment || filterRole || filterStatus) && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)", fontSize: 13 }}>
-                <span style={{ color: "var(--text-muted)" }}>
-                  Tìm thấy <strong>{filteredUsers.length}</strong> / {users.length} tài khoản phù hợp
-                </span>
-                <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setFilterDepartment("");
-                    setFilterRole("");
-                    setFilterStatus("");
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#2563eb",
-                    cursor: "pointer",
-                    fontWeight: 600
-                  }}
-                >
-                  Xóa bộ lọc
-                </button>
-              </div>
-            )}
+            {/* Department Filter */}
+            <div>
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="form-input"
+                style={{ height: 40 }}
+              >
+                <option value="">🏢 Tất cả phòng ban ({departments.length})</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.name}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Role Filter */}
+            <div>
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="form-input"
+                style={{ height: 40 }}
+              >
+                <option value="">🛡️ Tất cả vai trò ({roles.length})</option>
+                {sortedRoles.map((r) => (
+                  <option key={r.id} value={r.id}>{r.display_name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="form-input"
+                style={{ height: 40 }}
+              >
+                <option value="">⚡ Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="inactive">Tạm khóa</option>
+              </select>
+            </div>
           </div>
 
-          {/* Users Table */}
-          <div className="glass-card" style={{ overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid var(--border)" }}>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Nhân viên</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Tên đăng nhập</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Email nhận thông báo</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Số điện thoại</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Phòng ban / Tổ trực</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Vai trò hệ thống</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Trạng thái</th>
-                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
+          {(searchTerm || filterDepartment || filterRole || filterStatus) && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)", fontSize: 13 }}>
+              <span style={{ color: "var(--text-muted)" }}>
+                Tìm thấy <strong>{filteredUsers.length}</strong> / {users.length} tài khoản phù hợp
+              </span>
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterDepartment("");
+                  setFilterRole("");
+                  setFilterStatus("");
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#2563eb",
+                  cursor: "pointer",
+                  fontWeight: 600
+                }}
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Users Table */}
+        <div className="glass-card" style={{ overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid var(--border)" }}>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Nhân viên</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Tên đăng nhập</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Email nhận thông báo</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Số điện thoại</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Phòng ban / Tổ trực</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Vai trò hệ thống</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Trạng thái</th>
+                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+                      Không tìm thấy tài khoản nhân sự nào phù hợp với bộ lọc.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
-                        Không tìm thấy tài khoản nhân sự nào phù hợp với bộ lọc.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((u) => {
-                      const userRoleObj = roleMap[u.role] || { 
-                        display_name: u.role === "admin" ? "Quản trị viên" : (u.role === "staff" ? "Nhân viên" : u.role),
-                        color: u.role === "admin" ? "#7c3aed" : "#2563eb" 
-                      };
-                      const isLocked = u.status === "inactive" || u.status === "locked";
-                      return (
-                        <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "14px 20px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div style={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: "50%",
-                                background: `${userRoleObj.color}18`,
-                                color: userRoleObj.color,
+                ) : (
+                  filteredUsers.map((u) => {
+                    const userRoleObj = roleMap[u.role] || {
+                      display_name: u.role === "admin" ? "Quản trị viên" : (u.role === "staff" ? "Nhân viên" : u.role),
+                      color: u.role === "admin" ? "#7c3aed" : "#2563eb"
+                    };
+                    const isLocked = u.status === "inactive" || u.status === "locked";
+                    return (
+                      <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              background: `${userRoleObj.color}18`,
+                              color: userRoleObj.color,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 800,
+                              fontSize: 14
+                            }}>
+                              {u.full_name?.charAt(0) || u.username?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span style={{ fontWeight: 700, color: "#0f172a", display: "block" }}>{u.full_name}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 20px", fontFamily: "monospace", color: "#334155" }}>
+                          {u.username}
+                        </td>
+                        <td style={{ padding: "14px 20px", color: "#2563eb" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Mail size={13} /> {u.email}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 20px", color: "var(--text-muted)" }}>
+                          {u.phone ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              <Phone size={12} color="#64748b" /> {u.phone}
+                            </div>
+                          ) : "---"}
+                        </td>
+                        <td style={{ padding: "14px 20px", color: "#475569" }}>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            background: "#f1f5f9",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155"
+                          }}>
+                            <Building2 size={12} color="#64748b" /> {u.department || "Chưa phân bổ"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 20px" }}>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "4px 10px",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: `${userRoleObj.color}15`,
+                            color: userRoleObj.color,
+                            border: `1px solid ${userRoleObj.color}35`
+                          }}>
+                            <ShieldCheck size={13} /> {userRoleObj.display_name}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 20px" }}>
+                          {isLocked ? (
+                            <span className="badge" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                              Tạm khóa
+                            </span>
+                          ) : (
+                            <span className="badge badge-green">Hoạt động</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "14px 20px", textAlign: "center" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+
+                            <button
+                              onClick={() => handleOpenReset(u)}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#b45309",
+                                background: "#fffbeb",
+                                border: "1px solid #fde68a",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                fontWeight: 800,
-                                fontSize: 14
-                              }}>
-                                {u.full_name?.charAt(0) || u.username?.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span style={{ fontWeight: 700, color: "#0f172a", display: "block" }}>{u.full_name}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 20px", fontFamily: "monospace", color: "#334155" }}>
-                            {u.username}
-                          </td>
-                          <td style={{ padding: "14px 20px", color: "#2563eb" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <Mail size={13} /> {u.email}
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 20px", color: "var(--text-muted)" }}>
-                            {u.phone ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                <Phone size={12} color="#64748b" /> {u.phone}
-                              </div>
-                            ) : "---"}
-                          </td>
-                          <td style={{ padding: "14px 20px", color: "#475569" }}>
-                            <span style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 5,
-                              padding: "3px 8px",
-                              borderRadius: 6,
-                              background: "#f1f5f9",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: "#334155"
-                            }}>
-                              <Building2 size={12} color="#64748b" /> {u.department || "Chưa phân bổ"}
-                            </span>
-                          </td>
-                          <td style={{ padding: "14px 20px" }}>
-                            <span style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 5,
-                              padding: "4px 10px",
-                              borderRadius: 8,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              background: `${userRoleObj.color}15`,
-                              color: userRoleObj.color,
-                              border: `1px solid ${userRoleObj.color}35`
-                            }}>
-                              <ShieldCheck size={13} /> {userRoleObj.display_name}
-                            </span>
-                          </td>
-                          <td style={{ padding: "14px 20px" }}>
-                            {isLocked ? (
-                              <span className="badge" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
-                                Tạm khóa
-                              </span>
-                            ) : (
-                              <span className="badge badge-green">Hoạt động</span>
-                            )}
-                          </td>
-                          <td style={{ padding: "14px 20px", textAlign: "center" }}>
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              
-                              <button
-                                onClick={() => handleOpenReset(u)}
-                                className="btn btn-secondary btn-sm"
-                                style={{
-                                  padding: "5px 10px",
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  color: "#b45309",
-                                  background: "#fffbeb",
-                                  border: "1px solid #fde68a",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4
-                                }}
-                                title={`Đổi mật khẩu cho ${u.full_name} khi quên`}
-                              >
-                                <Key size={13} /> Đổi MK
-                              </button>
-                              <button
-                                onClick={() => handleOpenEdit(u)}
-                                className="btn btn-secondary btn-sm"
-                                style={{
-                                  padding: "5px 10px",
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  color: "#1d4ed8",
-                                  background: "#eff6ff",
-                                  border: "1px solid #bfdbfe",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4
-                                }}
-                                title={`Sửa thông tin tài khoản ${u.full_name}`}
-                              >
-                                <Edit3 size={13} /> Sửa
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                                gap: 4
+                              }}
+                              title={`Đổi mật khẩu cho ${u.full_name} khi quên`}
+                            >
+                              <Key size={13} /> Đổi MK
+                            </button>
+                            <button
+                              onClick={() => handleOpenEdit(u)}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#1d4ed8",
+                                background: "#eff6ff",
+                                border: "1px solid #bfdbfe",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4
+                              }}
+                              title={`Sửa thông tin tài khoản ${u.full_name}`}
+                            >
+                              <Edit3 size={13} /> Sửa
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
 
       {/* MODAL 1: CẤP TÀI KHOẢN MỚI (DYNAMIC ROLES & DEPTS)       */}
       {/* ======================================================== */}
@@ -738,7 +738,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <label className="form-label" style={{ margin: 0 }}>Phòng ban / Tổ trực:</label>
-                    
+
                   </div>
                   <select
                     className="form-input"
@@ -1073,9 +1073,9 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       )}
 
-      
+
 
       {/* ======================================================== */}
-      </div>
+    </div>
   );
 }

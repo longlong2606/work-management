@@ -1539,37 +1539,70 @@ export function SchedulePage() {
                           >
                             {day.dayName}
                           </span>
-                          <Calendar
-                            size={13}
-                            color={isExpanded || day.isToday ? "#2563eb" : "#94a3b8"}
-                          />
+                          {day.isToday ? (
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 800,
+                                background: "#2563eb",
+                                color: "#ffffff",
+                                padding: "1px 6px",
+                                borderRadius: 10,
+                              }}
+                            >
+                              Hôm nay
+                            </span>
+                          ) : (
+                            <Calendar
+                              size={12}
+                              color={isExpanded ? "#2563eb" : "#94a3b8"}
+                            />
+                          )}
                         </div>
                         <div
                           style={{
                             fontSize: 11,
-                            color: isExpanded ? "#1d4ed8" : day.isToday ? "#3b82f6" : "var(--text-muted)",
+                            color: isExpanded ? "#1d4ed8" : day.isToday ? "#2563eb" : "var(--text-muted)",
                             marginTop: 2,
                             fontWeight: 600,
                           }}
                         >
-                          {day.displayDate} {day.isToday && "(Hôm nay)"}
+                          {day.displayDate}
                         </div>
-                        <div style={{ marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: "2px 8px",
-                              borderRadius: 10,
-                              background: isExpanded ? "#2563eb" : "#e2e8f0",
-                              color: isExpanded ? "#ffffff" : "#334155",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 2,
-                            }}
-                          >
-                            {isExpanded ? "✦ Đang mở rộng" : "▼ Mở rộng"}
-                          </span>
+                        <div style={{ marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                          {isExpanded ? (
+                            <span
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                padding: "2px 7px",
+                                borderRadius: 8,
+                                background: "#2563eb",
+                                color: "#ffffff",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              ✕ Thu gọn
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: 600,
+                                color: "#64748b",
+                                padding: "1px 6px",
+                                borderRadius: 6,
+                                background: "#f1f5f9",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              ▾ Mở rộng
+                            </span>
+                          )}
                           {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
                             <button
                               onClick={(e) => {
@@ -1581,8 +1614,8 @@ export function SchedulePage() {
                                 background: "#f3e8ff",
                                 border: "1px solid #d8b4fe",
                                 color: "#7e22ce",
-                                borderRadius: 6,
-                                padding: "2px 6px",
+                                borderRadius: 5,
+                                padding: "1px 5px",
                                 cursor: "pointer",
                                 fontWeight: 700,
                               }}
@@ -1718,7 +1751,7 @@ export function SchedulePage() {
                           key={day.dateStr}
                           className={`schedule-day-col ${isExpanded ? "expanded" : ""}`}
                           style={{
-                            padding: isExpanded ? "10px 12px" : "8px",
+                            padding: isExpanded ? "8px 10px" : "6px",
                             verticalAlign: "top",
                             borderLeft: isExpanded ? "2px solid #60a5fa" : "1px solid #f1f5f9",
                             borderRight: isExpanded ? "2px solid #60a5fa" : "none",
@@ -1726,340 +1759,270 @@ export function SchedulePage() {
                             background: isExpanded
                               ? "#f0f7ff"
                               : day.isToday
-                                ? "#fcfdff"
+                                ? "#f8faff"
                                 : "#ffffff",
-                            minHeight: 110,
                             position: "relative",
                             transition: "all 0.2s ease",
                           }}
                         >
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {/* ================= PHẦN TRÊN: DANH SÁCH THÀNH VIÊN (GỌN GÀNG, NHẤN ĐỂ MỞ) ================= */}
-                            <div>
-                              <div
-                                onClick={() => openRosterModal(shift, day)}
-                                style={{
-                                  padding: "7px 10px",
-                                  borderRadius: 8,
-                                  background: hasAbsence ? "#fff1f2" : "#f1f5f9",
-                                  border: hasAbsence
-                                    ? "1.5px solid #fda4af"
-                                    : "1px solid #cbd5e1",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-                                  transition: "all 0.15s ease",
-                                }}
-                                onMouseEnter={(e) =>
-                                (e.currentTarget.style.background = hasAbsence
-                                  ? "#fee2e2"
-                                  : "#e2e8f0")
-                                }
-                                onMouseLeave={(e) =>
-                                (e.currentTarget.style.background = hasAbsence
-                                  ? "#fff1f2"
-                                  : "#f1f5f9")
-                                }
-                                title={`Bấm để xem đầy đủ danh sách ${totalMembers} thành viên (ai có mặt, ai vắng mặt)`}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                                  <Users
-                                    size={14}
-                                    color={hasAbsence ? "#e11d48" : hasPending ? "#d97706" : "#2563eb"}
-                                  />
-                                  <span
-                                    style={{
-                                      fontWeight: 800,
-                                      fontSize: 11,
-                                      color: hasAbsence ? "#9f1239" : hasPending ? "#92400e" : "#1e293b",
-                                    }}
-                                  >
-                                    {totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}
-                                  </span>
-                                  {hasAbsence && (
-                                    <span
-                                      style={{
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        background: "#ef4444",
-                                        color: "#ffffff",
-                                        padding: "1px 5px",
-                                        borderRadius: 10,
-                                      }}
-                                    >
-                                      🔴 {absentInSlot.length} vắng
-                                    </span>
-                                  )}
-                                  {hasPending && (
-                                    <span
-                                      style={{
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        background: "#f59e0b",
-                                        color: "#ffffff",
-                                        padding: "1px 5px",
-                                        borderRadius: 10,
-                                      }}
-                                    >
-                                      🟡 {pendingInSlot.length} chờ duyệt
-                                    </span>
-                                  )}
-                                  {conflictsInSlot.length > 0 && (
-                                    <span
-                                      style={{
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        background: "#fef3c7",
-                                        color: "#b45309",
-                                        border: "1px solid #fde68a",
-                                        padding: "1px 5px",
-                                        borderRadius: 10,
-                                      }}
-                                      title={conflictsInSlot
-                                        .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
-                                        .join("\n")}
-                                    >
-                                      🎓 {conflictsInSlot.length} trùng TKB
-                                    </span>
-                                  )}
-                                  {customizedInSlot.length > 0 && (
-                                    <span
-                                      style={{
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        background: "#f0fdf4",
-                                        color: "#15803d",
-                                        border: "1px solid #86efac",
-                                        padding: "1px 5px",
-                                        borderRadius: 10,
-                                      }}
-                                      title={customizedInSlot
-                                        .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
-                                        .join("\n")}
-                                    >
-                                      ⏱️ {customizedInSlot.length} chỉnh giờ
-                                    </span>
-                                  )}
-                                </div>
-
+                          <div
+                            className={`schedule-slot-card ${hasAbsence ? "has-absence" : hasPending ? "has-pending" : ""} ${day.isToday ? "is-today" : ""}`}
+                            onClick={() => openRosterModal(shift, day)}
+                            title={`Bấm để xem danh sách ${totalMembers} thành viên & điểm danh`}
+                          >
+                            {/* Member count chip & Quick hover actions */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                                 <div
                                   style={{
-                                    display: "flex",
+                                    display: "inline-flex",
                                     alignItems: "center",
                                     gap: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: hasAbsence ? "#9f1239" : hasPending ? "#92400e" : "#1e293b",
                                   }}
-                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <button
-                                    onClick={() => openReportAbsence(shift, day)}
-                                    style={{
-                                      background: "#fee2e2",
-                                      border: "1px solid #fca5a5",
-                                      borderRadius: 4,
-                                      padding: "1px 5px",
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      color: "#b91c1c",
-                                      cursor: "pointer",
-                                    }}
-                                    title="Báo vắng ca này kèm lý do cho Quản lý"
-                                  >
-                                    Báo vắng
-                                  </button>
-                                  <span
-                                    onClick={() => openRosterModal(shift, day)}
-                                    style={{
-                                      fontSize: 9,
-                                      color: hasAbsence ? "#e11d48" : "#2563eb",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    Xem ↗
-                                  </span>
+                                  <Users
+                                    size={13}
+                                    color={hasAbsence ? "#e11d48" : hasPending ? "#d97706" : "#2563eb"}
+                                  />
+                                  <span>{totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}</span>
                                 </div>
-                              </div>
 
-                              {/* Hiển thị chi tiết ai vắng mặt ngay trong cột khi mở rộng */}
-                              {isExpanded && absentInSlot.length > 0 && (
-                                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fda4af", paddingTop: 4 }}>
-                                  {absentInSlot.map((a) => (
-                                    <div
-                                      key={a.id}
-                                      style={{
-                                        fontSize: 10,
-                                        color: "#b91c1c",
-                                        background: "#fee2e2",
-                                        padding: "2px 6px",
-                                        borderRadius: 4,
-                                        fontWeight: 600,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: 4,
-                                      }}
-                                    >
-                                      <span>🔴 {a.full_name || a.username}</span>
-                                      <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>
-                                        {a.absence_reason || "Vắng mặt"}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Hiển thị chi tiết cảnh báo trùng lịch học khi mở rộng */}
-                              {isExpanded && conflictsInSlot.length > 0 && (
-                                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fde68a", paddingTop: 4 }}>
-                                  {conflictsInSlot.map((c, cIdx) => (
-                                    <div
-                                      key={`cf-${c.user_id}-${cIdx}`}
-                                      style={{
-                                        fontSize: 10,
-                                        color: "#92400e",
-                                        background: "#fffbeb",
-                                        padding: "2px 6px",
-                                        borderRadius: 4,
-                                        fontWeight: 600,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: 4,
-                                        border: "1px solid #fde68a",
-                                      }}
-                                      title={`Lớp: ${c.class_name || c.course_name || c.subject_name} (${c.class_time || `${c.start_time} - ${c.end_time}`})`}
-                                    >
-                                      <span>🎓 {c.user_name || c.full_name}</span>
-                                      <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.9 }}>
-                                        {c.course_code || "Lớp"}: {c.class_time || `${c.start_time}-${c.end_time}`}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* ================= PHẦN DƯỚI: 📅 SỰ KIỆN TRONG CA ================= */}
-                            <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: 5, marginTop: 2 }}>
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEventModal(shift, day, eventsInThisSlot);
-                                }}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  fontSize: 10,
-                                  fontWeight: 800,
-                                  color: "#64748b",
-                                  marginBottom: 4,
-                                  cursor: "pointer",
-                                  userSelect: "none",
-                                }}
-                                title="Bấm để xem chi tiết hoặc thêm sự kiện"
-                              >
-                                <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                  <Calendar size={11} color="#8b5cf6" /> SỰ KIỆN ({eventsInThisSlot.length})
-                                </span>
-                                {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
+                                {hasAbsence && (
                                   <span
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openCreateEventModal(shift.id, day.dateStr);
-                                    }}
                                     style={{
                                       fontSize: 9,
-                                      color: "#8b5cf6",
                                       fontWeight: 800,
-                                      cursor: "pointer",
+                                      background: "#ef4444",
+                                      color: "#ffffff",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                      boxShadow: "0 1px 2px rgba(239, 68, 68, 0.2)",
                                     }}
-                                    title="Thêm sự kiện mới"
                                   >
-                                    + Thêm
+                                    🔴 {absentInSlot.length} vắng
+                                  </span>
+                                )}
+                                {hasPending && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 800,
+                                      background: "#f59e0b",
+                                      color: "#ffffff",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                    }}
+                                  >
+                                    🟡 {pendingInSlot.length} chờ
+                                  </span>
+                                )}
+                                {conflictsInSlot.length > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      background: "#fef3c7",
+                                      color: "#b45309",
+                                      border: "1px solid #fde68a",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                    }}
+                                    title={conflictsInSlot
+                                      .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
+                                      .join("\n")}
+                                  >
+                                    🎓 {conflictsInSlot.length}
+                                  </span>
+                                )}
+                                {customizedInSlot.length > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      background: "#f0fdf4",
+                                      color: "#15803d",
+                                      border: "1px solid #86efac",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                    }}
+                                    title={customizedInSlot
+                                      .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
+                                      .join("\n")}
+                                  >
+                                    ⏱️ {customizedInSlot.length}
                                   </span>
                                 )}
                               </div>
 
-                              {/* DIRECT DISPLAY OF EVENT NAMES */}
-                              {eventsInThisSlot.length === 0 ? (
-                                <div
-                                  onClick={() =>
-                                    isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && openCreateEventModal(shift.id, day.dateStr)
-                                  }
+                              {/* Hover Quick Actions */}
+                              <div
+                                className="schedule-cell-actions"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  onClick={() => openReportAbsence(shift, day)}
                                   style={{
-                                    fontSize: 10,
-                                    color: "#94a3b8",
-                                    fontStyle: "italic",
-                                    padding: "2px 4px",
-                                    cursor: isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) ? "pointer" : "default",
+                                    background: "#fee2e2",
+                                    border: "1px solid #fca5a5",
+                                    borderRadius: 4,
+                                    padding: "2px 6px",
+                                    fontSize: 9.5,
+                                    fontWeight: 700,
+                                    color: "#b91c1c",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
                                   }}
+                                  title="Báo vắng ca này"
                                 >
-                                  {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) ? "+ Thêm sự kiện" : "Không có sự kiện"}
-                                </div>
-                              ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                                  {eventsInThisSlot.map((ev) => {
-                                    const badge = getEventTypeBadge(ev.event_type);
-                                    return (
-                                      <div
-                                        key={ev.id}
-                                        onClick={() => openEventModal(shift, day, eventsInThisSlot)}
-                                        style={{
-                                          display: "flex",
-                                          flexDirection: isExpanded ? "column" : "row",
-                                          alignItems: isExpanded ? "flex-start" : "center",
-                                          gap: 3,
-                                          padding: isExpanded ? "4px 7px" : "3px 6px",
-                                          borderRadius: 4,
-                                          background: badge.bg,
-                                          border: `1px solid ${badge.border}`,
-                                          color: badge.color,
-                                          fontSize: 10,
-                                          fontWeight: 600,
-                                          cursor: "pointer",
-                                        }}
-                                        title={`${ev.title}${ev.description ? ` - ${ev.description}` : ""
-                                          }`}
-                                      >
-                                        <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
-                                          <span style={{ fontSize: 9 }}>{badge.icon}</span>
-                                          {(!ev.shift_id || ev.shift_id === 0) && (
-                                            <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#7e22ce", color: "#fff", flexShrink: 0 }}>
-                                              CẢ NGÀY
-                                            </span>
-                                          )}
-                                          <span
-                                            style={{
-                                              overflow: "hidden",
-                                              textOverflow: "ellipsis",
-                                              whiteSpace: isExpanded ? "normal" : "nowrap",
-                                              flex: 1,
-                                            }}
-                                          >
-                                            {ev.title}
-                                          </span>
-                                        </div>
-                                        {isExpanded && ev.description && (
-                                          <div
-                                            style={{
-                                              fontSize: 9,
-                                              color: "#475569",
-                                              paddingLeft: 14,
-                                              lineHeight: 1.2,
-                                              opacity: 0.9,
-                                            }}
-                                          >
-                                            {ev.description}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                                  Báo vắng
+                                </button>
+                                {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
+                                  <button
+                                    onClick={() => openCreateEventModal(shift.id, day.dateStr)}
+                                    style={{
+                                      background: "#f3e8ff",
+                                      border: "1px solid #d8b4fe",
+                                      borderRadius: 4,
+                                      padding: "2px 5px",
+                                      fontSize: 9.5,
+                                      fontWeight: 800,
+                                      color: "#7e22ce",
+                                      cursor: "pointer",
+                                      lineHeight: 1,
+                                    }}
+                                    title="Thêm sự kiện vào ca này"
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
+                            {/* Expanded details (absent list) */}
+                            {isExpanded && absentInSlot.length > 0 && (
+                              <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fda4af", paddingTop: 4 }}>
+                                {absentInSlot.map((a) => (
+                                  <div
+                                    key={a.id}
+                                    style={{
+                                      fontSize: 10,
+                                      color: "#b91c1c",
+                                      background: "#fee2e2",
+                                      padding: "2px 6px",
+                                      borderRadius: 4,
+                                      fontWeight: 600,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <span>🔴 {a.full_name || a.username}</span>
+                                    <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>
+                                      {a.absence_reason || "Vắng mặt"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Expanded details (class conflicts) */}
+                            {isExpanded && conflictsInSlot.length > 0 && (
+                              <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fde68a", paddingTop: 4 }}>
+                                {conflictsInSlot.map((c, cIdx) => (
+                                  <div
+                                    key={`cf-${c.user_id}-${cIdx}`}
+                                    style={{
+                                      fontSize: 10,
+                                      color: "#92400e",
+                                      background: "#fffbeb",
+                                      padding: "2px 6px",
+                                      borderRadius: 4,
+                                      fontWeight: 600,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: 4,
+                                      border: "1px solid #fde68a",
+                                    }}
+                                    title={`Lớp: ${c.class_name || c.course_name || c.subject_name} (${c.class_time || `${c.start_time} - ${c.end_time}`})`}
+                                  >
+                                    <span>🎓 {c.user_name || c.full_name}</span>
+                                    <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.9 }}>
+                                      {c.course_code || "Lớp"}: {c.class_time || `${c.start_time}-${c.end_time}`}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Events list: ONLY rendered when events actually exist! */}
+                            {eventsInThisSlot.length > 0 && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 2, borderTop: "1px dashed #e2e8f0", paddingTop: 4 }}>
+                                {eventsInThisSlot.map((ev) => {
+                                  const badge = getEventTypeBadge(ev.event_type);
+                                  return (
+                                    <div
+                                      key={ev.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEventModal(shift, day, eventsInThisSlot);
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        flexDirection: isExpanded ? "column" : "row",
+                                        alignItems: isExpanded ? "flex-start" : "center",
+                                        gap: 3,
+                                        padding: isExpanded ? "4px 7px" : "2px 5px",
+                                        borderRadius: 4,
+                                        background: badge.bg,
+                                        border: `1px solid ${badge.border}`,
+                                        color: badge.color,
+                                        fontSize: 9.5,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                      title={`${ev.title}${ev.description ? ` - ${ev.description}` : ""}`}
+                                    >
+                                      <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
+                                        <span style={{ fontSize: 9 }}>{badge.icon}</span>
+                                        {(!ev.shift_id || ev.shift_id === 0) && (
+                                          <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#7e22ce", color: "#fff", flexShrink: 0 }}>
+                                            CẢ NGÀY
+                                          </span>
+                                        )}
+                                        <span
+                                          style={{
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: isExpanded ? "normal" : "nowrap",
+                                            flex: 1,
+                                          }}
+                                        >
+                                          {ev.title}
+                                        </span>
+                                      </div>
+                                      {isExpanded && ev.description && (
+                                        <div
+                                          style={{
+                                            fontSize: 9,
+                                            color: "#475569",
+                                            paddingLeft: 14,
+                                            lineHeight: 1.2,
+                                            opacity: 0.9,
+                                          }}
+                                        >
+                                          {ev.description}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </td>
                       );
