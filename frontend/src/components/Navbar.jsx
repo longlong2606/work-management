@@ -35,7 +35,6 @@ const ROLE_LABELS = {
   leader: { label: "Leader (Trưởng nhóm)", color: "#059669", bg: "#d1fae5" },
   contributor: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
   learning: { label: "Learning (Học viên)", color: "#8b5cf6", bg: "#f3e8ff" },
-  // Tương thích ngược
   manager: { label: "Manager (Quản lý)", color: "#2563eb", bg: "#dbeafe" },
   supervisor: { label: "Leader (Trưởng nhóm)", color: "#059669", bg: "#d1fae5" },
   technician: { label: "Contributor (Đóng góp)", color: "#0891b2", bg: "#cffafe" },
@@ -58,41 +57,53 @@ const TAB_TITLES = {
   tv: "TV Kiosk"
 };
 
+const TAB_ICONS = {
+  schedule: Calendar,
+  tasks: CheckSquare,
+  cp: Sparkles,
+  competency: Award,
+  notes: FileText,
+  feedback: MessageSquare,
+  staff: Users,
+  history: History,
+  emails: Mail,
+  smtp: Settings,
+  tv: Tv
+};
+
 export function Navbar({ activeTab, setActiveTab }) {
   const { user, logout, isAdmin, canManageStaff } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMobileModal, setShowMobileModal] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
 
-  // Click outside to close desktop dropdown
+  // Close drawer on Escape key
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && menuDrawerOpen) {
+        setMenuDrawerOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuDrawerOpen]);
 
   // 1. Menu chính
   const mainNavItems = [
-    { id: "schedule", label: "Lịch ca", icon: Calendar },
-    { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
-    { id: "cp", label: "Điểm CP", icon: Sparkles },
-    { id: "competency", label: "Năng lực", icon: Award },
-    { id: "notes", label: "Ghi chú", icon: FileText },
-    { id: "feedback", label: "Góp ý", icon: MessageSquare },
+    { id: "schedule", label: "Lịch ca", icon: Calendar, desc: "Lịch làm việc 9 ca & phân ca" },
+    { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare, desc: "Công việc, subtask & tiến độ" },
+    { id: "cp", label: "Điểm CP", icon: Sparkles, desc: "Điểm đóng góp & Bảng xếp hạng" },
+    { id: "competency", label: "Năng lực", icon: Award, desc: "Đánh giá & thang điểm năng lực" },
+    { id: "notes", label: "Ghi chú", icon: FileText, desc: "Sổ tay công việc & ca trực" },
+    { id: "feedback", label: "Góp ý", icon: MessageSquare, desc: "Hộp thư góp ý & phản hồi" },
   ];
 
   if (canManageStaff) {
-    mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users });
+    mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users, desc: "Danh sách thành viên & phòng ban" });
   }
 
-  // 2. Menu hệ thống & quản trị nâng cao
+  // 2. Menu hệ thống & quản trị
   const systemItems = [
     { id: "history", label: "Lịch sử ca (Audit Log)", icon: History, desc: "Nhật ký thay đổi & phân ca" },
     ...(isAdmin
@@ -103,19 +114,27 @@ export function Navbar({ activeTab, setActiveTab }) {
       : []),
   ];
 
-  const isSystemActive = systemItems.some((item) => item.id === activeTab);
+  // Quick primary items to display compactly on desktop navbar
+  const desktopQuickTabs = [
+    { id: "schedule", label: "Lịch ca", icon: Calendar },
+    { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
+    { id: "cp", label: "Điểm CP", icon: Sparkles },
+    ...(canManageStaff ? [{ id: "staff", label: "Nhân sự", icon: Users }] : []),
+  ];
 
   const handleSelectTab = (tabId) => {
     setActiveTab(tabId);
-    setMobileMenuOpen(false);
+    setMenuDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const userRoleMeta = ROLE_LABELS[user?.role] || {
-    label: user?.role || "Nhân viên",
+    label: user?.role || "Thành viên",
     color: "#2563eb",
     bg: "#eff6ff",
   };
+
+  const CurrentActiveIcon = TAB_ICONS[activeTab] || Calendar;
 
   return (
     <>
@@ -136,45 +155,120 @@ export function Navbar({ activeTab, setActiveTab }) {
             width: "100%",
             maxWidth: 1400,
             margin: "0 auto",
-            padding: "0 14px",
+            padding: "0 16px",
             boxSizing: "border-box",
             overflow: "visible",
           }}
         >
           {/* ========================================================= */}
-          {/* 1. GIAO DIỆN NAVBAR DESKTOP (Màn hình lớn >= 1025px)     */}
+          {/* 1. GIAO DIỆN NAVBAR DESKTOP (Màn hình lớn >= 1025px)      */}
           {/* ========================================================= */}
           <div className="navbar-desktop">
-            {/* LOGO & BRAND */}
+            {/* LEFT: NÚT 3 GẠCH MENU + BRAND LOGO + CURRENT PAGE BADGE */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
+              {/* NÚT 3 GẠCH (HAMBURGER MENU) CHO DESKTOP */}
+              <button
+                onClick={() => setMenuDrawerOpen(true)}
                 style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  background: "linear-gradient(135deg, #2563eb, #7c3aed)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ffffff",
-                  boxShadow: "0 4px 10px rgba(37, 99, 235, 0.25)",
+                  gap: 8,
+                  padding: "7px 13px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  background: menuDrawerOpen ? "#eff6ff" : "#f8fafc",
+                  color: menuDrawerOpen ? "#2563eb" : "#0f172a",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                  transition: "all 0.15s ease",
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#eff6ff";
+                  e.currentTarget.style.borderColor = "#93c5fd";
+                  e.currentTarget.style.color = "#2563eb";
+                }}
+                onMouseLeave={(e) => {
+                  if (!menuDrawerOpen) {
+                    e.currentTarget.style.background = "#f8fafc";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.color = "#0f172a";
+                  }
+                }}
+                title="Nhấn 3 gạch để mở toàn bộ Menu chức năng"
               >
-                <Clock size={20} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.3px", color: "#0f172a", lineHeight: 1.2 }}>
-                  WorkShift<span style={{ color: "#2563eb" }}>Pro</span>
+                <Menu size={18} color="#2563eb" strokeWidth={2.5} />
+                <span>Menu</span>
+              </button>
+
+              {/* BRAND LOGO */}
+              <div
+                onClick={() => handleSelectTab("schedule")}
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                title="Về trang chủ Lịch ca"
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#ffffff",
+                    boxShadow: "0 4px 10px rgba(37, 99, 235, 0.25)",
+                  }}
+                >
+                  <Clock size={19} />
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>
-                  Quản lý 9 Ca & Kiosk TV
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.3px", color: "#0f172a", lineHeight: 1.2 }}>
+                    WorkShift<span style={{ color: "#2563eb" }}>Pro</span>
+                  </div>
+                  <div style={{ fontSize: 10.5, color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>
+                    Quản lý 9 Ca & Kiosk TV
+                  </div>
                 </div>
               </div>
+
+              {/* CURRENT PAGE BADGE (Clickable to switch tab) */}
+              <button
+                onClick={() => setMenuDrawerOpen(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 11px",
+                  borderRadius: 20,
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  color: "#1d4ed8",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#dbeafe";
+                  e.currentTarget.style.borderColor = "#93c5fd";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#eff6ff";
+                  e.currentTarget.style.borderColor = "#bfdbfe";
+                }}
+                title="Trang hiện tại. Bấm để mở Menu đổi trang"
+              >
+                <CurrentActiveIcon size={14} color="#2563eb" />
+                <span>{TAB_TITLES[activeTab] || activeTab}</span>
+                <ChevronDown size={13} color="#2563eb" />
+              </button>
             </div>
 
-            {/* NAVIGATION TABS DESKTOP */}
-            <nav style={{ display: "flex", alignItems: "center", gap: 3, position: "relative", overflow: "visible" }}>
-              {mainNavItems.map((item) => {
+            {/* CENTER: GỌN GÀNG, KHÔNG RỐI MẮT VỚI THANH PILL NHANH */}
+            <nav style={{ display: "flex", alignItems: "center", gap: 4, position: "relative" }}>
+              {desktopQuickTabs.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -184,10 +278,10 @@ export function Navbar({ activeTab, setActiveTab }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 5,
-                      padding: "6px 9px",
+                      gap: 6,
+                      padding: "6px 12px",
                       borderRadius: 8,
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: isActive ? 700 : 600,
                       cursor: "pointer",
                       border: "none",
@@ -204,126 +298,41 @@ export function Navbar({ activeTab, setActiveTab }) {
                       if (!isActive) e.currentTarget.style.background = "transparent";
                     }}
                   >
-                    <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
+                    <Icon size={15} color={isActive ? "#2563eb" : "#64748b"} />
                     <span>{item.label}</span>
                   </button>
                 );
               })}
 
-              {/* DROPDOWN MENU HỆ THỐNG */}
-              {systemItems.length > 0 && (
-                <div style={{ position: "relative" }} ref={dropdownRef}>
-                  <button
-                    onClick={() => setShowDropdown(!showDropdown)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "6px 9px",
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: isSystemActive ? 700 : 600,
-                      cursor: "pointer",
-                      border: "none",
-                      whiteSpace: "nowrap",
-                      background: isSystemActive ? "#f1f5f9" : showDropdown ? "#f8fafc" : "transparent",
-                      color: isSystemActive ? "#1e293b" : "#475569",
-                      boxShadow: isSystemActive ? "inset 0 0 0 1.5px #cbd5e1" : "none",
-                      transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSystemActive) e.currentTarget.style.background = "#f8fafc";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSystemActive && !showDropdown) e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    <Settings size={15} color={isSystemActive ? "#0f172a" : "#64748b"} />
-                    <span>Hệ thống</span>
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        transform: showDropdown ? "rotate(180deg)" : "none",
-                        transition: "transform 0.2s ease",
-                      }}
-                    />
-                  </button>
-
-                  {/* Popup Dropdown Card */}
-                  {showDropdown && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 8px)",
-                        left: 0,
-                        width: 275,
-                        backgroundColor: "#ffffff",
-                        borderRadius: 14,
-                        border: "1px solid #cbd5e1",
-                        boxShadow: "0 16px 36px -6px rgba(15, 23, 42, 0.2), 0 6px 14px -3px rgba(15, 23, 42, 0.08)",
-                        padding: "8px",
-                        zIndex: 1000,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 4,
-                      }}
-                    >
-                      <div style={{ padding: "6px 10px 4px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        Nhật Ký & Cấu Hình
-                      </div>
-                      {systemItems.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = activeTab === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setActiveTab(item.id);
-                              setShowDropdown(false);
-                            }}
-                            style={{
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 10,
-                              padding: "8px 12px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: isActive ? "#eff6ff" : "transparent",
-                              cursor: "pointer",
-                              textAlign: "left",
-                              transition: "background 0.15s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isActive) e.currentTarget.style.background = "#f8fafc";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isActive) e.currentTarget.style.background = "transparent";
-                            }}
-                          >
-                            <div style={{ marginTop: 2, color: isActive ? "#2563eb" : "#64748b" }}>
-                              <Icon size={16} />
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: isActive ? 700 : 600, color: isActive ? "#2563eb" : "#1e293b" }}>
-                                {item.label}
-                              </div>
-                              {item.desc && (
-                                <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>
-                                  {item.desc}
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* NÚT THÊM... MỞ MENU 3 GẠCH */}
+              <button
+                onClick={() => setMenuDrawerOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "none",
+                  whiteSpace: "nowrap",
+                  background: "transparent",
+                  color: "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                title="Xem tất cả chức năng khác"
+              >
+                <span>Thêm</span>
+                <ChevronRight size={14} />
+              </button>
             </nav>
 
-            {/* RIGHT SIDE DESKTOP */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {/* RIGHT SIDE DESKTOP: TIỆN ÍCH, THÔNG BÁO, USER, ĐĂNG XUẤT */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               {/* Nút Mở trên Điện thoại (Mã QR) */}
               <button
                 onClick={() => setShowMobileModal(true)}
@@ -341,7 +350,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   transition: "all 0.15s ease",
                   flexShrink: 0,
                 }}
-                title="Quét mã QR để mở trang web trên điện thoại di động"
+                title="Quét mã QR để mở trang web trên điện thoại"
               >
                 <Smartphone size={16} />
               </button>
@@ -354,8 +363,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                   height: 34,
                   borderRadius: 8,
                   border: "1.5px solid #bfdbfe",
-                  background: "#eff6ff",
-                  color: "#1d4ed8",
+                  background: activeTab === "tv" ? "#2563eb" : "#eff6ff",
+                  color: activeTab === "tv" ? "#ffffff" : "#1d4ed8",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -363,7 +372,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   transition: "all 0.15s ease",
                   flexShrink: 0,
                 }}
-                title="Chuyển sang Màn hình Kiosk Smart TV (đường dẫn /tv)"
+                title="Chuyển sang Màn hình Kiosk Smart TV (/tv)"
               >
                 <Tv size={16} />
               </button>
@@ -448,18 +457,28 @@ export function Navbar({ activeTab, setActiveTab }) {
                   {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div style={{ textAlign: "left", whiteSpace: "nowrap" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", lineHeight: 1.1, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={user?.full_name || user?.username}>
+                  <div
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      lineHeight: 1.1,
+                      maxWidth: 120,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={user?.full_name || user?.username}
+                  >
                     {user?.full_name || user?.username}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
-                    <span style={{ fontSize: 10, color: userRoleMeta.color, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-                      <ShieldCheck size={10} /> {userRoleMeta.label}
+                    <span style={{ fontSize: 9.5, color: userRoleMeta.color, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
+                      <ShieldCheck size={10} /> {userRoleMeta.label.split(" ")[0]}
                     </span>
                   </div>
                 </div>
               </div>
-
-
 
               {/* Logout Button */}
               <button
@@ -476,7 +495,10 @@ export function Navbar({ activeTab, setActiveTab }) {
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#fee2e2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#fef2f2")}
                 title="Đăng xuất"
               >
                 <LogOut size={16} />
@@ -485,7 +507,7 @@ export function Navbar({ activeTab, setActiveTab }) {
           </div>
 
           {/* ========================================================= */}
-          {/* 2. GIAO DIỆN NAVBAR MOBILE & TABLET & LANDSCAPE (< 1025px)*/}
+          {/* 2. GIAO DIỆN NAVBAR MOBILE & TABLET (< 1025px)            */}
           {/* ========================================================= */}
           <div className="navbar-mobile">
             {/* BRAND & ACTIVE TAB BADGE */}
@@ -517,7 +539,7 @@ export function Navbar({ activeTab, setActiveTab }) {
                   padding: "2px 8px",
                   borderRadius: 12,
                   border: "1px solid #bfdbfe",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
                 }}
               >
                 {TAB_TITLES[activeTab] || activeTab}
@@ -588,34 +610,34 @@ export function Navbar({ activeTab, setActiveTab }) {
                 )}
               </button>
 
-              {/* Nút Hamburger menu */}
+              {/* Nút Hamburger menu (3 gạch) */}
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => setMenuDrawerOpen(!menuDrawerOpen)}
                 style={{
                   width: 34,
                   height: 34,
                   borderRadius: 8,
                   border: "1.5px solid #2563eb",
-                  background: mobileMenuOpen ? "#2563eb" : "#eff6ff",
-                  color: mobileMenuOpen ? "#ffffff" : "#2563eb",
+                  background: menuDrawerOpen ? "#2563eb" : "#eff6ff",
+                  color: menuDrawerOpen ? "#ffffff" : "#2563eb",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
-                title="Menu tất cả chức năng"
+                title="Menu tất cả chức năng (3 gạch)"
               >
-                {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                {menuDrawerOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
             </div>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* 3. MOBILE DRAWER MENU OVERLAY                             */}
+        {/* 3. SLIDE-OUT MENU DRAWER OVERLAY (CHO CẢ DESKTOP & MOBILE)*/}
         {/* ========================================================= */}
-        {mobileMenuOpen && (
+        {menuDrawerOpen && (
           <div
             style={{
               position: "fixed",
@@ -623,12 +645,12 @@ export function Navbar({ activeTab, setActiveTab }) {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(15, 23, 42, 0.4)",
+              backgroundColor: "rgba(15, 23, 42, 0.45)",
               backdropFilter: "blur(4px)",
-              zIndex: 105,
-              animation: "fadeIn 0.2s ease-out",
+              zIndex: 1000,
+              animation: "fadeInOverlay 0.2s ease-out",
             }}
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={() => setMenuDrawerOpen(false)}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -636,28 +658,47 @@ export function Navbar({ activeTab, setActiveTab }) {
                 position: "absolute",
                 top: 0,
                 right: 0,
-                width: "min(340px, 88vw)",
+                width: "min(360px, 90vw)",
                 height: "100%",
                 backgroundColor: "#ffffff",
-                boxShadow: "-8px 0 25px rgba(0, 0, 0, 0.15)",
+                boxShadow: "-8px 0 35px rgba(0, 0, 0, 0.18)",
                 display: "flex",
                 flexDirection: "column",
                 overflowY: "auto",
-                padding: "16px 14px",
-                gap: 12,
+                padding: "18px 16px",
+                gap: 14,
+                animation: "slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
               }}
             >
               {/* Drawer Top Header with close button */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Clock size={18} color="#2563eb" />
-                  <span style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>Menu Hệ Thống</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", lineHeight: 1.2 }}>
+                      WorkShift<span style={{ color: "#2563eb" }}>Pro</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>Menu Tất Cả Chức Năng</div>
+                  </div>
                 </div>
                 <button
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setMenuDrawerOpen(false)}
                   style={{
-                    width: 30,
-                    height: 30,
+                    width: 32,
+                    height: 32,
                     borderRadius: 8,
                     border: "1px solid #e2e8f0",
                     background: "#f8fafc",
@@ -665,30 +706,42 @@ export function Navbar({ activeTab, setActiveTab }) {
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    color: "#64748b"
+                    color: "#64748b",
+                    transition: "all 0.15s ease",
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fee2e2";
+                    e.currentTarget.style.color = "#dc2626";
+                    e.currentTarget.style.borderColor = "#fecaca";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#f8fafc";
+                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                  }}
+                  title="Đóng menu (Esc)"
                 >
-                  <X size={16} />
+                  <X size={17} />
                 </button>
               </div>
 
-              {/* User profile row in drawer */}
+              {/* User profile card in drawer */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "10px",
+                  padding: "12px",
                   backgroundColor: "#f8fafc",
                   borderRadius: 12,
                   border: "1px solid #e2e8f0",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
+                      width: 40,
+                      height: 40,
                       borderRadius: 10,
                       background: userRoleMeta.bg,
                       color: userRoleMeta.color,
@@ -696,18 +749,38 @@ export function Navbar({ activeTab, setActiveTab }) {
                       alignItems: "center",
                       justifyContent: "center",
                       fontWeight: 800,
-                      fontSize: 15,
+                      fontSize: 16,
+                      flexShrink: 0,
                     }}
                   >
                     {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
                   </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        color: "#0f172a",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={user?.full_name || user?.username}
+                    >
                       {user?.full_name || user?.username}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
-                      <span style={{ fontSize: 10, color: userRoleMeta.color, fontWeight: 700 }}>
-                        {userRoleMeta.label}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          color: userRoleMeta.color,
+                          fontWeight: 700,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <ShieldCheck size={11} /> {userRoleMeta.label}
                       </span>
                     </div>
                   </div>
@@ -715,38 +788,22 @@ export function Navbar({ activeTab, setActiveTab }) {
 
                 <button
                   onClick={() => {
-                    setMobileMenuOpen(false);
+                    setMenuDrawerOpen(false);
                     setShowProfileModal(true);
                   }}
                   className="btn btn-sm btn-secondary"
-                  style={{ fontSize: 11, padding: "5px 8px" }}
+                  style={{ fontSize: 11, padding: "5px 9px", flexShrink: 0, gap: 4 }}
+                  title="Xem hồ sơ & đổi mật khẩu"
                 >
                   <Key size={12} />
                   <span>Đổi MK</span>
                 </button>
               </div>
 
-              {/* Landscape tip badge */}
-              <div
-                style={{
-                  background: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                  borderRadius: 10,
-                  padding: "8px 10px",
-                  fontSize: 11,
-                  color: "#1e40af",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <RotateCcw size={14} color="#2563eb" style={{ flexShrink: 0 }} />
-                <span>Mẹo: Bạn có thể <strong>xoay ngang điện thoại</strong> để xem toàn bộ 9 ca làm việc cực kỳ rộng rãi!</span>
-              </div>
-
-              {/* Menu items list */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "4px 8px" }}>
+              {/* MENU ITEMS LIST */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+                {/* 1. CHỨC NĂNG CHÍNH */}
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "6px 8px 2px", letterSpacing: "0.5px" }}>
                   Chức Năng Chính
                 </div>
                 {mainNavItems.map((item) => {
@@ -760,8 +817,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "10px 12px",
-                        borderRadius: 8,
+                        padding: "9px 12px",
+                        borderRadius: 10,
                         border: "none",
                         background: isActive ? "#eff6ff" : "transparent",
                         color: isActive ? "#2563eb" : "#1e293b",
@@ -770,51 +827,117 @@ export function Navbar({ activeTab, setActiveTab }) {
                         cursor: "pointer",
                         textAlign: "left",
                         width: "100%",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) e.currentTarget.style.background = "#f8fafc";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) e.currentTarget.style.background = "transparent";
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                        <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
-                        <span>{item.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 8,
+                            background: isActive ? "#dbeafe" : "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: isActive ? "#2563eb" : "#64748b",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon size={16} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: isActive ? 800 : 600 }}>{item.label}</div>
+                          {item.desc && (
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {item.desc}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <ChevronRight size={15} color={isActive ? "#2563eb" : "#cbd5e1"} />
                     </button>
                   );
                 })}
 
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "6px 8px 2px" }}>
-                  Hệ Thống & Quản Trị
+                {/* 2. HỆ THỐNG & QUẢN TRỊ */}
+                {systemItems.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "10px 8px 2px", letterSpacing: "0.5px" }}>
+                      Hệ Thống & Quản Trị
+                    </div>
+                    {systemItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelectTab(item.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "9px 12px",
+                            borderRadius: 10,
+                            border: "none",
+                            background: isActive ? "#eff6ff" : "transparent",
+                            color: isActive ? "#2563eb" : "#1e293b",
+                            fontWeight: isActive ? 800 : 600,
+                            fontSize: 13,
+                            cursor: "pointer",
+                            textAlign: "left",
+                            width: "100%",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) e.currentTarget.style.background = "#f8fafc";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                            <div
+                              style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 8,
+                                background: isActive ? "#dbeafe" : "#f1f5f9",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: isActive ? "#2563eb" : "#64748b",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Icon size={16} />
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: isActive ? 800 : 600 }}>{item.label}</div>
+                              {item.desc && (
+                                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {item.desc}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight size={15} color={isActive ? "#2563eb" : "#cbd5e1"} />
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* 3. TIỆN ÍCH */}
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", padding: "10px 8px 2px", letterSpacing: "0.5px" }}>
+                  Tiện Ích & Kết Nối
                 </div>
-                {systemItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleSelectTab(item.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "10px 12px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: isActive ? "#eff6ff" : "transparent",
-                        color: isActive ? "#2563eb" : "#1e293b",
-                        fontWeight: isActive ? 800 : 600,
-                        fontSize: 13,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        width: "100%",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                        <Icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
-                        <span>{item.label}</span>
-                      </div>
-                      <ChevronRight size={15} color={isActive ? "#2563eb" : "#cbd5e1"} />
-                    </button>
-                  );
-                })}
 
                 {/* Chuyển Màn hình TV */}
                 <button
@@ -823,8 +946,8 @@ export function Navbar({ activeTab, setActiveTab }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "10px 12px",
-                    borderRadius: 8,
+                    padding: "9px 12px",
+                    borderRadius: 10,
                     border: "none",
                     background: activeTab === "tv" ? "#eff6ff" : "transparent",
                     color: activeTab === "tv" ? "#2563eb" : "#1e293b",
@@ -833,11 +956,35 @@ export function Navbar({ activeTab, setActiveTab }) {
                     cursor: "pointer",
                     textAlign: "left",
                     width: "100%",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== "tv") e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== "tv") e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <Tv size={16} color="#2563eb" />
-                    <span>Màn hình Kiosk TV (/tv)</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        background: activeTab === "tv" ? "#dbeafe" : "#f1f5f9",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#2563eb",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Tv size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Màn hình Kiosk TV</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>Chế độ trình chiếu Kiosk Smart TV (/tv)</div>
+                    </div>
                   </div>
                   <ChevronRight size={15} color="#cbd5e1" />
                 </button>
@@ -845,15 +992,15 @@ export function Navbar({ activeTab, setActiveTab }) {
                 {/* Mã QR điện thoại */}
                 <button
                   onClick={() => {
-                    setMobileMenuOpen(false);
+                    setMenuDrawerOpen(false);
                     setShowMobileModal(true);
                   }}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "10px 12px",
-                    borderRadius: 8,
+                    padding: "9px 12px",
+                    borderRadius: 10,
                     border: "none",
                     background: "transparent",
                     color: "#0f172a",
@@ -862,18 +1009,38 @@ export function Navbar({ activeTab, setActiveTab }) {
                     cursor: "pointer",
                     textAlign: "left",
                     width: "100%",
+                    transition: "all 0.15s ease",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <Smartphone size={16} color="#7c3aed" />
-                    <span>Mã QR kết nối Điện thoại</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        background: "#f3e8ff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#7c3aed",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Smartphone size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Mã QR Điện Thoại</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>Quét mã để truy cập nhanh trên mobile</div>
+                    </div>
                   </div>
                   <ChevronRight size={15} color="#cbd5e1" />
                 </button>
               </div>
 
               {/* Drawer footer with logout */}
-              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 10, marginTop: "auto" }}>
+              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: "auto" }}>
                 <button
                   onClick={logout}
                   style={{
@@ -883,17 +1050,20 @@ export function Navbar({ activeTab, setActiveTab }) {
                     gap: 8,
                     width: "100%",
                     padding: "10px",
-                    borderRadius: 8,
+                    borderRadius: 10,
                     border: "1.5px solid #fecaca",
                     background: "#fef2f2",
                     color: "#dc2626",
                     fontWeight: 700,
                     fontSize: 13,
                     cursor: "pointer",
+                    transition: "all 0.15s ease",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#fee2e2")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fef2f2")}
                 >
-                  <LogOut size={15} />
-                  <span>Đăng xuất</span>
+                  <LogOut size={16} />
+                  <span>Đăng xuất khỏi hệ thống</span>
                 </button>
               </div>
             </div>
@@ -902,97 +1072,76 @@ export function Navbar({ activeTab, setActiveTab }) {
       </header>
 
       {/* ========================================================= */}
-      {/* 4. THANH ĐIỀU HƯỚNG DƯỚI CÙNG (BOTTOM BAR PREMIUM CAPSULE) */}
+      {/* 4. THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO MOBILE (BOTTOM BAR)     */}
       {/* ========================================================= */}
       <nav className="mobile-bottom-bar">
         {[
           { id: "schedule", label: "Lịch ca", icon: Calendar },
           { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
-    { id: "competency", label: "Năng lực", icon: Award },
+          { id: "cp", label: "Điểm CP", icon: Sparkles },
           { id: "notes", label: "Ghi chú", icon: FileText },
-          { id: "feedback", label: "Góp ý", icon: MessageSquare },
+          { id: "menu", label: "Menu", icon: Menu, isMenuToggle: true },
         ].map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = item.isMenuToggle ? menuDrawerOpen : activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => handleSelectTab(item.id)}
+              onClick={() => {
+                if (item.isMenuToggle) {
+                  setMenuDrawerOpen(!menuDrawerOpen);
+                } else {
+                  handleSelectTab(item.id);
+                }
+              }}
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 flex: 1,
+                height: "100%",
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
-                padding: "2px 0",
+                padding: "4px 2px",
                 color: isActive ? "#2563eb" : "#64748b",
                 transition: "all 0.15s ease",
-                userSelect: "none",
               }}
             >
               <div
                 style={{
+                  padding: "3px 12px",
+                  borderRadius: 16,
+                  background: isActive ? "#eff6ff" : "transparent",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: 40,
-                  height: 26,
-                  borderRadius: 13,
-                  background: isActive ? "#eff6ff" : "transparent",
-                  transition: "background 0.15s ease",
+                  transition: "all 0.15s ease",
                 }}
               >
-                <Icon size={18} color={isActive ? "#2563eb" : "#64748b"} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={19} color={isActive ? "#2563eb" : "#64748b"} strokeWidth={isActive ? 2.5 : 2} />
               </div>
-              <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, marginTop: 1 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: isActive ? 800 : 500,
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {item.label}
               </span>
             </button>
           );
         })}
-
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "2px 0",
-            color: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b",
-            transition: "all 0.15s ease",
-            userSelect: "none",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 40,
-              height: 26,
-              borderRadius: 13,
-              background: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#eff6ff" : "transparent",
-            }}
-          >
-            <Menu size={18} color={(mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? "#2563eb" : "#64748b"} strokeWidth={2} />
-          </div>
-          <span style={{ fontSize: 10, fontWeight: (mobileMenuOpen || !["schedule", "tasks", "notes", "feedback"].includes(activeTab)) ? 800 : 600, marginTop: 1 }}>
-            Menu
-          </span>
-        </button>
       </nav>
 
-      {/* MODALS */}
-      <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
-      <MobileConnectModal isOpen={showMobileModal} onClose={() => setShowMobileModal(false)} />
+      {/* ========================================================= */}
+      {/* 5. CÁC MODAL HỆ THỐNG                                     */}
+      {/* ========================================================= */}
+      {showProfileModal && <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />}
+      {showMobileModal && <MobileConnectModal isOpen={showMobileModal} onClose={() => setShowMobileModal(false)} />}
     </>
   );
 }
