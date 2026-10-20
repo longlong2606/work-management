@@ -840,7 +840,8 @@ export function TasksPage() {
               const totalSub = subtasks.length;
               const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
-              const isLeaderOrAdmin = isAdmin || isCore || isLeader || taskDetail.task.leader_id === user?.id;
+              const isTaskAssignee = Number(taskDetail.task.leader_id) === Number(user?.id);
+              const canManageTaskSubtasks = isAdmin || isTaskAssignee;
 
               return (
                 <div
@@ -977,8 +978,8 @@ export function TasksPage() {
                       </div>
                     </div>
 
-                    {/* ADMIN / LEADER ACTION BUTTONS (FINISH & POSTPONE) */}
-                    {isLeaderOrAdmin && (
+                    {/* ACTION BUTTONS (FINISH & POSTPONE) */}
+                    {canManageTaskSubtasks && (
                       <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
                         {taskDetail.task.status !== "FINISHED" && (
                           <button
@@ -1005,7 +1006,7 @@ export function TasksPage() {
                           </button>
                         )}
 
-                        {(hasAdminRights || isLeaderOrAdmin) && (
+                        {(hasAdminRights || canManageTaskSubtasks) && (
                           <button
                             onClick={() => handleDeleteTask(taskDetail.task.id)}
                             style={{
@@ -1078,7 +1079,7 @@ export function TasksPage() {
                         </p>
                       </div>
 
-                      {isLeaderOrAdmin && (
+                      {canManageTaskSubtasks && (
                         <button
                           onClick={() => setShowAddSubtaskModal(true)}
                           style={{
@@ -1107,7 +1108,7 @@ export function TasksPage() {
                       <div style={{ padding: "40px 0", textAlign: "center", border: "1.5px dashed #cbd5e1", borderRadius: 10, color: "#64748b" }}>
                         <CheckSquare size={32} style={{ color: "#94a3b8", marginBottom: 8 }} />
                         <div style={{ fontWeight: 600 }}>Nhiệm vụ này chưa có mục việc checklist nào.</div>
-                        {isLeaderOrAdmin && (
+                        {canManageTaskSubtasks && (
                           <button
                             onClick={() => setShowAddSubtaskModal(true)}
                             style={{
@@ -1252,7 +1253,7 @@ export function TasksPage() {
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center" }}>
                                   {/* 1. Member submits */}
-                                  {sub.status === "PROCESSING" && (isAssignedToMe || isLeaderOrAdmin) && (
+                                  {sub.status === "PROCESSING" && (isAssignedToMe || canManageTaskSubtasks) && (
                                     <button
                                       onClick={() => handleSubmitSubtask(sub.id)}
                                       style={{
@@ -1276,7 +1277,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* 2. Leader reviews */}
-                                  {sub.status === "REVIEW" && isLeaderOrAdmin && (
+                                  {sub.status === "REVIEW" && canManageTaskSubtasks && (
                                     <button
                                       onClick={() => {
                                         setReviewModalSubtask({ id: sub.id, title: sub.title });
@@ -1303,7 +1304,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Delete subtask */}
-                                  {isLeaderOrAdmin && (
+                                  {canManageTaskSubtasks && (
                                     <button
                                       onClick={() => handleDeleteSubtask(sub.id)}
                                       style={{
@@ -1354,7 +1355,10 @@ export function TasksPage() {
           onClose={() => setShowAddSubtaskModal(false)}
           taskId={taskDetail.task.id}
           taskDeadline={taskDetail.task.deadline}
-          allMembers={allMembers}
+          assignedLeader={{
+            id: taskDetail.task.leader_id,
+            name: taskDetail.task.leader_name
+          }}
           onSuccess={() => {
             refreshTaskDetail(taskDetail.task.id);
             showToast("Đã thêm mục việc thành công!");
@@ -1752,7 +1756,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Trưởng nhóm phụ trách <span style={{ color: "#ef4444" }}>*</span>
+                  Giao nhiệm vụ cho thành viên <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <select
                   value={leaderId}
@@ -1928,12 +1932,11 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
 
 /* ================= MODAL COMPONENT: ADD SUBTASK (BỐ CỤC CHUẨN TIẾNG VIỆT) ================= */
-function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, onSuccess }) {
+function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [cpPoints, setCpPoints] = useState(20);
-  const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1951,7 +1954,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
         title: title.trim(),
         description: description.trim(),
         due_at: dueAt ? dueAt.replace("T", " ") : "",
-        assignee_ids: selectedAssignees,
+        assignee_ids: assignedLeader?.id ? [assignedLeader.id] : [],
         cp_points: Number(cpPoints) || 0,
       });
       onSuccess();
@@ -1993,7 +1996,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
-            Thêm Mục Việc (Trưởng Nhóm)
+            Thêm Mục Việc Checklist
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
@@ -2009,7 +2012,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Tiêu đề:
+              Tiêu đề mục việc: <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="text"
@@ -2051,39 +2054,42 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-              Thành viên phụ trách:
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Thành viên được giao mục việc:
             </label>
-            <select
-              multiple
-              size={4}
-              value={selectedAssignees.map(String)}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, (option) => parseInt(option.value));
-                setSelectedAssignees(selected);
-              }}
+            <div
               style={{
-                width: "100%",
-                padding: "6px 8px",
-                borderRadius: 8,
-                border: "1px solid #cbd5e1",
-                fontSize: 13,
-                boxSizing: "border-box",
-                outlineColor: "#93c5fd",
-                background: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                background: "#f0fdf4",
+                border: "1.5px solid #86efac",
+                borderRadius: 10,
+                color: "#166534",
+                fontSize: 13.5,
               }}
             >
-              {allMembers.map((m) => {
-                const roleLabel = m.role === "admin" ? "Quản trị" : m.role === "leader" ? "Trưởng nhóm" : "Thành viên";
-                return (
-                  <option key={m.id} value={m.id} style={{ padding: "4px 8px", borderRadius: 4, margin: "1px 0" }}>
-                    @{m.username} [{roleLabel}] - {m.full_name}
-                  </option>
-                );
-              })}
-            </select>
-            <small style={{ fontSize: 11, color: "#64748b", marginTop: 2, display: "block" }}>
-              (Giữ phím Ctrl để chọn nhiều thành viên)
+              <User size={18} color="#16a34a" />
+              <div>
+                <strong>{assignedLeader?.name || "Người phụ trách nhiệm vụ"}</strong>
+              </div>
+              <span
+                style={{
+                  marginLeft: "auto",
+                  background: "#dcfce7",
+                  color: "#15803d",
+                  padding: "3px 8px",
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                Người nhận nhiệm vụ
+              </span>
+            </div>
+            <small style={{ fontSize: 11, color: "#64748b", marginTop: 4, display: "block" }}>
+              Nhiệm vụ này đã giao cho {assignedLeader?.name || "người phụ trách"}, do đó mục việc này sẽ được phân công trực tiếp cho thành viên này.
             </small>
           </div>
 
@@ -2110,6 +2116,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
                 }}
               />
             </div>
+
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
                 Hạn chót:
@@ -2117,6 +2124,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
               <input
                 type="datetime-local"
                 value={dueAt}
+                max={taskDeadline ? taskDeadline.replace(" ", "T") : undefined}
                 onChange={(e) => setDueAt(e.target.value)}
                 style={{
                   width: "100%",
@@ -2136,33 +2144,33 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, allMembers, on
               type="button"
               onClick={onClose}
               style={{
-                background: "#52525b",
-                color: "#ffffff",
-                border: "none",
-                padding: "8px 24px",
-                borderRadius: 999,
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#475569",
+                fontSize: 13,
                 fontWeight: 600,
-                fontSize: 14,
                 cursor: "pointer",
               }}
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="submit"
               disabled={loading}
               style={{
-                background: "#0d6efd",
-                color: "#ffffff",
+                padding: "8px 18px",
+                borderRadius: 8,
                 border: "none",
-                padding: "8px 24px",
-                borderRadius: 999,
+                background: "#2563eb",
+                color: "#ffffff",
+                fontSize: 13,
                 fontWeight: 600,
-                fontSize: 14,
                 cursor: "pointer",
               }}
             >
-              {loading ? "Đang thêm..." : "Thêm Mục Việc"}
+              {loading ? "Đang lưu..." : "Thêm mục việc"}
             </button>
           </div>
         </form>

@@ -398,24 +398,10 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
             cpPoints
         });
 
-    // Handle Assignees and % contributions
-    if (req.assignee_contributions != null && req.assignee_contributions.Any())
-    {
-        foreach (var ac in req.assignee_contributions)
-        {
-            conn.Execute("INSERT OR REPLACE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @pct)",
-                new { subtaskId, uid = ac.user_id, pct = ac.contribution_pct });
-        }
-    }
-    else if (req.assignee_ids != null && req.assignee_ids.Any())
-    {
-        int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
-        foreach (var uid in req.assignee_ids)
-        {
-            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct)",
-                new { subtaskId, uid, defaultPct });
-        }
-    }
+    // Subtask trong nhiem vu luon duoc giao truc tiep cho nguoi phu trach nhiem vu (vi du: Cong)
+    long taskAssigneeId = (long)task.leader_id;
+    conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, 100)",
+        new { subtaskId, uid = taskAssigneeId });
 
     // Auto transition parent task from OPEN to IN_PROGRESS
     if ((string)task.status == "OPEN")
