@@ -1,4 +1,3 @@
-import { CompetencyScorecardPage } from "./CompetencyScorecardPage";
 import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -481,7 +480,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             Quản Lý Tổ Chức & Nhân Sự
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-            Quản lý tập trung tài khoản nhân viên, sơ đồ phòng ban và cấu hình vai trò & quyền hạn (RBAC)
+            Quản lý tập trung tài khoản nhân sự và cấu hình vai trò & quyền hạn (RBAC)
           </p>
         </div>
 
@@ -496,15 +495,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               <UserPlus size={16} /> Cấp Tài Khoản Mới
             </button>
           )}
-          {activeTab === "departments" && (
-            <button
-              onClick={handleOpenAddDept}
-              className="btn btn-primary"
-              style={{ boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)", display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <Plus size={16} /> Thêm Phòng Ban Mới
-            </button>
-          )}
+          
           {activeTab === "roles" && (
             <button
               onClick={handleOpenAddRole}
@@ -517,68 +508,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       </div>
 
-      {/* Competency Radar Banner Alert */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)",
-          border: "1px solid #c4b5fd",
-          borderRadius: 14,
-          padding: "12px 18px",
-          marginBottom: 18,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: "#7c3aed",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 10px rgba(124, 58, 237, 0.25)",
-              flexShrink: 0
-            }}
-          >
-            <Award size={20} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "#1e1b4b" }}>
-              Bảng Điểm Đánh Giá Năng Lực Thành Viên (Biểu Đồ Tam Giác Blue Lock)
-            </div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>
-              Đã tích hợp 3 trụ cột (Quản lý, Kỹ thuật, Research) & 5 cấp bậc vai trò theo bảng đánh giá Lab.
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={() => setActiveTab("competency")}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            background: "#7c3aed",
-            color: "#ffffff",
-            border: "none",
-            fontWeight: 800,
-            fontSize: 12.5,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.3)",
-          }}
-        >
-          <span>Xem Thẻ Điểm Ngay</span>
-          <ChevronRight size={15} />
-        </button>
-      </div>
+      
 
       {/* Sub-Navigation Tabs (Touch-scrollable on mobile) */}
       <div style={{
@@ -612,26 +542,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           <Users size={16} /> Danh Sách Nhân Sự ({users.length})
         </button>
 
-        <button
-          onClick={() => setActiveTab("departments")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: "8px 8px 0 0",
-            fontWeight: 700,
-            fontSize: 14,
-            border: "none",
-            cursor: "pointer",
-            background: activeTab === "departments" ? "var(--surface)" : "transparent",
-            color: activeTab === "departments" ? "#2563eb" : "var(--text-muted)",
-            borderBottom: activeTab === "departments" ? "3px solid #2563eb" : "3px solid transparent",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            transition: "all 0.15s ease"
-          }}
-        >
-          <Building2 size={16} /> Quản Lý Phòng Ban / Tổ Trực ({departments.length})
-        </button>
+        
 
         <button
           onClick={() => setActiveTab("roles")}
@@ -654,28 +565,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           <Shield size={16} /> Quản Lý Vai Trò & Quyền Hạn ({roles.length})
         </button>
 
-        <button
-          onClick={() => setActiveTab("competency")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: "8px 8px 0 0",
-            fontWeight: 700,
-            fontSize: 14,
-            border: "none",
-            cursor: "pointer",
-            background: activeTab === "competency" ? "var(--surface)" : "transparent",
-            color: activeTab === "competency" ? "#7c3aed" : "var(--text-muted)",
-            borderBottom: activeTab === "competency" ? "3px solid #7c3aed" : "3px solid transparent",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap"
-          }}
-        >
-          <Award size={16} color={activeTab === "competency" ? "#7c3aed" : "currentColor"} />
-          <span>Bảng Điểm Năng Lực (Radar Tam Giác)</span>
-        </button>
+        
       </div>
 
       {/* ======================================================== */}
@@ -885,24 +775,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                           </td>
                           <td style={{ padding: "14px 20px", textAlign: "center" }}>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              <button
-                                onClick={() => setActiveTab("competency")}
-                                className="btn btn-secondary btn-sm"
-                                style={{
-                                  padding: "5px 10px",
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  color: "#6d28d9",
-                                  background: "#f5f3ff",
-                                  border: "1px solid #ddd6fe",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4
-                                }}
-                                title={`Xem thẻ điểm năng lực & biểu đồ radar tam giác của ${u.full_name}`}
-                              >
-                                <Award size={13} /> Thẻ Điểm
-                              </button>
+                              
                               <button
                                 onClick={() => handleOpenReset(u)}
                                 className="btn btn-secondary btn-sm"
@@ -952,163 +825,8 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* TAB 2: QUẢN LÝ PHÒNG BAN / TỔ TRỰC                        */}
-      {/* ======================================================== */}
-      {activeTab === "departments" && (
-        <div>
-          {/* Department Stats */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 16,
-            marginBottom: 20
-          }}>
-            <div className="glass-card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "#dbeafe", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Building2 size={24} />
-              </div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{departments.length}</div>
-                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Tổng số phòng ban / tổ trực</div>
-              </div>
-            </div>
-
-            <div className="glass-card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "#d1fae5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Users size={24} />
-              </div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>
-                  {departments.reduce((sum, d) => sum + (d.member_count || 0), 0)}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Nhân sự đã phân bổ theo phòng</div>
-              </div>
-            </div>
-
-            <div className="glass-card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Briefcase size={24} />
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {departments.length > 0 ? [...departments].sort((a,b) => (b.member_count||0) - (a.member_count||0))[0]?.name : "---"}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Phòng ban có đông nhân sự nhất</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Department Cards Grid */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
-            gap: 16
-          }}>
-            {departments.map((dept) => (
-              <div key={dept.id} className="glass-card" style={{
-                padding: "20px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                position: "relative",
-                borderTop: `4px solid ${dept.color || "#2563eb"}`
-              }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
-                        {dept.name}
-                      </h3>
-                      {dept.code && (
-                        <span style={{
-                          display: "inline-block",
-                          marginTop: 4,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: "2px 6px",
-                          borderRadius: 4,
-                          background: "#f1f5f9",
-                          color: "#475569"
-                        }}>
-                          Mã: {dept.code}
-                        </span>
-                      )}
-                    </div>
-                    <span style={{
-                      padding: "4px 10px",
-                      borderRadius: 20,
-                      background: "#eff6ff",
-                      color: "#1d4ed8",
-                      fontSize: 12,
-                      fontWeight: 700
-                    }}>
-                      {dept.member_count || 0} thành viên
-                    </span>
-                  </div>
-
-                  <p style={{
-                    fontSize: 13,
-                    color: "var(--text-muted)",
-                    margin: "10px 0 16px 0",
-                    lineHeight: 1.4,
-                    minHeight: 38
-                  }}>
-                    {dept.description || "Chưa có mô tả chức năng cho phòng ban này."}
-                  </p>
-
-                  <div style={{
-                    fontSize: 12,
-                    color: "#475569",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#f8fafc",
-                    marginBottom: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6
-                  }}>
-                    <UserCheck size={14} color="#64748b" />
-                    <span>Phụ trách: <strong>{dept.manager_name || "Chưa bổ nhiệm"}</strong></span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 8,
-                  paddingTop: 12,
-                  borderTop: "1px solid var(--border)"
-                }}>
-                  <button
-                    onClick={() => handleOpenEditDept(dept)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
-                  >
-                    <Edit3 size={13} /> Chỉnh sửa
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget({ type: "department", item: dept })}
-                    className="btn btn-secondary btn-sm"
-                    style={{
-                      fontSize: 12,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      color: "#dc2626",
-                      borderColor: "#fecaca"
-                    }}
-                    title="Xóa phòng ban này"
-                  >
-                    <Trash2 size={13} /> Xóa
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      
+      
 
       {/* ======================================================== */}
       {/* TAB 3: QUẢN LÝ VAI TRÒ & QUYỀN HẠN (RBAC)                 */}
@@ -1275,14 +993,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* TAB 4: BẢNG ĐIỂM NĂNG LỰC & BIỂU ĐỒ RADAR TAM GIÁC       */}
-      {/* ======================================================== */}
-      {activeTab === "competency" && (
-        <div style={{ marginTop: 8 }}>
-          <CompetencyScorecardPage />
-        </div>
-      )}
+      
 
       {/* ======================================================== */}
       {/* MODAL 1: CẤP TÀI KHOẢN MỚI (DYNAMIC ROLES & DEPTS)       */}
@@ -1381,13 +1092,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <label className="form-label" style={{ margin: 0 }}>Phòng ban / Tổ trực:</label>
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddModal(false); handleOpenAddDept(); }}
-                      style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
-                    >
-                      + Thêm mới
-                    </button>
+                    
                   </div>
                   <select
                     className="form-input"
@@ -1722,136 +1427,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* MODAL 4: THÊM / SỬA PHÒNG BAN                            */}
-      {/* ======================================================== */}
-      {showDeptModal && (
-        <div className="modal-overlay" onClick={() => setShowDeptModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: "26px", maxWidth: 500 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  background: "#eff6ff",
-                  color: "#2563eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-                    {editingDept ? "Chỉnh Sửa Phòng Ban / Tổ Trực" : "Thêm Phòng Ban / Tổ Trực Mới"}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-                    Quản lý cơ cấu tổ chức và phân chia nhân lực
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowDeptModal(false)} style={{ border: "none", background: "none", cursor: "pointer" }}>
-                <X size={20} color="#94a3b8" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveDepartment}>
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label className="form-label">Tên phòng ban / tổ trực: *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={deptName}
-                  onChange={(e) => setDeptName(e.target.value)}
-                  placeholder="ví dụ: Tổ Trực Ca Đêm"
-                  required
-                />
-              </div>
-
-              <div className="staff-modal-grid-2col" style={{ marginBottom: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Mã viết tắt:</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={deptCode}
-                    onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
-                    placeholder="ví dụ: CA_DEM"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Người phụ trách:</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={deptManager}
-                    onChange={(e) => setDeptManager(e.target.value)}
-                    placeholder="Họ tên trưởng nhóm"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label className="form-label">Mô tả chức năng & nhiệm vụ:</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={deptDesc}
-                  onChange={(e) => setDeptDesc(e.target.value)}
-                  placeholder="Mô tả phạm vi trách nhiệm của tổ trực..."
-                />
-              </div>
-
-              {/* Color Presets */}
-              <div className="form-group" style={{ marginBottom: 20 }}>
-                <label className="form-label">Màu nhận diện phòng ban:</label>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {COLOR_PRESETS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setDeptColor(c)}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: c,
-                        border: deptColor === c ? "3px solid #0f172a" : "2px solid #fff",
-                        cursor: "pointer",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.15)"
-                      }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={deptColor}
-                    onChange={(e) => setDeptColor(e.target.value)}
-                    style={{ width: 34, height: 32, borderRadius: 6, border: "1px solid var(--border)", cursor: "pointer" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowDeptModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={deptSubmitting}
-                  className="btn btn-primary"
-                >
-                  {deptSubmitting ? "Đang lưu..." : (editingDept ? "Cập Nhật" : "Tạo Phòng Ban")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      
 
       {/* ======================================================== */}
       {/* MODAL 5: THÊM / SỬA VAI TRÒ (ROLES & PERMISSIONS)        */}
