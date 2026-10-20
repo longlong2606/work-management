@@ -1936,7 +1936,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
-  const [cpPoints, setCpPoints] = useState(20);
+  const [cpPoints, setCpPoints] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -2101,10 +2101,10 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
               <input
                 type="number"
                 min="0"
-                step="5"
+                step="1"
                 value={cpPoints}
                 onChange={(e) => setCpPoints(e.target.value)}
-                placeholder="20"
+                placeholder="VD: 1, 2, 3, 5..."
                 style={{
                   width: "100%",
                   padding: "8px 12px",
