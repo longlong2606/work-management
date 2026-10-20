@@ -63,6 +63,8 @@ export function SchedulePage() {
     }
     return d.toISOString().split("T")[0];
   });
+  const [mondayDate, setMondayDate] = useState(() => getMonday(new Date()));
+  const [weekDays, setWeekDays] = useState(() => getDaysOfWeek(getMonday(new Date())));
 
   // Tự động bỏ qua Chủ nhật (phòng trường hợp chọn hoặc tính toán rơi vào Chủ nhật)
   useEffect(() => {
@@ -78,8 +80,6 @@ export function SchedulePage() {
       }
     }
   }, [currentDate, mondayDate]);
-  const [mondayDate, setMondayDate] = useState(() => getMonday(new Date()));
-  const [weekDays, setWeekDays] = useState(() => getDaysOfWeek(getMonday(new Date())));
 
   const [schedule, setSchedule] = useState([]);
   const [events, setEvents] = useState([]);
