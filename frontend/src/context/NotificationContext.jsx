@@ -18,11 +18,13 @@ export function NotificationProvider({ children }) {
     }
     try {
       const data = await api.getNotifications();
-      setNotifications(data);
-      const unread = data.filter((n) => !n.is_read).length;
-      setUnreadCount(unread);
+      if (Array.isArray(data)) {
+        setNotifications(data);
+        const unread = data.filter((n) => !n.is_read).length;
+        setUnreadCount(unread);
+      }
     } catch (err) {
-      console.error("Failed to load notifications:", err);
+      console.warn("Failed to load notifications (network error or unauthorized):", err.message || err);
     }
   }, [user]);
 

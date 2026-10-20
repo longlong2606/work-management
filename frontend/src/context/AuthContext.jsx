@@ -19,8 +19,17 @@ export function AuthProvider({ children }) {
           setUser(profile);
           localStorage.setItem("wm_user", JSON.stringify(profile));
         } catch (err) {
-          console.error("Auth check failed:", err);
-          logout();
+          console.warn("Auth check error:", err.message || err);
+          const isUnauthorized = err?.message?.includes("401") || err?.message?.includes("Phiên đăng nhập") || err?.status === 401;
+          if (isUnauthorized) {
+            logout();
+          } else {
+            // Giữ session nếu chỉ là lỗi mạng tạm thời
+            const saved = localStorage.getItem("wm_user");
+            if (saved) {
+              try { setUser(JSON.parse(saved)); } catch (_) {}
+            }
+          }
         }
       }
       setLoading(false);
