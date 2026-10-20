@@ -53,7 +53,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ username, password }),
     }),
-  getProfile: () => request("/auth/me"),
+  getProfile: () => request(`/auth/me?_t=${Date.now()}`),
   forgotPassword: (identifier) =>
     request("/auth/forgot-password", {
       method: "POST",
@@ -71,7 +71,7 @@ export const api = {
     }),
 
   // Users
-  getUsers: () => request("/users"),
+  getUsers: () => request(`/users?_t=${Date.now()}`),
   createUser: (userData) =>
     request("/users", {
       method: "POST",
@@ -89,7 +89,7 @@ export const api = {
     }),
 
   // Roles Management
-  getRoles: () => request("/roles"),
+  getRoles: () => request(`/roles?_t=${Date.now()}`),
   createRole: (roleData) =>
     request("/roles", {
       method: "POST",

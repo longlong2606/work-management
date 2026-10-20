@@ -19,7 +19,7 @@ export function BulkAbsenceModal({
   schedule = [],
   onSuccess
 }) {
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
 
   // Selected target member (Staff default to themselves, Admin can pick any member)
   const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");

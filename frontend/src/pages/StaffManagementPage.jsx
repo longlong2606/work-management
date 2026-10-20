@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import {
+  RefreshCw,
   Award,
   UserPlus, 
   ShieldCheck, 
@@ -134,9 +135,11 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         api.getDepartments().catch(() => []),
         api.getRoles().catch(() => [])
       ]);
-      setUsers(uData);
-      setDepartments(dData);
-      setRoles(rData);
+      setUsers(Array.isArray(uData) ? uData : []);
+      setDepartments(Array.isArray(dData) ? dData : []);
+      if (Array.isArray(rData) && rData.length > 0) {
+        setRoles(rData);
+      }
 
       // Default department for add form
       if (dData.length > 0 && !department) {
@@ -393,10 +396,29 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_evaluate: roleCanEvaluate,
           can_manage_cp: roleCanCp,
         });
-        showToastMsg("Cập nhật vai trò thành công!");
+        // Optimistic UI update ngay lập tức ra bảng bên ngoài
+        setRoles((prevRoles) =>
+          prevRoles.map((r) =>
+            r.id === editingRole.id
+              ? {
+                  ...r,
+                  display_name: roleDisplayName.trim(),
+                  description: roleDesc.trim(),
+                  color: roleColor,
+                  can_manage_schedule: roleCanSchedule,
+                  can_manage_tasks: roleCanTasks,
+                  can_manage_staff: roleCanStaff,
+                  can_evaluate: roleCanEvaluate,
+                  can_manage_cp: roleCanCp,
+                }
+              : r
+          )
+        );
+        showToastMsg("Cập nhật vai trò & quyền hạn thành công!");
       } else {
-        await api.createRole({
-          id: roleId.trim().toLowerCase().replace(/\s+/g, "_"),
+        const newRoleId = roleId.trim().toLowerCase().replace(/\s+/g, "_");
+        const newRoleObj = {
+          id: newRoleId,
           display_name: roleDisplayName.trim(),
           description: roleDesc.trim(),
           color: roleColor,
@@ -405,12 +427,16 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
           can_manage_staff: roleCanStaff,
           can_evaluate: roleCanEvaluate,
           can_manage_cp: roleCanCp,
-        });
+          is_system: false,
+          user_count: 0,
+        };
+        await api.createRole(newRoleObj);
+        setRoles((prevRoles) => [...prevRoles, newRoleObj]);
         showToastMsg("Thêm vai trò mới thành công!");
       }
       setShowRoleModal(false);
       window.dispatchEvent(new CustomEvent("roles_updated", { detail: { roleId: editingRole?.id || roleId } }));
-      loadAllData();
+      await loadAllData();
     } catch (err) {
       showToastMsg(err.message || "Thao tác vai trò thất bại!", "danger");
     } finally {
@@ -838,18 +864,45 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             padding: "18px 22px",
             marginBottom: 20,
             background: "linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)",
-            borderLeft: "4px solid #2563eb"
+            borderLeft: "4px solid #2563eb",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <ShieldCheck size={20} color="#2563eb" />
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1e3a8a" }}>
-                Hệ Thống Phân Quyền Theo Vai Trò (Role-Based Access Control)
-              </h3>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <ShieldCheck size={20} color="#2563eb" />
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1e3a8a" }}>
+                  Hệ Thống Phân Quyền Theo Vai Trò (Role-Based Access Control)
+                </h3>
+              </div>
+              <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+                Mỗi tài khoản nhân sự được gán một vai trò xác định quyền hạn trên hệ thống. 
+                Bạn có thể xem ma trận quyền hạn dưới đây hoặc tạo thêm vai trò mới để đáp ứng nhu cầu quản trị chuyên biệt.
+              </p>
             </div>
-            <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
-              Mỗi tài khoản nhân sự được gán một vai trò xác định quyền hạn trên hệ thống. 
-              Bạn có thể xem ma trận quyền hạn dưới đây hoặc tạo thêm vai trò mới để đáp ứng nhu cầu quản trị chuyên biệt.
-            </p>
+            <button
+              onClick={loadAllData}
+              disabled={loading}
+              className="btn btn-secondary btn-sm"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                padding: "8px 14px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer"
+              }}
+            >
+              <RefreshCw size={14} className={loading ? "spin" : ""} style={{ animation: loading ? "spin 0.8s linear infinite" : "none" }} />
+              <span>{loading ? "Đang tải..." : "Làm mới"}</span>
+            </button>
           </div>
 
           {/* Roles Table */}
@@ -910,7 +963,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         </td>
                         {/* Can schedule */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          {r.id === "admin" || r.can_manage_schedule ? (
+                          {Boolean(r.can_manage_schedule) ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -918,7 +971,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         </td>
                         {/* Can tasks */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          {r.id === "admin" || r.can_manage_tasks ? (
+                          {Boolean(r.can_manage_tasks) ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -926,7 +979,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         </td>
                         {/* Can staff */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          {r.id === "admin" || r.can_manage_staff ? (
+                          {Boolean(r.can_manage_staff) ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -934,7 +987,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         </td>
                         {/* Can evaluate */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          {r.id === "admin" || r.can_evaluate ? (
+                          {Boolean(r.can_evaluate) ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>
@@ -942,7 +995,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                         </td>
                         {/* Can manage CP */}
                         <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                          {r.id === "admin" || r.can_manage_cp ? (
+                          {Boolean(r.can_manage_cp) ? (
                             <span style={{ color: "#059669", fontWeight: 700 }}>✓ Có</span>
                           ) : (
                             <span style={{ color: "#94a3b8" }}>—</span>

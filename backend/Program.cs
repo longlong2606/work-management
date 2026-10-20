@@ -437,7 +437,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
-    if (currentUser.role != "admin" && (long)subtask.leader_id != currentUser.id)
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && !currentUser.can_manage_cp && (long)subtask.leader_id != currentUser.id)
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.title))
@@ -977,6 +977,10 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
 
 app.MapGet("/api/auth/me", (HttpContext ctx) =>
 {
+    ctx.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+    ctx.Response.Headers.Expires = "0";
+
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
     return Results.Ok(currentUser);
@@ -1162,6 +1166,10 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
 // ================= ROLES MANAGEMENT =================
 app.MapGet("/api/roles", (HttpContext ctx) =>
 {
+    ctx.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+    ctx.Response.Headers.Expires = "0";
+
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
@@ -2345,7 +2353,7 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
@@ -2498,7 +2506,7 @@ app.MapPost("/api/shifts/reject-expired-requests", (HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
@@ -2601,11 +2609,12 @@ app.MapDelete("/api/shifts/register", (int shift_id, string work_date, long? use
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    var targetUserId = (currentUser.role == "admin" && user_id.HasValue && user_id.Value > 0)
+    var isScheduleManager = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var targetUserId = (isScheduleManager && user_id.HasValue && user_id.Value > 0)
         ? user_id.Value
         : currentUser.id;
 
-    if (currentUser.role != "admin" && targetUserId == currentUser.id)
+    if (!isScheduleManager && targetUserId == currentUser.id)
     {
         return Results.BadRequest(new { detail = "Nhân viên không thể tự ý xóa ca. Vui lòng gửi yêu cầu xin hủy ca để Quản lý phê duyệt!" });
     }
