@@ -114,13 +114,7 @@ export function Navbar({ activeTab, setActiveTab }) {
       : []),
   ];
 
-  // Quick primary items to display compactly on desktop navbar
-  const desktopQuickTabs = [
-    { id: "schedule", label: "Lịch ca", icon: Calendar },
-    { id: "tasks", label: "Nhiệm vụ", icon: CheckSquare },
-    { id: "cp", label: "Điểm CP", icon: Sparkles },
-    ...(canManageStaff ? [{ id: "staff", label: "Nhân sự", icon: Users }] : []),
-  ];
+
 
   const handleSelectTab = (tabId) => {
     setActiveTab(tabId);
@@ -266,70 +260,7 @@ export function Navbar({ activeTab, setActiveTab }) {
               </button>
             </div>
 
-            {/* CENTER: GỌN GÀNG, KHÔNG RỐI MẮT VỚI THANH PILL NHANH */}
-            <nav style={{ display: "flex", alignItems: "center", gap: 4, position: "relative" }}>
-              {desktopQuickTabs.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "6px 12px",
-                      borderRadius: 8,
-                      fontSize: 12.5,
-                      fontWeight: isActive ? 700 : 600,
-                      cursor: "pointer",
-                      border: "none",
-                      transition: "all 0.15s ease",
-                      whiteSpace: "nowrap",
-                      background: isActive ? "#eff6ff" : "transparent",
-                      color: isActive ? "#2563eb" : "#475569",
-                      boxShadow: isActive ? "inset 0 0 0 1.5px #bfdbfe" : "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.background = "#f8fafc";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    <Icon size={15} color={isActive ? "#2563eb" : "#64748b"} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
 
-              {/* NÚT THÊM... MỞ MENU 3 GẠCH */}
-              <button
-                onClick={() => setMenuDrawerOpen(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: "none",
-                  whiteSpace: "nowrap",
-                  background: "transparent",
-                  color: "#64748b",
-                  transition: "all 0.15s ease",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                title="Xem tất cả chức năng khác"
-              >
-                <span>Thêm</span>
-                <ChevronRight size={14} />
-              </button>
-            </nav>
 
             {/* RIGHT SIDE DESKTOP: TIỆN ÍCH, THÔNG BÁO, USER, ĐĂNG XUẤT */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
