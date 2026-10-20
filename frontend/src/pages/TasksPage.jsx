@@ -16,7 +16,6 @@ import {
   Award,
   X,
   ChevronRight,
-  MapPin,
   Check,
   RotateCcw,
   PauseCircle
@@ -459,7 +458,7 @@ export function TasksPage() {
             <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             <input
               type="text"
-              placeholder="Tìm theo tên, địa điểm..."
+              placeholder="Tìm kiếm theo tiêu đề nhiệm vụ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -649,13 +648,6 @@ export function TasksPage() {
                         Hạn chót: <strong>{formatDeadline(task.deadline)}</strong>
                       </span>
                     </div>
-
-                    {task.location && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <MapPin size={14} color="#64748b" />
-                        <span>{task.location}</span>
-                      </div>
-                    )}
 
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <User size={14} color="#64748b" />
@@ -944,16 +936,6 @@ export function TasksPage() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                         <span style={{ color: "#64748b" }}>Hạn chót:</span>
                         <strong style={{ color: "#dc2626", fontWeight: 800 }}>{taskDetail.task.deadline || "Không có"}</strong>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Địa điểm:</span>
-                        <strong style={{ color: "#334155" }}>{taskDetail.task.location || "Chưa xác định"}</strong>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Đối tác / Đơn vị:</span>
-                        <strong style={{ color: "#334155" }}>{taskDetail.task.customer_info || "Nội bộ trường"}</strong>
                       </div>
                     </div>
 
@@ -1587,8 +1569,6 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [plannedDate, setPlannedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
   const [leaderId, setLeaderId] = useState(allMembers[0]?.id || 1);
-  const [location, setLocation] = useState("");
-  const [customerInfo, setCustomerInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1608,8 +1588,8 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         task_type: taskType,
         planned_date: plannedDate,
         deadline: deadline ? deadline.replace("T", " ") : "",
-        location: location.trim(),
-        customer_info: customerInfo.trim(),
+        location: "",
+        customer_info: "",
         leader_id: parseInt(leaderId),
       });
       onSuccess();
@@ -1859,7 +1839,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
             </div>
           </div>
 
-          {/* KHỐI 3: ĐỊA ĐIỂM & CHI TIẾT */}
+          {/* KHOI 3: MO TA NHIEM VU */}
           <div
             style={{
               background: "#f8fafc",
@@ -1872,51 +1852,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
             }}
           >
             <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
-              <span>📍 3. Địa điểm & Mô tả chi tiết</span>
-            </div>
-
-            <div className="task-modal-grid-2col">
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Địa điểm / Phòng Lab
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Phòng Lab 301, Tòa nhà Beta..."
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    background: "#ffffff"
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Đối tác / Đơn vị yêu cầu
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Viettel Digital, FPT Telecom, Khoa CNTT..."
-                  value={customerInfo}
-                  onChange={(e) => setCustomerInfo(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    background: "#ffffff"
-                  }}
-                />
-              </div>
+              <span>📝 3. Mô tả nhiệm vụ</span>
             </div>
 
             <div>
@@ -1924,7 +1860,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                 Mô tả chi tiết nhiệm vụ
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 placeholder="Nhập nội dung, yêu cầu kỹ thuật và mục tiêu cần đạt được..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
