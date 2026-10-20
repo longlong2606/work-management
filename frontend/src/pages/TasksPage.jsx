@@ -1359,6 +1359,7 @@ export function TasksPage() {
             id: taskDetail.task.leader_id,
             name: taskDetail.task.leader_name
           }}
+          allMembers={allMembers}
           onSuccess={() => {
             refreshTaskDetail(taskDetail.task.id);
             showToast("Đã thêm mục việc thành công!");
@@ -1932,18 +1933,43 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
 
 /* ================= MODAL COMPONENT: ADD SUBTASK (BỐ CỤC CHUẨN TIẾNG VIỆT) ================= */
-function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader, onSuccess }) {
+function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader, allMembers = [], onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [cpPoints, setCpPoints] = useState(1);
+  const [selectedAssignees, setSelectedAssignees] = useState(() => {
+    if (assignedLeader?.id) return [Number(assignedLeader.id)];
+    if (allMembers && allMembers.length > 0) return [Number(allMembers[0].id)];
+    return [];
+  });
+  const [isMulti, setIsMulti] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (assignedLeader?.id) {
+      setSelectedAssignees([Number(assignedLeader.id)]);
+    } else if (allMembers && allMembers.length > 0) {
+      setSelectedAssignees([Number(allMembers[0].id)]);
+    }
+  }, [assignedLeader, allMembers]);
+
+  const toggleAssignee = (userId) => {
+    const idNum = Number(userId);
+    setSelectedAssignees((prev) =>
+      prev.includes(idNum) ? prev.filter((id) => id !== idNum) : [...prev, idNum]
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       setError("Vui lòng nhập Tiêu đề mục việc!");
+      return;
+    }
+    if (selectedAssignees.length === 0) {
+      setError("Vui lòng chọn ít nhất 1 thành viên được giao mục việc!");
       return;
     }
 
@@ -1954,7 +1980,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
         title: title.trim(),
         description: description.trim(),
         due_at: dueAt ? dueAt.replace("T", " ") : "",
-        assignee_ids: assignedLeader?.id ? [assignedLeader.id] : [],
+        assignee_ids: selectedAssignees,
         cp_points: Number(cpPoints) || 0,
       });
       onSuccess();
@@ -1988,7 +2014,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
           background: "#ffffff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 460,
+          maxWidth: 480,
           padding: 24,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
@@ -2054,42 +2080,115 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-              Thành viên được giao mục việc:
-            </label>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 14px",
-                background: "#f0fdf4",
-                border: "1.5px solid #86efac",
-                borderRadius: 10,
-                color: "#166534",
-                fontSize: 13.5,
-              }}
-            >
-              <User size={18} color="#16a34a" />
-              <div>
-                <strong>{assignedLeader?.name || "Người phụ trách nhiệm vụ"}</strong>
-              </div>
-              <span
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
+                Thành viên được giao mục việc: <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              {allMembers && allMembers.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsMulti(!isMulti)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  {isMulti ? "Chỉ chọn 1 người" : "+ Giao cho nhiều người"}
+                </button>
+              )}
+            </div>
+
+            {!isMulti ? (
+              <select
+                value={selectedAssignees[0] || ""}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setSelectedAssignees(val ? [val] : []);
+                }}
                 style={{
-                  marginLeft: "auto",
-                  background: "#dcfce7",
-                  color: "#15803d",
-                  padding: "3px 8px",
-                  borderRadius: 12,
-                  fontSize: 11,
-                  fontWeight: 700,
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  color: "#1e293b",
+                  outlineColor: "#93c5fd",
+                  cursor: "pointer",
                 }}
               >
-                Người nhận nhiệm vụ
-              </span>
-            </div>
+                {allMembers.map((m) => {
+                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
+                  const isTaskLeader = assignedLeader?.id && Number(m.id) === Number(assignedLeader.id);
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} (@{m.username}) — [{roleBadge}]{isTaskLeader ? " (Phụ trách nhiệm vụ)" : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  padding: "8px 10px",
+                  border: "1.5px solid #cbd5e1",
+                  borderRadius: 8,
+                  background: "#f8fafc",
+                }}
+              >
+                {allMembers.map((m) => {
+                  const isChecked = selectedAssignees.includes(Number(m.id));
+                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
+                  const isTaskLeader = assignedLeader?.id && Number(m.id) === Number(assignedLeader.id);
+                  return (
+                    <label
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "5px 8px",
+                        borderRadius: 6,
+                        background: isChecked ? "#eff6ff" : "#ffffff",
+                        border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: "#1e293b",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleAssignee(m.id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontWeight: isChecked ? 600 : 400 }}>
+                        {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
+                      </span>
+                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
+                        [{roleBadge}]{isTaskLeader ? " ⭐" : ""}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
             <small style={{ fontSize: 11, color: "#64748b", marginTop: 4, display: "block" }}>
-              Nhiệm vụ này đã giao cho {assignedLeader?.name || "người phụ trách"}, do đó mục việc này sẽ được phân công trực tiếp cho thành viên này.
+              {isMulti
+                ? `Đã chọn ${selectedAssignees.length} thành viên. Điểm CP sẽ được ghi nhận khi hoàn thành.`
+                : "Thành viên được chọn sẽ phụ trách thực hiện mục việc này."}
             </small>
           </div>
 

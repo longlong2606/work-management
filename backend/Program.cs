@@ -398,10 +398,16 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
             cpPoints
         });
 
-    // Subtask trong nhiem vu luon duoc giao truc tiep cho nguoi phu trach nhiem vu (vi du: Cong)
-    long taskAssigneeId = (long)task.leader_id;
-    conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, 100)",
-        new { subtaskId, uid = taskAssigneeId });
+    var assigneeIds = (req.assignee_ids != null && req.assignee_ids.Any())
+        ? req.assignee_ids.Distinct().ToList()
+        : new List<long> { (long)task.leader_id };
+
+    int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
+    foreach (var uid in assigneeIds)
+    {
+        conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct)",
+            new { subtaskId, uid, defaultPct });
+    }
 
     // Auto transition parent task from OPEN to IN_PROGRESS
     if ((string)task.status == "OPEN")
