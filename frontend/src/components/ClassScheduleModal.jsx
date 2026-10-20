@@ -157,22 +157,39 @@ export function ClassScheduleModal({
     const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
     const rawHeaders = lines[0].split(delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
 
-    // Normalize header mapping (supports 'shift' / 'ca' column or legacy 'start_time' / 'end_time')
+    // Normalize header mapping: supports course_code, class_name, start_date, end_date, shift, room
     const colIndex = {
-      course_code: rawHeaders.findIndex((h) => h.includes("code") || h.includes("mã môn") || h.includes("subject")),
-      class_name: rawHeaders.findIndex((h) => h.includes("class") || h.includes("name") || h.includes("tên môn") || h.includes("môn học")),
-      date: rawHeaders.findIndex((h) => h.includes("date") || h.includes("ngày") || h.includes("start_date")),
-      shift: rawHeaders.findIndex((h) => h.includes("shift") || h.includes("ca") || h.includes("slot") || h.includes("buổi")),
+      course_code: rawHeaders.findIndex((h) => h === "course_code" || h.includes("code") || h.includes("mã môn") || h.includes("subject")),
+      class_name: rawHeaders.findIndex((h) => h === "class_name" || h.includes("class") || h.includes("name") || h.includes("tên môn") || h.includes("môn học")),
+      start_date: rawHeaders.findIndex((h) => h === "start_date" || h.includes("start_date") || h.includes("start date") || h.includes("ngày bắt đầu") || h.includes("ngay bat dau") || h.includes("work_date") || h.includes("work date") || h === "date" || h === "ngày"),
+      end_date: rawHeaders.findIndex((h) => h === "end_date" || h.includes("end_date") || h.includes("end date") || h.includes("ngày kết thúc") || h.includes("ngay ket thuc")),
+      shift: rawHeaders.findIndex((h) => h === "shift" || h.includes("shift") || h.includes("ca") || h.includes("slot") || h.includes("buổi")),
       start_time: rawHeaders.findIndex((h) => h.includes("start_time") || h.includes("giờ bắt đầu") || h.includes("from")),
       end_time: rawHeaders.findIndex((h) => h.includes("end_time") || h.includes("giờ kết thúc") || h.includes("to")),
       room: rawHeaders.findIndex((h) => h.includes("room") || h.includes("phòng") || h.includes("địa điểm")),
     };
 
-    if (colIndex.date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1) || (colIndex.shift === -1 && colIndex.start_time === -1)) {
-      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code, class_name, work_date, ca_hoc (hoặc ca), room.");
+    if (colIndex.start_date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1) || (colIndex.shift === -1 && colIndex.start_time === -1)) {
+      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code, class_name, start_date, end_date, shift, room.");
       setParsedRows([]);
       return;
     }
+
+    const normalizeDate = (rawStr) => {
+      if (!rawStr) return "";
+      let s = rawStr.toString().trim().split(" ")[0];
+      if (s.includes("/")) {
+        const segs = s.split("/");
+        if (segs.length === 3) {
+          if (segs[0].length === 4) {
+            s = `${segs[0]}-${segs[1].padStart(2, "0")}-${segs[2].padStart(2, "0")}`;
+          } else {
+            s = `${segs[2]}-${segs[1].padStart(2, "0")}-${segs[0].padStart(2, "0")}`;
+          }
+        }
+      }
+      return s;
+    };
 
     const parsed = [];
     for (let i = 1; i < lines.length; i++) {
@@ -182,7 +199,8 @@ export function ClassScheduleModal({
       
       let courseCode = colIndex.course_code !== -1 ? (parts[colIndex.course_code] || "") : "";
       let className = colIndex.class_name !== -1 ? (parts[colIndex.class_name] || "") : "";
-      let dateStr = colIndex.date !== -1 ? (parts[colIndex.date] || "") : "";
+      let startDateRaw = colIndex.start_date !== -1 ? (parts[colIndex.start_date] || "") : "";
+      let endDateRaw = colIndex.end_date !== -1 ? (parts[colIndex.end_date] || "") : "";
       let shiftVal = colIndex.shift !== -1 ? (parts[colIndex.shift] || "") : "";
       let startTime = colIndex.start_time !== -1 ? (parts[colIndex.start_time] || "") : "";
       let endTime = colIndex.end_time !== -1 ? (parts[colIndex.end_time] || "") : "";
@@ -211,39 +229,59 @@ export function ClassScheduleModal({
       }
       if (!className && courseCode) className = courseCode;
 
-      // Standardize date (Support YYYY-MM-DD or DD/MM/YYYY)
-      if (dateStr.includes("/")) {
-        const segs = dateStr.split("/");
-        if (segs.length === 3) {
-          if (segs[0].length === 4) {
-            // YYYY/MM/DD
-            dateStr = `${segs[0]}-${segs[1].padStart(2, "0")}-${segs[2].padStart(2, "0")}`;
-          } else {
-            // DD/MM/YYYY
-            dateStr = `${segs[2]}-${segs[1].padStart(2, "0")}-${segs[0].padStart(2, "0")}`;
-          }
-        }
-      }
-
       // Standardize time format HH:mm
       if (startTime.length === 4 && startTime.includes(":")) startTime = "0" + startTime;
       if (endTime.length === 4 && endTime.includes(":")) endTime = "0" + endTime;
 
-      const isValid = Boolean(className && dateStr && startTime && endTime && endTime > startTime);
-      const overlapping = isValid ? getOverlappingShifts(startTime, endTime) : [];
+      const sDateStr = normalizeDate(startDateRaw);
+      const eDateStr = normalizeDate(endDateRaw) || sDateStr;
 
-      parsed.push({
-        rowNum: i + 1,
-        course_code: courseCode,
-        class_name: className,
-        work_date: dateStr,
-        start_time: startTime,
-        end_time: endTime,
-        room,
-        isValid,
-        error: !isValid ? (endTime <= startTime ? "Giờ kết thúc phải sau giờ bắt đầu" : "Thiếu thông tin bắt buộc") : null,
-        overlappingShifts: overlapping
-      });
+      let dateList = [];
+      if (!eDateStr || eDateStr === sDateStr) {
+        if (sDateStr) dateList.push(sDateStr);
+      } else {
+        const sD = new Date(sDateStr + "T00:00:00");
+        const eD = new Date(eDateStr + "T00:00:00");
+        if (!isNaN(sD.getTime()) && !isNaN(eD.getTime()) && eD >= sD) {
+          const diffDays = Math.round((eD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24));
+          const stepDays = diffDays >= 7 ? 7 : 1;
+          const cur = new Date(sD);
+          while (cur <= eD) {
+            const yyyy = cur.getFullYear();
+            const mm = String(cur.getMonth() + 1).padStart(2, "0");
+            const dd = String(cur.getDate()).padStart(2, "0");
+            dateList.push(`${yyyy}-${mm}-${dd}`);
+            cur.setDate(cur.getDate() + stepDays);
+          }
+        } else {
+          if (sDateStr) dateList.push(sDateStr);
+        }
+      }
+
+      if (dateList.length === 0 && sDateStr) {
+        dateList.push(sDateStr);
+      }
+
+      for (const dStr of dateList) {
+        const isValid = Boolean(className && dStr && startTime && endTime && endTime > startTime);
+        const overlapping = isValid ? getOverlappingShifts(startTime, endTime) : [];
+
+        parsed.push({
+          rowNum: i + 1,
+          course_code: courseCode,
+          class_name: className,
+          work_date: dStr,
+          start_date: sDateStr,
+          end_date: eDateStr,
+          start_time: startTime,
+          end_time: endTime,
+          shiftLabel,
+          room,
+          isValid,
+          error: !isValid ? (endTime <= startTime ? "Giờ kết thúc phải sau giờ bắt đầu" : "Thiếu thông tin bắt buộc") : null,
+          overlappingShifts: overlapping
+        });
+      }
     }
 
     setParsedRows(parsed);
@@ -267,8 +305,8 @@ export function ClassScheduleModal({
 
   // Download template CSV
   const handleDownloadTemplate = () => {
-    const csvHeader = "course_code,class_name,work_date,shift,room\n";
-    const sampleRow = "COMP1752,Lập trình hướng đối tượng,2026-10-05,1,Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2,Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,4,Room 201\n";
+    const csvHeader = "course_code,class_name,start_date,end_date,shift,room\n";
+    const sampleRow = "COMP1752,Lập trình hướng đối tượng,2026-10-05,2026-10-05,1,Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2026-10-06,2,Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,2026-10-08,4,Room 201\n";
     const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -491,7 +529,7 @@ export function ClassScheduleModal({
                   Tải lên File Thời Khóa Biểu (Excel .xlsx hoặc .csv)
                 </h4>
                 <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 16px" }}>
-                  Cấu trúc file gồm 5 cột: <code>course_code</code>, <code>class_name</code>, <code>work_date</code>, <strong><code>ca_hoc</code> (Ca 1, Ca 2, Ca 3...)</strong>, <code>room</code>
+                  Cấu trúc file gồm 6 cột: <code>course_code</code>, <code>class_name</code>, <code>start_date</code>, <code>end_date</code>, <strong><code>shift</code> (1, 2, 3... hoặc Ca 1, Ca 2)</strong>, <code>room</code>
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
