@@ -82,12 +82,13 @@ export function AuthProvider({ children }) {
   const isContributor = isLeader || role === "contributor" || role === "technician" || role === "staff";
   const isLearning = !!user;
 
-  // Quyen han thuc te theo Database: Admin & Manager luon co quyen toi cao, hoac quyen theo vai tro role
-  const canManageStaff = isAdmin || isManagerRole || (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : isCore);
-  const canManageSchedule = isAdmin || isManagerRole || (user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : isLeader);
-  const canManageTasks = isAdmin || isManagerRole || (user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : isLeader);
-  const canEvaluate = isAdmin || isManagerRole || (user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (isCore || isLeader));
-  const canManageCp = isAdmin || isManagerRole || (user?.can_manage_cp !== undefined ? Boolean(user.can_manage_cp) : (isCore || isLeader));
+  // Quyen han thuc te theo Database: Uu tien tuyet doi gia tri phan quyen tu Server (user.can_...)
+  // Rieng quyen quan ly nhan su luon giu cho Admin de khong bao gio bi mat quyen cau hinh he thong
+  const canManageStaff = isAdmin ? true : (user?.can_manage_staff !== undefined ? Boolean(user.can_manage_staff) : (isManagerRole || isCore));
+  const canManageSchedule = user?.can_manage_schedule !== undefined ? Boolean(user.can_manage_schedule) : (isAdmin || isManagerRole || isLeader);
+  const canManageTasks = user?.can_manage_tasks !== undefined ? Boolean(user.can_manage_tasks) : (isAdmin || isManagerRole || isLeader);
+  const canEvaluate = user?.can_evaluate !== undefined ? Boolean(user.can_evaluate) : (isAdmin || isManagerRole || isCore || isLeader);
+  const canManageCp = user?.can_manage_cp !== undefined ? Boolean(user.can_manage_cp) : (isAdmin || isManagerRole || isCore || isLeader);
 
   // Alias tuong thich
   const isManager = isCore || isManagerRole;

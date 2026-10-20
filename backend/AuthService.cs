@@ -99,11 +99,11 @@ public static class AuthService
         using var conn = Database.GetConnection();
         var user = conn.QueryFirstOrDefault<UserDto>(@"
             SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
-                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
-                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
-                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
-                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate,
-                   CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_cp, 0) END AS can_manage_cp
+                   COALESCE(r.can_manage_schedule, 0) AS can_manage_schedule,
+                   COALESCE(r.can_manage_tasks, 0) AS can_manage_tasks,
+                   COALESCE(r.can_manage_staff, CASE WHEN u.role = 'admin' THEN 1 ELSE 0 END) AS can_manage_staff,
+                   COALESCE(r.can_evaluate, 0) AS can_evaluate,
+                   COALESCE(r.can_manage_cp, 0) AS can_manage_cp
             FROM users u
             LEFT JOIN roles r ON r.id = u.role
             WHERE u.id = @id",
@@ -112,11 +112,8 @@ public static class AuthService
         if (user == null || user.status != "active") return null;
         if (user.role == "admin")
         {
-            user.can_manage_schedule = true;
-            user.can_manage_tasks = true;
+            // Luon dam bao admin co quyen can_manage_staff de tranh tu khoa he thong
             user.can_manage_staff = true;
-            user.can_evaluate = true;
-            user.can_manage_cp = true;
         }
         return user;
     }

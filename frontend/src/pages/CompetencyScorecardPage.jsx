@@ -471,27 +471,29 @@ export function CompetencyScorecardPage() {
                 Chế độ chỉ xem
               </div>
             )}
-            <button
-              onClick={handleResetData}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 12px",
-                borderRadius: 10,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                background: "rgba(255, 255, 255, 0.08)",
-                color: "#e2e8f0",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                transition: "all 0.2s ease",
-              }}
-              title="Khôi phục lại điểm gốc ban đầu"
-            >
-              <RefreshCw size={13} />
-              Đặt lại gốc
-            </button>
+            {canEvaluate && (
+              <button
+                onClick={handleResetData}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  color: "#e2e8f0",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: "all 0.2s ease",
+                }}
+                title="Khôi phục lại điểm gốc ban đầu"
+              >
+                <RefreshCw size={13} />
+                Đặt lại gốc
+              </button>
+            )}
           </div>
         </div>
 

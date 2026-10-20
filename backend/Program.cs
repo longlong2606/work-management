@@ -923,11 +923,11 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
     using var conn = Database.GetConnection();
     var user = conn.QueryFirstOrDefault<UserDto>(@"
         SELECT u.id, u.username, u.full_name, u.email, u.phone, u.role, u.department, u.status,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_schedule, 0) END AS can_manage_schedule,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_tasks, 0) END AS can_manage_tasks,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_staff, 0) END AS can_manage_staff,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_evaluate, 0) END AS can_evaluate,
-               CASE WHEN u.role = 'admin' THEN 1 ELSE COALESCE(r.can_manage_cp, 0) END AS can_manage_cp
+               COALESCE(r.can_manage_schedule, 0) AS can_manage_schedule,
+               COALESCE(r.can_manage_tasks, 0) AS can_manage_tasks,
+               COALESCE(r.can_manage_staff, CASE WHEN u.role = 'admin' THEN 1 ELSE 0 END) AS can_manage_staff,
+               COALESCE(r.can_evaluate, 0) AS can_evaluate,
+               COALESCE(r.can_manage_cp, 0) AS can_manage_cp
         FROM users u
         LEFT JOIN roles r ON r.id = u.role
         WHERE u.username = @u AND u.status = 'active'",
@@ -944,11 +944,7 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
 
     if (user.role == "admin")
     {
-        user.can_manage_schedule = true;
-        user.can_manage_tasks = true;
         user.can_manage_staff = true;
-        user.can_evaluate = true;
-        user.can_manage_cp = true;
     }
 
     var token = AuthService.CreateToken(user.id, user.username, user.role);
@@ -1135,7 +1131,8 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (!currentUser.can_evaluate && currentUser.role != "admin" && currentUser.role != "manager") return Results.StatusCode(403);
+    if (!currentUser.can_evaluate)
+        return Results.Json(new { detail = "Bạn không có quyền đánh giá hoặc chỉnh sửa điểm năng lực!" }, statusCode: 403);
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault<dynamic>("SELECT id, role FROM users WHERE id = @userId", new { userId });

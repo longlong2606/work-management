@@ -35,6 +35,8 @@ import {
 
 export function StaffManagementPage({ onNavigateToCompetency }) {
   const auth = useAuth() || {};
+  const user = auth.user || null;
+  const updateCurrentUser = auth.updateCurrentUser;
   const isAdmin = auth.isAdmin ?? false;
   const canManageStaff = auth.canManageStaff ?? false;
   const isRoleAdmin = isAdmin || Boolean(canManageStaff);
@@ -414,6 +416,16 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               : r
           )
         );
+        // Neu dang sua vai tro cua chinh tai khoan dang dang nhap, cap nhat ngay lap tuc AuthContext
+        if (editingRole && user && editingRole.id === user.role && updateCurrentUser) {
+          updateCurrentUser({
+            can_manage_schedule: roleCanSchedule,
+            can_manage_tasks: roleCanTasks,
+            can_manage_staff: user.role === "admin" ? true : roleCanStaff,
+            can_evaluate: roleCanEvaluate,
+            can_manage_cp: roleCanCp,
+          });
+        }
         showToastMsg("Cập nhật vai trò & quyền hạn thành công!");
       } else {
         const newRoleId = roleId.trim().toLowerCase().replace(/\s+/g, "_");
