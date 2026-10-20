@@ -473,39 +473,7 @@ export function ClassScheduleModal({
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
           {activeTab === "import" && (
             <div>
-              {/* Member Selection (Admin only) */}
-              {isAdmin && (
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    padding: "12px 16px",
-                    marginBottom: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 10,
-                  }}
-                >
-                  <label style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
-                    👤 Áp dụng thời khóa biểu cho nhân sự:
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ maxWidth: 280, fontWeight: 600 }}
-                    value={targetUserId}
-                    onChange={(e) => setTargetUserId(e.target.value)}
-                  >
-                    {allMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name} ({m.username})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              
 
               {/* Upload Dropzone / Actions */}
               <div
