@@ -1310,7 +1310,7 @@ export function SchedulePage() {
         </div>
 
         {/* Date Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div className="schedule-date-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {viewMode === "week" && (
             <>
               <button
