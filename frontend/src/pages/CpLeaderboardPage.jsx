@@ -16,7 +16,8 @@ import {
   User,
   Star,
   ShieldCheck,
-  Percent
+  Percent,
+  AlertCircle
 } from "lucide-react";
 
 export function CpLeaderboardPage() {
@@ -28,32 +29,79 @@ export function CpLeaderboardPage() {
   const [userHistory, setUserHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, text: "", type: "success" });
 
-  const fetchLeaderboard = async () => {
+  const showToast = (text, type = "success") => {
+    setToast({ show: true, text, type });
+    setTimeout(() => {
+      setToast({ show: false, text: "", type: "success" });
+    }, 3200);
+  };
+
+  const fetchLeaderboard = async (isManual = false) => {
     setLoading(true);
+    const startTime = Date.now();
     try {
       const data = await api.getCpLeaderboard();
-      setLeaderboard(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setLeaderboard(list);
+
+      // Nếu đang mở chi tiết của một thành viên, tự động đồng bộ lại lịch sử và điểm số của thành viên đó
+      if (selectedUser) {
+        const found = list.find((u) => u.user_id === selectedUser.user_id);
+        if (found) setSelectedUser(found);
+        try {
+          const hist = await api.getUserCpHistory(selectedUser.user_id);
+          setUserHistory(Array.isArray(hist) ? hist : []);
+        } catch (e) {
+          console.error("Lỗi khi đồng bộ lịch sử CP thành viên:", e);
+        }
+      }
+
+      const elapsed = Date.now() - startTime;
+      if (isManual && elapsed < 400) {
+        await new Promise((r) => setTimeout(r, 400 - elapsed));
+      }
+
+      if (isManual) {
+        showToast("Đã làm mới dữ liệu Bảng Điểm CP thành công!", "success");
+      }
     } catch (err) {
       console.error("Lỗi khi tải bảng điểm CP:", err);
+      if (isManual) {
+        showToast(err.message || "Không thể tải lại bảng điểm CP. Vui lòng thử lại!", "danger");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLeaderboard();
+    fetchLeaderboard(false);
   }, []);
 
-  const handleViewUserHistory = async (u) => {
+  const handleViewUserHistory = async (u, isManualRefresh = false) => {
     setSelectedUser(u);
     setLoadingHistory(true);
+    const startTime = Date.now();
     try {
       const data = await api.getUserCpHistory(u.user_id);
       setUserHistory(Array.isArray(data) ? data : []);
+
+      const elapsed = Date.now() - startTime;
+      if (isManualRefresh && elapsed < 400) {
+        await new Promise((r) => setTimeout(r, 400 - elapsed));
+      }
+
+      if (isManualRefresh) {
+        showToast(`Đã làm mới lịch sử CP của ${u.full_name}!`, "success");
+      }
     } catch (err) {
       console.error("Lỗi khi tải lịch sử CP:", err);
       setUserHistory([]);
+      if (isManualRefresh) {
+        showToast("Lỗi khi tải lịch sử CP!", "danger");
+      }
     } finally {
       setLoadingHistory(false);
     }
@@ -138,22 +186,32 @@ export function CpLeaderboardPage() {
           </div>
 
           <button
-            onClick={fetchLeaderboard}
+            onClick={() => fetchLeaderboard(true)}
+            disabled={loading}
             style={{
-              background: "rgba(255, 255, 255, 0.15)",
+              background: loading ? "rgba(255, 255, 255, 0.25)" : "rgba(255, 255, 255, 0.15)",
               border: "1px solid rgba(255, 255, 255, 0.25)",
               color: "#ffffff",
               borderRadius: 10,
               padding: "8px 14px",
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
               fontSize: 13,
+              fontWeight: 500,
               display: "flex",
               alignItems: "center",
               gap: 6,
               transition: "all 0.2s",
+              opacity: loading ? 0.8 : 1,
             }}
           >
-            <RefreshCw size={14} className={loading ? "spin" : ""} /> Làm mới
+            <RefreshCw
+              size={14}
+              className={loading ? "spin" : ""}
+              style={{
+                animation: loading ? "spin 0.8s linear infinite" : "none",
+              }}
+            />
+            {loading ? "Đang làm mới..." : "Làm mới"}
           </button>
         </div>
 
@@ -512,7 +570,7 @@ export function CpLeaderboardPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 12 }}>
               <div>
                 <h3 style={{ margin: "0 0 4px 0", fontSize: 18, fontWeight: 700, color: "#1e293b" }}>
                   Lịch Sử Cống Hiến CP: {selectedUser.full_name}
@@ -521,22 +579,57 @@ export function CpLeaderboardPage() {
                   Tổng điểm tích lũy: <strong style={{ color: "#2563eb" }}>{selectedUser.total_cp} CP</strong> &bull; {selectedUser.tier}
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedUser(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  fontSize: 18,
-                  cursor: "pointer",
-                  color: "#94a3b8",
-                }}
-              >
-                &times;
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  onClick={() => handleViewUserHistory(selectedUser, true)}
+                  disabled={loadingHistory}
+                  title="Làm mới lịch sử"
+                  style={{
+                    background: "#f1f5f9",
+                    border: "1px solid #cbd5e1",
+                    color: "#334155",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    cursor: loadingHistory ? "not-allowed" : "pointer",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  <RefreshCw
+                    size={13}
+                    className={loadingHistory ? "spin" : ""}
+                    style={{
+                      animation: loadingHistory ? "spin 0.8s linear infinite" : "none",
+                    }}
+                  />
+                  {loadingHistory ? "Đang tải..." : "Làm mới"}
+                </button>
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    fontSize: 22,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    color: "#94a3b8",
+                    padding: "4px 8px",
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
             </div>
 
             {loadingHistory ? (
-              <div style={{ padding: "30px 0", textAlign: "center", color: "#64748b" }}>Đang tải lịch sử...</div>
+              <div style={{ padding: "30px 0", textAlign: "center", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <RefreshCw size={16} className="spin" style={{ animation: "spin 0.8s linear infinite" }} />
+                <span>Đang tải lịch sử cống hiến...</span>
+              </div>
             ) : userHistory.length === 0 ? (
               <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8" }}>
                 Chưa có lịch sử nhận CP cho thành viên này.
@@ -550,7 +643,7 @@ export function CpLeaderboardPage() {
                       border: "1px solid #e2e8f0",
                       borderRadius: 10,
                       padding: "12px 14px",
-                      background: "#fafafa",
+                      background: item.cp_earned < 0 ? "#fff5f5" : "#fafafa",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
@@ -574,7 +667,7 @@ export function CpLeaderboardPage() {
                       Nhiệm vụ cha: <strong>{item.task_title}</strong>
                     </div>
 
-                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#475569" }}>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#475569", flexWrap: "wrap" }}>
                       <span>Tỷ lệ đóng góp: <strong>{item.contribution_pct}%</strong></span>
                       {item.quality_multiplier !== 1.0 && (
                         <span>Hệ số chất lượng: <strong>{item.quality_multiplier}x</strong></span>
@@ -665,7 +758,34 @@ export function CpLeaderboardPage() {
           </div>
         </div>
       )}
+
+      {/* FLOATING TOAST ALERT */}
+      {toast.show && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            background: toast.type === "danger" ? "#ef4444" : "#10b981",
+            color: "#ffffff",
+            padding: "12px 20px",
+            borderRadius: 8,
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.25)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontSize: 14,
+            fontWeight: 500,
+            animation: "fadeIn 0.2s ease-in-out",
+          }}
+        >
+          {toast.type === "danger" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{toast.text}</span>
+        </div>
+      )}
     </div>
   );
 }
+
 export default CpLeaderboardPage;

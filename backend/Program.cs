@@ -681,6 +681,10 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 // ===== CP LEADERBOARD & STATS ENDPOINTS =====
 app.MapGet("/api/cp/leaderboard", (HttpContext ctx) =>
 {
+    ctx.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+    ctx.Response.Headers.Expires = "0";
+
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
@@ -747,6 +751,10 @@ app.MapGet("/api/cp/leaderboard", (HttpContext ctx) =>
 
 app.MapGet("/api/cp/history/{userId:long}", (long userId, HttpContext ctx) =>
 {
+    ctx.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+    ctx.Response.Headers.Expires = "0";
+
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 

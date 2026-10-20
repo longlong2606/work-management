@@ -440,6 +440,6 @@ export const api = {
     }),
 
   // Contribution Points (CP) System
-  getCpLeaderboard: () => request("/cp/leaderboard"),
-  getUserCpHistory: (userId) => request(`/cp/history/${userId}`),
+  getCpLeaderboard: () => request(`/cp/leaderboard?_t=${Date.now()}`),
+  getUserCpHistory: (userId) => request(`/cp/history/${userId}?_t=${Date.now()}`),
 };
