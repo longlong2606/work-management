@@ -577,8 +577,8 @@ export default function ProfileModal({ isOpen, onClose }) {
               }}
             >
               <div>
-                <span style={{ color: "#64748b" }}>Phòng ban: </span>
-                <strong style={{ color: "#334155" }}>{user?.department || "Bộ phận Vận hành"}</strong>
+                <span style={{ color: "#64748b" }}>Tài khoản: </span>
+                <strong style={{ color: "#334155" }}>@{user?.username}</strong>
               </div>
               <div>
                 <span style={{ color: "#64748b" }}>Vai trò: </span>

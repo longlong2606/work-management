@@ -100,7 +100,7 @@ export function Navbar({ activeTab, setActiveTab }) {
   ];
 
   if (canManageStaff) {
-    mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users, desc: "Danh sách thành viên & phòng ban" });
+    mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users, desc: "Danh sách thành viên & tài khoản" });
   }
 
   // 2. Menu hệ thống & quản trị

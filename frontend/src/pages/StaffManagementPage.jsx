@@ -159,13 +159,12 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.phone?.includes(searchTerm);
 
-      const matchDept = !filterDepartment || u.department === filterDepartment;
       const matchRole = !filterRole || u.role === filterRole;
       const matchStatus = !filterStatus || u.status === filterStatus;
 
-      return matchSearch && matchDept && matchRole && matchStatus;
+      return matchSearch && matchRole && matchStatus;
     });
-  }, [users, searchTerm, filterDepartment, filterRole, filterStatus]);
+  }, [users, searchTerm, filterRole, filterStatus]);
 
   // 1. Create User
   const handleCreateUser = async (e) => {
@@ -271,63 +270,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
     }
   };
 
-  // 4. Department Modal Handlers
-  const handleOpenAddDept = () => {
-    setEditingDept(null);
-    setDeptName("");
-    setDeptCode("");
-    setDeptDesc("");
-    setDeptManager("");
-    setDeptColor("#2563eb");
-    setShowDeptModal(true);
-  };
 
-  const handleOpenEditDept = (dept) => {
-    setEditingDept(dept);
-    setDeptName(dept.name || "");
-    setDeptCode(dept.code || "");
-    setDeptDesc(dept.description || "");
-    setDeptManager(dept.manager_name || "");
-    setDeptColor(dept.color || "#2563eb");
-    setShowDeptModal(true);
-  };
-
-  const handleSaveDepartment = async (e) => {
-    e.preventDefault();
-    if (!deptName.trim()) {
-      showToastMsg("Vui lòng nhập tên phòng ban / tổ trực!", "danger");
-      return;
-    }
-
-    try {
-      setDeptSubmitting(true);
-      if (editingDept) {
-        await api.updateDepartment(editingDept.id, {
-          name: deptName.trim(),
-          code: deptCode.trim(),
-          description: deptDesc.trim(),
-          manager_name: deptManager.trim(),
-          color: deptColor,
-        });
-        showToastMsg("Cập nhật phòng ban thành công!");
-      } else {
-        await api.createDepartment({
-          name: deptName.trim(),
-          code: deptCode.trim(),
-          description: deptDesc.trim(),
-          manager_name: deptManager.trim(),
-          color: deptColor,
-        });
-        showToastMsg("Thêm phòng ban mới thành công!");
-      }
-      setShowDeptModal(false);
-      loadAllData();
-    } catch (err) {
-      showToastMsg(err.message || "Thao tác phòng ban thất bại!", "danger");
-    } finally {
-      setDeptSubmitting(false);
-    }
-  };
 
   // 5. Role Modal Handlers
   return (
@@ -412,21 +355,6 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               />
             </div>
 
-            {/* Department Filter */}
-            <div>
-              <select
-                value={filterDepartment}
-                onChange={(e) => setFilterDepartment(e.target.value)}
-                className="form-input"
-                style={{ height: 40 }}
-              >
-                <option value="">🏢 Tất cả phòng ban ({departments.length})</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Role Filter */}
             <div>
               <select
@@ -457,7 +385,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             </div>
           </div>
 
-          {(searchTerm || filterDepartment || filterRole || filterStatus) && (
+          {(searchTerm || filterRole || filterStatus) && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)", fontSize: 13 }}>
               <span style={{ color: "var(--text-muted)" }}>
                 Tìm thấy <strong>{filteredUsers.length}</strong> / {users.length} tài khoản phù hợp
@@ -465,7 +393,6 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setFilterDepartment("");
                   setFilterRole("");
                   setFilterStatus("");
                 }}
@@ -493,7 +420,6 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Tên đăng nhập</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Email nhận thông báo</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Số điện thoại</th>
-                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Phòng ban / Tổ trực</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Vai trò hệ thống</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Trạng thái</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
@@ -502,7 +428,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <td colSpan={7} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
                       Không tìm thấy tài khoản nhân sự nào phù hợp với bộ lọc.
                     </td>
                   </tr>
@@ -550,21 +476,6 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                               <Phone size={12} color="#64748b" /> {u.phone}
                             </div>
                           ) : "---"}
-                        </td>
-                        <td style={{ padding: "14px 20px", color: "#475569" }}>
-                          <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 5,
-                            padding: "3px 8px",
-                            borderRadius: 6,
-                            background: "#f1f5f9",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#334155"
-                          }}>
-                            <Building2 size={12} color="#64748b" /> {u.department || "Chưa phân bổ"}
-                          </span>
                         </td>
                         <td style={{ padding: "14px 20px" }}>
                           <span style={{
@@ -733,56 +644,35 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 </div>
               </div>
 
-              {/* DYNAMIC DEPARTMENT & ROLE DROPDOWNS */}
-              <div className="staff-modal-grid-2col" style={{ marginTop: 14 }}>
-                <div className="form-group">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <label className="form-label" style={{ margin: 0 }}>Phòng ban / Tổ trực:</label>
-
-                  </div>
-                  <select
-                    className="form-input"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+              {/* ROLE DROPDOWN */}
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label className="form-label" style={{ margin: 0 }}>Vai trò hệ thống:</label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddModal(false); handleOpenAddRole(); }}
+                    style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
                   >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.name}>{d.name}</option>
-                    ))}
-                    {departments.length === 0 && (
-                      <option value="Tổ Trực Vận Hành">Tổ Trực Vận Hành</option>
-                    )}
-                  </select>
+                    + Quản lý role
+                  </button>
                 </div>
-
-                <div className="form-group">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <label className="form-label" style={{ margin: 0 }}>Vai trò hệ thống:</label>
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddModal(false); handleOpenAddRole(); }}
-                      style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
-                    >
-                      + Quản lý role
-                    </button>
-                  </div>
-                  <select
-                    className="form-input"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                  >
-                    {roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.display_name}
-                      </option>
-                    ))}
-                    {roles.length === 0 && (
-                      <>
-                        <option value="staff">Nhân viên (Staff)</option>
-                        <option value="admin">Quản lý (Admin)</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+                <select
+                  className="form-input"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.display_name}
+                    </option>
+                  ))}
+                  {roles.length === 0 && (
+                    <>
+                      <option value="staff">Nhân viên (Staff)</option>
+                      <option value="admin">Quản lý (Admin)</option>
+                    </>
+                  )}
+                </select>
               </div>
 
               {/* Hint about selected role permissions */}
@@ -998,22 +888,6 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                     onChange={(e) => setEditPhone(e.target.value)}
                   />
                 </div>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label className="form-label">Phòng ban / Tổ trực:</label>
-                <select
-                  className="form-input"
-                  value={editDepartment}
-                  onChange={(e) => setEditDepartment(e.target.value)}
-                >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
-                  ))}
-                  {departments.length === 0 && (
-                    <option value="Tổ Trực Vận Hành">Tổ Trực Vận Hành</option>
-                  )}
-                </select>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
