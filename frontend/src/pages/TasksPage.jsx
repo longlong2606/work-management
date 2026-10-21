@@ -1390,7 +1390,7 @@ export function TasksPage() {
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {subtasks.map((sub, idx) => {
-                          const isAssignedToMe = sub.assignees?.some((a) => a.user_id === user?.id);
+                          const isAssignedToMe = sub.assignees?.some((a) => Number(a.user_id) === Number(user?.id));
 
                           let statusBadge = { label: "Đang làm", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
                           if (sub.status === "PENDING") {
@@ -1552,8 +1552,8 @@ export function TasksPage() {
 
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
-                                  {/* 0. Member accepts or rejects when PENDING */}
-                                  {sub.status === "PENDING" && (isAssignedToMe || canManageTaskSubtasks) && (
+                                  {/* 0. Member accepts or rejects when PENDING - ONLY assigned member can accept or reject */}
+                                  {sub.status === "PENDING" && isAssignedToMe && (
                                     <>
                                       <button
                                         onClick={() => handleAcceptSubtask(sub.id)}
@@ -1599,6 +1599,30 @@ export function TasksPage() {
                                         <span>Từ Chối</span>
                                       </button>
                                     </>
+                                  )}
+
+                                  {/* If PENDING and not assigned to current user, leader/admin can edit or reassign */}
+                                  {sub.status === "PENDING" && !isAssignedToMe && canManageTaskSubtasks && (
+                                    <button
+                                      onClick={() => setEditingSubtask(sub)}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#f8fafc",
+                                        color: "#475569",
+                                        border: "1px solid #cbd5e1",
+                                        padding: "5px 12px",
+                                        borderRadius: 999,
+                                        fontSize: 11.5,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Chỉnh sửa hoặc phân công lại người khác"
+                                    >
+                                      <Edit3 size={12} />
+                                      <span>Đổi người / Sửa</span>
+                                    </button>
                                   )}
 
                                   {/* If REJECTED, leader/admin can reassign/edit */}

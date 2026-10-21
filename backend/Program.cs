@@ -634,10 +634,9 @@ app.MapPost("/api/subtasks/{id:long}/accept", (long id, HttpContext ctx) =>
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long subtaskTaskId = Convert.ToInt64(subtask.task_id);
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id) || currentUser.can_manage_tasks;
 
-    if (!isAssigned && !isLeaderOrAdmin)
-        return Results.StatusCode(403);
+    if (!isAssigned)
+        return Results.Json(new { detail = "Chỉ người được giao mục việc mới có quyền tiếp nhận mục việc này!" }, statusCode: 403);
 
     if ((string)subtask.status != "PENDING")
         return Results.BadRequest(new { detail = $"Chỉ có thể tiếp nhận khi mục việc ở trạng thái Chờ tiếp nhận. Hiện tại: {subtask.status}" });
@@ -672,10 +671,9 @@ app.MapPost("/api/subtasks/{id:long}/reject", (long id, RejectSubtaskRequest req
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long subtaskTaskId = Convert.ToInt64(subtask.task_id);
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id) || currentUser.can_manage_tasks;
 
-    if (!isAssigned && !isLeaderOrAdmin)
-        return Results.StatusCode(403);
+    if (!isAssigned)
+        return Results.Json(new { detail = "Chỉ người được giao mục việc mới có quyền từ chối nhận mục việc này!" }, statusCode: 403);
 
     if ((string)subtask.status != "PENDING")
         return Results.BadRequest(new { detail = $"Chỉ có thể từ chối khi mục việc ở trạng thái Chờ tiếp nhận. Hiện tại: {subtask.status}" });
