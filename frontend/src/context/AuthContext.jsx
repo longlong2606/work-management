@@ -67,6 +67,9 @@ export function AuthProvider({ children }) {
     localStorage.setItem("wm_token", res.access_token);
     localStorage.setItem("wm_user", JSON.stringify(res.user));
     setUser(res.user);
+    if (typeof window !== "undefined") {
+      window.history.pushState({ tab: "schedule" }, "", "/");
+    }
     return res.user;
   };
 
@@ -74,6 +77,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("wm_token");
     localStorage.removeItem("wm_user");
     setUser(null);
+    if (typeof window !== "undefined") {
+      window.history.replaceState({ tab: "schedule" }, "", "/");
+    }
   };
 
   const updateCurrentUser = (updatedUser) => {

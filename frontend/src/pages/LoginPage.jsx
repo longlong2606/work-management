@@ -18,7 +18,7 @@ import {
   Tv
 } from "lucide-react";
 
-export function LoginPage({ onBackToTv }) {
+export function LoginPage({ onBackToTv, onLoginSuccess }) {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +44,9 @@ export function LoginPage({ onBackToTv }) {
     try {
       setLoading(true);
       await login(username, password);
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (err) {
       setError(err.message || "Đăng nhập thất bại");
     } finally {

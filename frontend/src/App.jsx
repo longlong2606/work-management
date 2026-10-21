@@ -81,6 +81,18 @@ function MainContent() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Kiểm tra quyền truy cập tab của người dùng:
+  // Nếu user không có quyền (ví dụ: contributor truy cập /staff, /emails, /smtp)
+  // thì tự động chuyển hướng về trang chủ ("schedule" /)
+  useEffect(() => {
+    if (!user) return;
+    const isStaffRestricted = activeTab === "staff" && !canManageStaff;
+    const isEmailRestricted = (activeTab === "emails" || activeTab === "smtp") && !isAdmin;
+    if (isStaffRestricted || isEmailRestricted) {
+      navigateToTab("schedule");
+    }
+  }, [user, activeTab, canManageStaff, isAdmin, navigateToTab]);
+
   // Nếu tab là "tv" (truy cập /tv):
   // Hiển thị trực tiếp màn hình Kiosk TV mà KHÔNG yêu cầu đăng nhập
   if (activeTab === "tv") {
@@ -104,7 +116,12 @@ function MainContent() {
   }
 
   if (!user) {
-    return <LoginPage onBackToTv={() => navigateToTab("tv")} />;
+    return (
+      <LoginPage 
+        onBackToTv={() => navigateToTab("tv")} 
+        onLoginSuccess={() => navigateToTab("schedule")}
+      />
+    );
   }
 
   return (

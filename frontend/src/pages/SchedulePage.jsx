@@ -3681,57 +3681,28 @@ export function SchedulePage() {
                     />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                        Ngày diễn ra <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={createEventModal.work_date || ""}
-                        onChange={(e) =>
-                          setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))
-                        }
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1.5px solid #cbd5e1",
-                          fontSize: 13,
-                          boxSizing: "border-box",
-                          background: "#ffffff",
-                          fontWeight: 600
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                        Loại sự kiện
-                      </label>
-                      <select
-                        value={createEventModal.event_type}
-                        onChange={(e) =>
-                          setCreateEventModal((prev) => ({ ...prev, event_type: e.target.value }))
-                        }
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1.5px solid #cbd5e1",
-                          fontSize: 13,
-                          boxSizing: "border-box",
-                          background: "#ffffff"
-                        }}
-                      >
-                        <option value="meeting">📌 Họp / Giao ban</option>
-                        <option value="maintenance">🔧 Bảo trì kỹ thuật</option>
-                        <option value="task">⚡ Tác vụ quan trọng</option>
-                        <option value="handover">📋 Bàn giao ca trực</option>
-                        <option value="general">📢 Thông báo chung</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                      Ngày diễn ra <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={createEventModal.work_date || ""}
+                      onChange={(e) =>
+                        setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: 13,
+                        boxSizing: "border-box",
+                        background: "#ffffff",
+                        fontWeight: 600
+                      }}
+                    />
                   </div>
 
                   <div>
