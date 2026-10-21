@@ -166,12 +166,13 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     var assigneesDict = new Dictionary<long, List<dynamic>>();
     if (subtaskIds.Any())
     {
-        var assignees = conn.Query(@"
+        string ids = string.Join(",", subtaskIds);
+        var assignees = conn.Query($@"
             SELECT sa.subtask_id, u.id AS user_id, u.full_name, u.username, u.role,
                    COALESCE(sa.contribution_pct, 100) AS contribution_pct
             FROM subtask_assignees sa
             JOIN users u ON sa.user_id = u.id
-            WHERE sa.subtask_id IN @subtaskIds", new { subtaskIds }).ToList();
+            WHERE sa.subtask_id IN ({ids})").ToList();
 
         foreach (var a in assignees)
         {
@@ -471,9 +472,12 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
             ? req.assignee_ids.Distinct().ToList()
             : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
 
-        var validAssigneeIds = (assigneeIds != null && assigneeIds.Any())
-            ? conn.Query<long>("SELECT id FROM users WHERE id IN @assigneeIds", new { assigneeIds }).ToList()
-            : new List<long>();
+        List<long> validAssigneeIds = new List<long>();
+        if (assigneeIds.Any())
+        {
+            string ids = string.Join(",", assigneeIds);
+            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+        }
         if (!validAssigneeIds.Any() && leaderId.HasValue) validAssigneeIds.Add(leaderId.Value);
 
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
@@ -562,18 +566,25 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
+            var uids = req.assignee_contributions.Select(ac => ac.user_id).Distinct().ToList();
+            string ids = string.Join(",", uids);
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
-            foreach (var ac in req.assignee_contributions)
+            foreach (var ac in req.assignee_contributions.Where(ac => validUids.Contains(ac.user_id)))
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { id, uid = ac.user_id, pct = ac.contribution_pct });
             }
         }
-        else if (req.assignee_ids != null)
+        else if (req.assignee_ids != null && req.assignee_ids.Any())
         {
+            string ids = string.Join(",", req.assignee_ids.Distinct());
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
-            int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
-            foreach (var uid in req.assignee_ids)
+            int defaultPct = validUids.Count > 1 ? (100 / validUids.Count) : 100;
+            foreach (var uid in validUids)
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { id, uid, defaultPct });
@@ -2651,8 +2662,9 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
     List<dynamic> items;
     if (req?.registration_ids != null && req.registration_ids.Count > 0)
     {
-        query += " AND sr.id IN @ids";
-        items = conn.Query<dynamic>(query, new { today, ids = req.registration_ids }).ToList();
+        string ids = string.Join(",", req.registration_ids.Select(x => x.ToString()));
+        query += $" AND sr.id IN ({ids})";
+        items = conn.Query<dynamic>(query, new { today }).ToList();
     }
     else
     {
