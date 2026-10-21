@@ -490,17 +490,16 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 cpPoints
             }));
 
-        var assigneeIds = (req.assignee_ids != null && req.assignee_ids.Any())
-            ? req.assignee_ids.Distinct().ToList()
-            : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
-
         List<long> validAssigneeIds = new List<long>();
-        if (assigneeIds.Any())
+        if (req.assignee_ids != null && req.assignee_ids.Any())
         {
-            string ids = string.Join(",", assigneeIds);
-            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+            string ids = string.Join(",", req.assignee_ids.Distinct());
+            // Trong phần giao người làm subtask không giao cho admin và leader
+            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
         }
-        if (!validAssigneeIds.Any() && leaderId.HasValue) validAssigneeIds.Add(leaderId.Value);
+
+        if (!validAssigneeIds.Any())
+            return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
 
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
@@ -593,7 +592,11 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         {
             var uids = req.assignee_contributions.Select(ac => ac.user_id).Distinct().ToList();
             string ids = string.Join(",", uids);
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+            // Trong phần giao người làm subtask không giao cho admin và leader
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
+
+            if (!validUids.Any())
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             foreach (var ac in req.assignee_contributions.Where(ac => validUids.Contains(ac.user_id)))
@@ -605,7 +608,11 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         else if (req.assignee_ids != null && req.assignee_ids.Any())
         {
             string ids = string.Join(",", req.assignee_ids.Distinct());
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
+            // Trong phần giao người làm subtask không giao cho admin và leader
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
+
+            if (!validUids.Any())
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             int defaultPct = validUids.Count > 1 ? (100 / validUids.Count) : 100;

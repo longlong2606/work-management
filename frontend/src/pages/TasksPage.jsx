@@ -2701,9 +2701,13 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
   const [dueAt, setDueAt] = useState("");
   const remainingCp = Math.max(0, totalCp - currentAllocatedCp);
   const [cpPoints, setCpPoints] = useState(() => (totalCp > 0 && remainingCp > 0 ? Math.min(1, remainingCp) : 1));
+  // Chỉ giao mục việc cho thành viên (không giao cho Admin và Leader)
+  const assignableMembers = useMemo(() => {
+    return (allMembers || []).filter((m) => m.role !== 'admin' && m.role !== 'leader');
+  }, [allMembers]);
+
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
-    if (assignedLeader?.id) return [Number(assignedLeader.id)];
-    if (allMembers && allMembers.length > 0) return [Number(allMembers[0].id)];
+    if (assignableMembers.length > 0) return [Number(assignableMembers[0].id)];
     return [];
   });
   const [isMulti, setIsMulti] = useState(false);
@@ -2711,12 +2715,15 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (assignedLeader?.id) {
-      setSelectedAssignees([Number(assignedLeader.id)]);
-    } else if (allMembers && allMembers.length > 0) {
-      setSelectedAssignees([Number(allMembers[0].id)]);
+    if (assignableMembers.length > 0) {
+      setSelectedAssignees((prev) => {
+        const valid = prev.filter((id) => assignableMembers.some((m) => Number(m.id) === id));
+        return valid.length > 0 ? valid : [Number(assignableMembers[0].id)];
+      });
+    } else {
+      setSelectedAssignees([]);
     }
-  }, [assignedLeader, allMembers]);
+  }, [assignableMembers]);
 
   const toggleAssignee = (userId) => {
     const idNum = Number(userId);
@@ -2945,15 +2952,18 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                   cursor: "pointer",
                 }}
               >
-                {allMembers.map((m) => {
-                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                  const isTaskLeader = assignedLeader?.id && Number(m.id) === Number(assignedLeader.id);
-                  return (
-                    <option key={m.id} value={m.id}>
-                      {m.full_name} (@{m.username}) — [{roleBadge}]{isTaskLeader ? " (Phụ trách nhiệm vụ)" : ""}
-                    </option>
-                  );
-                })}
+                {assignableMembers.length === 0 ? (
+                  <option value="">-- Chưa có tài khoản thành viên (ngoài Admin & Leader) --</option>
+                ) : (
+                  assignableMembers.map((m) => {
+                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} (@{m.username}) — [{roleBadge}]
+                      </option>
+                    );
+                  })
+                )}
               </select>
             ) : (
               <div
@@ -2969,41 +2979,44 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                   background: "#f8fafc",
                 }}
               >
-                {allMembers.map((m) => {
-                  const isChecked = selectedAssignees.includes(Number(m.id));
-                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                  const isTaskLeader = assignedLeader?.id && Number(m.id) === Number(assignedLeader.id);
-                  return (
-                    <label
-                      key={m.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "5px 8px",
-                        borderRadius: 6,
-                        background: isChecked ? "#eff6ff" : "#ffffff",
-                        border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: "#1e293b",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleAssignee(m.id)}
-                        style={{ cursor: "pointer" }}
-                      />
-                      <span style={{ fontWeight: isChecked ? 600 : 400 }}>
-                        {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
-                      </span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
-                        [{roleBadge}]{isTaskLeader ? " ⭐" : ""}
-                      </span>
-                    </label>
-                  );
-                })}
+                {assignableMembers.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#64748b", padding: 8 }}>Chưa có thành viên nào để giao việc</div>
+                ) : (
+                  assignableMembers.map((m) => {
+                    const isChecked = selectedAssignees.includes(Number(m.id));
+                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    return (
+                      <label
+                        key={m.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "5px 8px",
+                          borderRadius: 6,
+                          background: isChecked ? "#eff6ff" : "#ffffff",
+                          border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
+                          cursor: "pointer",
+                          fontSize: 13,
+                          color: "#1e293b",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleAssignee(m.id)}
+                          style={{ cursor: "pointer" }}
+                        />
+                        <span style={{ fontWeight: isChecked ? 600 : 400 }}>
+                          {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
+                        </span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
+                          [{roleBadge}]
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             )}
             <small style={{ fontSize: 11, color: "#64748b", marginTop: 4, display: "block" }}>
@@ -3269,10 +3282,19 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
   const [description, setDescription] = useState(subtask?.description || "");
   const [dueAt, setDueAt] = useState(subtask?.due_at ? subtask.due_at.replace(" ", "T").slice(0, 16) : "");
   const [cpPoints, setCpPoints] = useState(subtask?.cp_points ?? 1);
+
+  // Chỉ giao mục việc cho thành viên (không giao cho Admin và Leader)
+  const assignableMembers = useMemo(() => {
+    return (allMembers || []).filter((m) => m.role !== 'admin' && m.role !== 'leader');
+  }, [allMembers]);
+
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
     if (subtask?.assignees && subtask.assignees.length > 0) {
-      return subtask.assignees.map((a) => Number(a.user_id));
+      const ids = subtask.assignees.map((a) => Number(a.user_id));
+      const filtered = ids.filter((id) => assignableMembers.some((m) => Number(m.id) === id));
+      if (filtered.length > 0) return filtered;
     }
+    if (assignableMembers.length > 0) return [Number(assignableMembers[0].id)];
     return [];
   });
   const [isMulti, setIsMulti] = useState(() => (subtask?.assignees?.length || 0) > 1);
@@ -3518,14 +3540,18 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                   cursor: "pointer",
                 }}
               >
-                {allMembers.map((m) => {
-                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                  return (
-                    <option key={m.id} value={m.id}>
-                      {m.full_name} (@{m.username}) — [{roleBadge}]
-                    </option>
-                  );
-                })}
+                {assignableMembers.length === 0 ? (
+                  <option value="">-- Chưa có tài khoản thành viên (ngoài Admin & Leader) --</option>
+                ) : (
+                  assignableMembers.map((m) => {
+                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} (@{m.username}) — [{roleBadge}]
+                      </option>
+                    );
+                  })
+                )}
               </select>
             ) : (
               <div
@@ -3541,40 +3567,44 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                   background: "#f8fafc",
                 }}
               >
-                {allMembers.map((m) => {
-                  const isChecked = selectedAssignees.includes(Number(m.id));
-                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                  return (
-                    <label
-                      key={m.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "5px 8px",
-                        borderRadius: 6,
-                        background: isChecked ? "#eff6ff" : "#ffffff",
-                        border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: "#1e293b",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleAssignee(m.id)}
-                        style={{ cursor: "pointer" }}
-                      />
-                      <span style={{ fontWeight: isChecked ? 600 : 400 }}>
-                        {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
-                      </span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
-                        [{roleBadge}]
-                      </span>
-                    </label>
-                  );
-                })}
+                {assignableMembers.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#64748b", padding: 8 }}>Chưa có thành viên nào để giao việc</div>
+                ) : (
+                  assignableMembers.map((m) => {
+                    const isChecked = selectedAssignees.includes(Number(m.id));
+                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    return (
+                      <label
+                        key={m.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "5px 8px",
+                          borderRadius: 6,
+                          background: isChecked ? "#eff6ff" : "#ffffff",
+                          border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
+                          cursor: "pointer",
+                          fontSize: 13,
+                          color: "#1e293b",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleAssignee(m.id)}
+                          style={{ cursor: "pointer" }}
+                        />
+                        <span style={{ fontWeight: isChecked ? 600 : 400 }}>
+                          {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
+                        </span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
+                          [{roleBadge}]
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
