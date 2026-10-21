@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   X, CalendarX2, Clock, AlertTriangle, User
 } from "lucide-react";
@@ -20,6 +20,18 @@ export function BulkAbsenceModal({
   onSuccess
 }) {
   const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
+
+  const memberOptions = useMemo(() => {
+    if (!allMembers || allMembers.length === 0) {
+      if (currentUser) return [currentUser];
+      return [];
+    }
+    const hasCurrent = allMembers.some((m) => m.id === currentUser?.id);
+    if (!hasCurrent && currentUser) {
+      return [currentUser, ...allMembers];
+    }
+    return allMembers;
+  }, [allMembers, currentUser]);
 
   // Selected target member (Staff default to themselves, Admin can pick any member)
   const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");
@@ -47,29 +59,52 @@ export function BulkAbsenceModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Sync state when modal is opened or weekDays/user change
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg("");
+      setLoading(false);
+      if (currentUser?.id) {
+        setTargetUserId(currentUser.id);
+      }
+      if (weekDays && weekDays.length > 0) {
+        setStartDate(weekDays[0].dateStr);
+        setEndDate(weekDays[weekDays.length - 1].dateStr);
+        setSelectedDates(weekDays.map((d) => d.dateStr));
+      }
+    }
+  }, [isOpen, weekDays, currentUser]);
+
   // Determine final dates to apply
   const finalDates = useMemo(() => {
     if (scopeMode === "whole_week") {
-      return weekDays.map((d) => d.dateStr).filter((d) => d >= todayStr);
+      return weekDays.map((d) => d.dateStr).filter((d) => isAdmin || d >= todayStr);
     }
     if (scopeMode === "date_range") {
       const dates = [];
       if (startDate && endDate) {
-        let cur = new Date(startDate);
-        const end = new Date(endDate);
-        while (cur <= end) {
-          const ds = cur.toISOString().split("T")[0];
-          if (ds >= todayStr) dates.push(ds);
-          cur.setDate(cur.getDate() + 1);
+        const [sy, sm, sd] = startDate.split("-").map(Number);
+        const [ey, em, ed] = endDate.split("-").map(Number);
+        if (!isNaN(sy) && !isNaN(ey)) {
+          const cur = new Date(sy, sm - 1, sd, 12, 0, 0);
+          const end = new Date(ey, em - 1, ed, 12, 0, 0);
+          while (cur <= end) {
+            const y = cur.getFullYear();
+            const m = String(cur.getMonth() + 1).padStart(2, "0");
+            const d = String(cur.getDate()).padStart(2, "0");
+            const ds = `${y}-${m}-${d}`;
+            if (isAdmin || ds >= todayStr) dates.push(ds);
+            cur.setDate(cur.getDate() + 1);
+          }
         }
       }
       return dates;
     }
     if (scopeMode === "custom_days") {
-      return selectedDates.filter((d) => d >= todayStr);
+      return selectedDates.filter((d) => isAdmin || d >= todayStr);
     }
     return [];
-  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr]);
+  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr, isAdmin]);
 
   // Determine final shift IDs
   const finalShiftIds = useMemo(() => {
@@ -113,12 +148,19 @@ export function BulkAbsenceModal({
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const targetUid = Number(targetUserId) || currentUser?.id;
+    if (!targetUid) {
+      setErrorMsg("Vui lòng chọn nhân sự nộp đơn!");
+      return;
+    }
     if (!reason.trim()) {
       setErrorMsg("Vui lòng nhập lý do xin vắng ca!");
       return;
     }
     if (finalDates.length === 0) {
-      setErrorMsg("Vui lòng chọn ít nhất một ngày làm việc trong tương lai hoặc hôm nay!");
+      setErrorMsg(isAdmin 
+        ? "Vui lòng chọn ít nhất một ngày làm việc!" 
+        : "Vui lòng chọn ít nhất một ngày làm việc hôm nay hoặc trong tương lai!");
       return;
     }
     if (finalShiftIds.length === 0) {
@@ -131,7 +173,7 @@ export function BulkAbsenceModal({
 
     try {
       const res = await api.reportAbsenceBulk({
-        user_id: Number(targetUserId) || currentUser?.id,
+        user_id: targetUid,
         reason: reason.trim(),
         dates: finalDates,
         shift_ids: finalShiftIds,
@@ -279,7 +321,7 @@ export function BulkAbsenceModal({
                     className="form-control"
                     style={{ fontWeight: 600, fontSize: 13, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #cbd5e1" }}
                   >
-                    {allMembers.map((m) => (
+                    {memberOptions.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Tôi)" : ""}
                       </option>
@@ -399,7 +441,7 @@ export function BulkAbsenceModal({
                       </label>
                       <input
                         type="date"
-                        min={todayStr}
+                        min={isAdmin ? undefined : todayStr}
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                         style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
@@ -411,7 +453,7 @@ export function BulkAbsenceModal({
                       </label>
                       <input
                         type="date"
-                        min={startDate || todayStr}
+                        min={isAdmin ? undefined : (startDate || todayStr)}
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
@@ -424,7 +466,7 @@ export function BulkAbsenceModal({
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
                     {weekDays.map((d) => {
                       const isChecked = selectedDates.includes(d.dateStr);
-                      const isPast = d.dateStr < todayStr;
+                      const isPast = !isAdmin && d.dateStr < todayStr;
                       return (
                         <button
                           type="button"

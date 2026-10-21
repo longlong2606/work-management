@@ -1486,16 +1486,16 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
         return Results.BadRequest(new { detail = "Vui lòng nhập lý do báo vắng!" });
     }
 
-    var targetUserId = (currentUser.role == "admin" && req.user_id.HasValue) 
+    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var targetUserId = (canManage && req.user_id.HasValue) 
         ? req.user_id.Value 
         : currentUser.id;
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
     if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-    if ((string)targetUser.role == "admin")
-        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
-var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+
+    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
 
     // Gather dates
     var targetDates = new HashSet<string>();
@@ -1531,8 +1531,8 @@ var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
 
     foreach (var date in targetDates.OrderBy(x => x))
     {
-        // Don't allow reporting absence for past dates
-        if (string.Compare(date, todayStr, StringComparison.Ordinal) < 0) continue;
+        // Don't allow reporting absence for past dates for regular members
+        if (!canManage && string.Compare(date, todayStr, StringComparison.Ordinal) < 0) continue;
 
         foreach (var sid in targetShifts)
         {
@@ -1564,7 +1564,8 @@ var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
                 {
                     conn.Execute(@"
                         UPDATE shift_registrations 
-                        SET attendance_status = 'pending_absence', 
+                        SET status = 'registered',
+                            attendance_status = 'pending_absence', 
                             absence_reason = @reason, 
                             absence_reported_at = CURRENT_TIMESTAMP,
                             absence_approved_by = NULL,
@@ -1585,7 +1586,7 @@ var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
 
     if (affectedCount == 0)
     {
-        return Results.BadRequest(new { detail = "Không có ca trực hợp lệ trong tương lai để nộp đơn báo vắng (các ca trong quá khứ không thể báo vắng)." });
+        return Results.BadRequest(new { detail = "Không có ca trực hợp lệ để nộp đơn báo vắng (vui lòng chọn ca làm việc hợp lệ)." });
     }
 
     // Send single consolidated notification to managers
@@ -1596,6 +1597,17 @@ var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
             sender = currentUser.id,
             title = $"Đơn xin vắng hàng loạt ({affectedCount} ca) cần duyệt",
             msg = $"{targetUser.full_name} vừa nộp đơn XIN VẮNG {affectedCount} ca làm việc ({targetDates.Min()} đến {targetDates.Max()}). Lý do: '{req.reason.Trim()}'. Vui lòng xem xét và phê duyệt."
+        }
+    );
+
+    // Ghi nhật ký lịch sử
+    conn.Execute(@"
+        INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+        VALUES (@uid, 0, @wdate, 'SUBMIT_BULK_ABSENCE', @note)",
+        new {
+            uid = targetUserId,
+            wdate = targetDates.Min(),
+            note = $"{targetUser.full_name} đã nộp đơn xin vắng hàng loạt {affectedCount} ca ({targetDates.Min()} đến {targetDates.Max()}). Lý do: {req.reason.Trim()} (Chờ duyệt)"
         }
     );
 
@@ -1617,17 +1629,16 @@ app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext
         return Results.BadRequest(new { detail = "Vui lòng nhập lý do báo vắng!" });
     }
 
-    // Nhân viên báo vắng cho ca của mình (hoặc quản lý nếu nộp thay)
-    var targetUserId = (currentUser.role == "admin" && req.user_id.HasValue) 
+    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var targetUserId = (canManage && req.user_id.HasValue) 
         ? req.user_id.Value 
         : currentUser.id;
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
     if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-    if ((string)targetUser.role == "admin")
-        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
-var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
+
+    var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
     if (shift == null) return Results.NotFound(new { detail = "Không tìm thấy ca làm việc!" });
 
     var existingReg = conn.QueryFirstOrDefault(
