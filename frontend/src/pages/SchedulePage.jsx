@@ -310,6 +310,15 @@ export function SchedulePage() {
     fetchSchedule();
   }, [fetchSchedule]);
 
+  // Tự động đồng bộ lịch mới nhất khi người dùng chuyển lại tab mà không cần reload
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchSchedule();
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [fetchSchedule]);
+
   // Open Roster Modal (All Members)
   const openRosterModal = async (shift, day) => {
     setRosterModal({
