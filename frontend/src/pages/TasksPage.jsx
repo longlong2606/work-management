@@ -43,7 +43,17 @@ export function TasksPage() {
   const hasAdminRights = canCreateRootTask !== undefined ? canCreateRootTask : isAdmin;
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all"); // 'all', 'my_tasks', 'needs_review', 'finished'
+  const [activeTab, setActiveTab] = useState("active"); // 'active', 'my_tasks', 'needs_review', 'finished', 'all'
+  const [taskStats, setTaskStats] = useState({ total: 0, active: 0, finished: 0, needs_review_tasks: 0 });
+
+  const fetchTaskStats = useCallback(async () => {
+    try {
+      const stats = await api.getTaskStats();
+      if (stats) setTaskStats(stats);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [allMembers, setAllMembers] = useState([]);
@@ -81,7 +91,8 @@ export function TasksPage() {
     try {
       setLoading(true);
       const params = {};
-      if (activeTab === "my_tasks") params.filter = "my_tasks";
+      if (activeTab === "active") params.status = "active";
+      else if (activeTab === "my_tasks") params.filter = "my_tasks";
       else if (activeTab === "needs_review") params.filter = "needs_review";
       else if (activeTab === "finished") params.status = "FINISHED";
       else if (activeTab === "all") {
@@ -112,7 +123,8 @@ export function TasksPage() {
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchTaskStats();
+  }, [fetchTasks, fetchTaskStats]);
 
   useEffect(() => {
     fetchMembers();
@@ -140,16 +152,17 @@ export function TasksPage() {
         setSelectedTask(res.task);
       }
       fetchTasks();
+      fetchTaskStats();
     } catch (err) {
       console.error(err);
     }
   };
 
   // Metrics
-  const totalCount = tasks.length;
-  const inProgressCount = tasks.filter((t) => t.status === "IN_PROGRESS" || t.status === "OPEN").length;
-  const needsReviewCount = tasks.reduce((sum, t) => sum + (t.review_subtasks_count || 0), 0);
-  const finishedCount = tasks.filter((t) => t.status === "FINISHED").length;
+  const totalCount = taskStats.total;
+  const inProgressCount = taskStats.active;
+  const needsReviewCount = taskStats.needs_review_tasks;
+  const finishedCount = taskStats.finished;
 
   const getTypeBadge = (type) => {
     switch (type) {
@@ -186,8 +199,12 @@ export function TasksPage() {
     if (!window.confirm("Bạn có chắc chắn muốn nghiệm thu và kết thúc toàn bộ nhiệm vụ này?")) return;
     try {
       const res = await api.finishTask(taskId);
-      showToast(res.message || "Đã hoàn thành nhiệm vụ thành công!");
-      refreshTaskDetail(taskId);
+      showToast(res.message || "Chúc mừng! Nhiệm vụ đã hoàn thành xuất sắc và được chuyển sang mục Đã hoàn thành.");
+      setSelectedTask(null);
+      setTaskDetail(null);
+      setActiveTab("finished");
+      fetchTasks();
+      fetchTaskStats();
     } catch (err) {
       showToast(err.message || "Không thể hoàn thành nhiệm vụ.", "danger");
     }
@@ -275,12 +292,18 @@ export function TasksPage() {
         isPenalty,
         Number(reviewPenaltyPoints) || 0
       );
-      showToast(res.message || "Đã cập nhật mục việc thành công!");
+      if (res?.task_finished) {
+        showToast(res.message || "Đã hoàn thành toàn bộ mục checklist và chuyển nhiệm vụ sang Đã hoàn thành!");
+      } else {
+        showToast(res.message || "Đã cập nhật mục việc thành công!");
+      }
       setReviewModalSubtask(null);
       setReviewComment("");
       setReviewPenaltyPoints(1);
       setReviewActionMode("approve");
       if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+      fetchTasks();
+      fetchTaskStats();
     } catch (err) {
       showToast(err.message || "Lỗi khi xử lý mục việc.", "danger");
     }
@@ -463,10 +486,11 @@ export function TasksPage() {
           }}
         >
           {[
-            { id: "all", label: "Tất cả", count: totalCount, icon: ListTodo },
+            { id: "active", label: "Đang thực hiện", count: inProgressCount, icon: Clock },
             { id: "my_tasks", label: "Việc của tôi", icon: User },
             { id: "needs_review", label: "Cần duyệt", count: needsReviewCount, icon: AlertCircle },
             { id: "finished", label: "Đã hoàn thành", count: finishedCount, icon: CheckCircle2 },
+            { id: "all", label: "Tất cả", count: totalCount, icon: ListTodo },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -1243,7 +1267,7 @@ export function TasksPage() {
                           </button>
                         )}
 
-                        {taskDetail.task.status !== "FINISHED" && (
+                        {taskDetail.task.status !== "FINISHED" ? (
                           <button
                             onClick={() => handleFinishTask(taskDetail.task.id)}
                             style={{
@@ -1266,6 +1290,24 @@ export function TasksPage() {
                             <Award size={15} />
                             <span>Hoàn Thành</span>
                           </button>
+                        ) : (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "#ecfdf5",
+                              border: "1px solid #a7f3d0",
+                              color: "#047857",
+                              padding: "8px 14px",
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 700,
+                            }}
+                          >
+                            <CheckCircle2 size={16} color="#059669" />
+                            <span>Nhiệm vụ đã hoàn thành</span>
+                          </div>
                         )}
 
                         {isAdmin && (

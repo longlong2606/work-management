@@ -377,6 +377,7 @@ export const api = {
     const qs = query.toString();
     return request(`/tasks${qs ? `?${qs}` : ""}`);
   },
+  getTaskStats: () => request("/tasks/stats"),
   getTaskDetail: (id) => request(`/tasks/${id}`),
   createTask: (data) =>
     request("/tasks", {

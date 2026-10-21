@@ -85,8 +85,15 @@ app.MapGet("/api/tasks", (
 
     if (!string.IsNullOrWhiteSpace(status))
     {
-        sql += " AND t.status = @status";
-        p.Add("status", status);
+        if (status.Equals("active", StringComparison.OrdinalIgnoreCase))
+        {
+            sql += " AND t.status IN ('OPEN', 'IN_PROGRESS', 'POSTPONED')";
+        }
+        else
+        {
+            sql += " AND t.status = @status";
+            p.Add("status", status);
+        }
     }
     if (!string.IsNullOrWhiteSpace(task_type))
     {
@@ -121,6 +128,29 @@ app.MapGet("/api/tasks", (
 
     var tasks = conn.Query(sql, p).ToList();
     return Results.Ok(tasks);
+});
+
+app.MapGet("/api/tasks/stats", (HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var stats = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT 
+            COUNT(1) AS total,
+            SUM(CASE WHEN t.status IN ('OPEN', 'IN_PROGRESS', 'POSTPONED') THEN 1 ELSE 0 END) AS active,
+            SUM(CASE WHEN t.status = 'FINISHED' THEN 1 ELSE 0 END) AS finished,
+            (SELECT COUNT(DISTINCT s.task_id) FROM subtasks s WHERE s.status = 'REVIEW') AS needs_review_tasks
+        FROM tasks t");
+
+    return Results.Ok(new
+    {
+        total = Convert.ToInt32(stats?.total ?? 0),
+        active = Convert.ToInt32(stats?.active ?? 0),
+        finished = Convert.ToInt32(stats?.finished ?? 0),
+        needs_review_tasks = Convert.ToInt32(stats?.needs_review_tasks ?? 0)
+    });
 });
 
 app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
@@ -894,7 +924,30 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
             }
         }
 
-        return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!" });
+        long taskId = Convert.ToInt64(subtask.task_id);
+        var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
+            SELECT 
+                COUNT(1) AS total,
+                SUM(CASE WHEN status IN ('FINISHED', 'FAILED') THEN 1 ELSE 0 END) AS resolved,
+                SUM(CASE WHEN status = 'FINISHED' THEN 1 ELSE 0 END) AS finished
+            FROM subtasks WHERE task_id = @taskId", new { taskId });
+
+        int totalSubtasks = Convert.ToInt32(subtaskStats?.total ?? 0);
+        int resolvedSubtasks = Convert.ToInt32(subtaskStats?.resolved ?? 0);
+        bool allResolved = totalSubtasks > 0 && totalSubtasks == resolvedSubtasks;
+
+        if (allResolved)
+        {
+            conn.Execute(@"
+                UPDATE tasks SET status = 'FINISHED', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = @taskId AND status != 'FINISHED'", new { taskId });
+        }
+
+        string msg = allResolved
+            ? "Đã duyệt ĐẠT mục checklist và tự động nghiệm thu hoàn thành toàn bộ nhiệm vụ lớn!"
+            : "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!";
+
+        return Results.Ok(new { message = msg, task_finished = allResolved });
     }
     // TRƯỜNG HỢP 3: Yêu cầu sửa lại (từ REVIEW) HOẶC Cho làm lại (từ FAILED)
     else
@@ -930,6 +983,9 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                 createdBy = currentUser.id,
                 cpPoints
             }));
+
+            // Nếu nhiệm vụ cha đã FINISHED, đưa về IN_PROGRESS vì có việc mới cần làm lại
+            conn.Execute("UPDATE tasks SET status = 'IN_PROGRESS', finished_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = @taskId", new { taskId });
 
             // Sao chép toàn bộ phân công thành viên (assignees) từ mục việc cũ sang mục việc mới
             var oldAssignees = conn.Query<dynamic>("SELECT user_id, contribution_pct FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
