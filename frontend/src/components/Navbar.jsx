@@ -528,17 +528,17 @@ export function Navbar({ activeTab, setActiveTab }) {
               style={{
                 position: "absolute",
                 top: 0,
-                right: 0,
+                left: 0,
                 width: "min(360px, 90vw)",
                 height: "100%",
                 backgroundColor: "#ffffff",
-                boxShadow: "-8px 0 35px rgba(0, 0, 0, 0.18)",
+                boxShadow: "8px 0 35px rgba(0, 0, 0, 0.18)",
                 display: "flex",
                 flexDirection: "column",
                 overflowY: "auto",
                 padding: "18px 16px",
                 gap: 14,
-                animation: "slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+                animation: "slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
               }}
             >
               {/* Drawer Top Header with close button */}
