@@ -162,7 +162,7 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         WHERE s.task_id = @id
         ORDER BY s.position ASC, s.created_at ASC", new { id }).ToList();
 
-    var subtaskIds = subtasksRaw.Select(s => (long)s.id).ToList();
+    var subtaskIds = subtasksRaw.Select(s => Convert.ToInt64(s.id)).ToList();
     var assigneesDict = new Dictionary<long, List<dynamic>>();
     if (subtaskIds.Any())
     {
@@ -175,11 +175,11 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
 
         foreach (var a in assignees)
         {
-            long sId = (long)a.subtask_id;
+            long sId = Convert.ToInt64(a.subtask_id);
             if (!assigneesDict.ContainsKey(sId)) assigneesDict[sId] = new List<dynamic>();
             int pct = Convert.ToInt32(a.contribution_pct);
             assigneesDict[sId].Add(new { 
-                user_id = (long)a.user_id, 
+                user_id = Convert.ToInt64(a.user_id), 
                 full_name = (string)a.full_name, 
                 username = (string)a.username, 
                 role = (string)a.role,
@@ -190,24 +190,24 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
 
     var subtasks = subtasksRaw.Select(s => new
     {
-        id = (long)s.id,
-        task_id = (long)s.task_id,
+        id = Convert.ToInt64(s.id),
+        task_id = Convert.ToInt64(s.task_id),
         title = (string)s.title,
         description = (string?)s.description,
-        position = (int)s.position,
+        position = Convert.ToInt32(s.position),
         status = (string)s.status,
         due_at = (string?)s.due_at,
         review_comment = (string?)s.review_comment,
         reject_reason = (string?)s.reject_reason,
         submitted_for_review_at = (string?)s.submitted_for_review_at,
         finished_at = (string?)s.finished_at,
-        created_by = (long)s.created_by,
+        created_by = Convert.ToInt64(s.created_by),
         creator_name = (string?)s.creator_name,
         created_at = (string?)s.created_at?.ToString(),
         updated_at = (string?)s.updated_at?.ToString(),
         cp_points = Convert.ToInt32(s.cp_points),
         quality_multiplier = Convert.ToDouble(s.quality_multiplier),
-        assignees = assigneesDict.ContainsKey((long)s.id) ? assigneesDict[(long)s.id] : new List<dynamic>()
+        assignees = assigneesDict.ContainsKey(Convert.ToInt64(s.id)) ? assigneesDict[Convert.ToInt64(s.id)] : new List<dynamic>()
     }).ToList();
 
     return Results.Ok(new
@@ -268,7 +268,8 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
     var existing = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
     if (existing == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
-    if (currentUser.role != "admin" && (long)existing.leader_id != currentUser.id)
+    long? existingLeaderId = existing.leader_id != null ? Convert.ToInt64(existing.leader_id) : (long?)null;
+    if (currentUser.role != "admin" && (!existingLeaderId.HasValue || existingLeaderId.Value != currentUser.id))
         return Results.StatusCode(403);
 
     int totalCp = Math.Max(0, req.total_cp);
@@ -322,9 +323,10 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
+    long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool canCreateSubtask = currentUser.role == "admin" 
         || currentUser.role == "leader" 
-        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
+        || (leaderId.HasValue && leaderId.Value == currentUser.id)
         || currentUser.can_manage_tasks;
 
     if (!canCreateSubtask)
@@ -368,19 +370,50 @@ app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, created_by FROM tasks WHERE id = @id", new { id });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
+    long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
+    long? createdBy = task.created_by != null ? Convert.ToInt64(task.created_by) : (long?)null;
+
     bool isAuthorized = currentUser.role == "admin" 
         || currentUser.can_manage_tasks 
-        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
-        || (task.created_by != null && (long)task.created_by == currentUser.id);
+        || (leaderId.HasValue && leaderId.Value == currentUser.id)
+        || (createdBy.HasValue && createdBy.Value == currentUser.id);
 
     if (!isAuthorized) return Results.StatusCode(403);
+
+    // Đảm bảo bảng cp_transactions luôn tồn tại (tránh lỗi 42P01 trên PostgreSQL nếu chưa có migration)
+    try
+    {
+        string pk = Database.IsPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+        conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
+            id {pk},
+            user_id INTEGER NOT NULL,
+            subtask_id INTEGER,
+            cp_earned REAL DEFAULT 0,
+            contribution_pct INTEGER DEFAULT 100,
+            cp_points_base INTEGER DEFAULT 0,
+            quality_multiplier REAL DEFAULT 1.0,
+            awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );");
+    }
+    catch { }
 
     using var tx = conn.BeginTransaction();
     try
     {
+        // 1. Xóa các thông báo liên quan đến nhiệm vụ
+        conn.Execute("DELETE FROM notifications WHERE type = 'task' AND related_id = @id", new { id }, tx);
+
+        // 2. Xóa các giao dịch CP liên quan đến các checklist của nhiệm vụ
         conn.Execute("DELETE FROM cp_transactions WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id }, tx);
+
+        // 3. Xóa người phụ trách các checklist
         conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id IN (SELECT id FROM subtasks WHERE task_id = @id)", new { id }, tx);
+
+        // 4. Xóa các checklist
         conn.Execute("DELETE FROM subtasks WHERE task_id = @id", new { id }, tx);
+
+        // 5. Xóa nhiệm vụ chính
         int rows = conn.Execute("DELETE FROM tasks WHERE id = @id", new { id }, tx);
 
         tx.Commit();
@@ -403,9 +436,10 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ cha không tồn tại!" });
 
+    long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool canCreateSubtask = currentUser.role == "admin" 
         || currentUser.role == "leader" 
-        || (task.leader_id != null && (long)task.leader_id == currentUser.id)
+        || (leaderId.HasValue && leaderId.Value == currentUser.id)
         || currentUser.can_manage_tasks;
 
     if (!canCreateSubtask)
@@ -439,7 +473,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
 
     var assigneeIds = (req.assignee_ids != null && req.assignee_ids.Any())
         ? req.assignee_ids.Distinct().ToList()
-        : new List<long> { (long)task.leader_id };
+        : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
 
     int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
     foreach (var uid in assigneeIds)
@@ -475,7 +509,8 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && !currentUser.can_manage_cp && (long)subtask.leader_id != currentUser.id)
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && !currentUser.can_manage_cp && (!subtaskLeaderId.HasValue || subtaskLeaderId.Value != currentUser.id))
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.title))
@@ -535,8 +570,10 @@ app.MapPost("/api/subtasks/{id:long}/accept", (long id, HttpContext ctx) =>
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
 
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    long subtaskTaskId = Convert.ToInt64(subtask.task_id);
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id) || currentUser.can_manage_tasks;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id) || currentUser.can_manage_tasks;
 
     if (!isAssigned && !isLeaderOrAdmin)
         return Results.StatusCode(403);
@@ -549,10 +586,10 @@ app.MapPost("/api/subtasks/{id:long}/accept", (long id, HttpContext ctx) =>
             status = 'PROCESSING', reject_reason = NULL, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id", new { id });
 
-    if (subtask.leader_id != null && (long)subtask.leader_id != currentUser.id)
+    if (subtaskLeaderId.HasValue && subtaskLeaderId.Value != currentUser.id)
     {
         conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@leaderId, @senderId, @title, @msg, 'task', @taskId)",
-            new { leaderId = (long)subtask.leader_id, senderId = currentUser.id, title = "Thành viên đã tiếp nhận mục việc", msg = $"{currentUser.full_name} đã xác nhận tiếp nhận mục việc: \"{subtask.title}\".", taskId = (long)subtask.task_id });
+            new { leaderId = subtaskLeaderId.Value, senderId = currentUser.id, title = "Thành viên đã tiếp nhận mục việc", msg = $"{currentUser.full_name} đã xác nhận tiếp nhận mục việc: \"{subtask.title}\".", taskId = subtaskTaskId });
     }
 
     return Results.Ok(new { message = "Đã tiếp nhận mục việc thành công! Trạng thái chuyển sang Đang thực hiện." });
@@ -571,8 +608,10 @@ app.MapPost("/api/subtasks/{id:long}/reject", (long id, RejectSubtaskRequest req
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
 
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    long subtaskTaskId = Convert.ToInt64(subtask.task_id);
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id) || currentUser.can_manage_tasks;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id) || currentUser.can_manage_tasks;
 
     if (!isAssigned && !isLeaderOrAdmin)
         return Results.StatusCode(403);
@@ -587,10 +626,10 @@ app.MapPost("/api/subtasks/{id:long}/reject", (long id, RejectSubtaskRequest req
             status = 'REJECTED', reject_reason = @reason, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id", new { id, reason });
 
-    if (subtask.leader_id != null && (long)subtask.leader_id != currentUser.id)
+    if (subtaskLeaderId.HasValue && subtaskLeaderId.Value != currentUser.id)
     {
         conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@leaderId, @senderId, @title, @msg, 'task', @taskId)",
-            new { leaderId = (long)subtask.leader_id, senderId = currentUser.id, title = "Thành viên từ chối nhận mục việc", msg = $"{currentUser.full_name} đã từ chối nhận mục việc \"{subtask.title}\" với lý do: {reason}", taskId = (long)subtask.task_id });
+            new { leaderId = subtaskLeaderId.Value, senderId = currentUser.id, title = "Thành viên từ chối nhận mục việc", msg = $"{currentUser.full_name} đã từ chối nhận mục việc \"{subtask.title}\" với lý do: {reason}", taskId = subtaskTaskId });
     }
 
     return Results.Ok(new { message = "Đã từ chối nhận mục việc và gửi thông báo phản hồi cho Trưởng nhóm!" });
@@ -610,7 +649,8 @@ app.MapPost("/api/subtasks/{id:long}/submit", (long id, HttpContext ctx) =>
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (long)subtask.leader_id == currentUser.id;
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id);
 
     if (!isAssigned && !isLeaderOrAdmin)
         return Results.StatusCode(403);
@@ -639,9 +679,10 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     bool canReview = currentUser.role == "admin" 
         || currentUser.role == "leader" 
-        || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id)
+        || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id)
         || currentUser.can_manage_cp
         || currentUser.can_manage_tasks;
 
@@ -680,7 +721,7 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
         {
             if ((string)a.role == "admin") continue; // Không phạt trừ Admin
 
-            long uId = (long)a.user_id;
+            long uId = Convert.ToInt64(a.user_id);
             int pct = Convert.ToInt32(a.contribution_pct);
             double cpDeducted = -Math.Round(penalty * (pct / 100.0), 1);
             conn.Execute(@"
@@ -727,7 +768,7 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
             {
                 if ((string)a.role == "admin") continue; // Không tích lũy điểm CP cho Quản trị viên (Admin)
 
-                long uId = (long)a.user_id;
+                long uId = Convert.ToInt64(a.user_id);
                 int pct = Convert.ToInt32(a.contribution_pct);
                 double cpEarned = Math.Round(cpPoints * (pct / 100.0) * qMultiplier, 1);
                 conn.Execute(@"
@@ -775,13 +816,34 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
+    long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
+
     bool isAuthorized = currentUser.role == "admin" 
         || currentUser.can_manage_tasks 
-        || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id)
-        || (subtask.created_by != null && (long)subtask.created_by == currentUser.id);
+        || (leaderId.HasValue && leaderId.Value == currentUser.id)
+        || (createdBy.HasValue && createdBy.Value == currentUser.id);
 
     if (!isAuthorized)
         return Results.StatusCode(403);
+
+    // Đảm bảo bảng cp_transactions luôn tồn tại
+    try
+    {
+        string pk = Database.IsPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+        conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
+            id {pk},
+            user_id INTEGER NOT NULL,
+            subtask_id INTEGER,
+            cp_earned REAL DEFAULT 0,
+            contribution_pct INTEGER DEFAULT 100,
+            cp_points_base INTEGER DEFAULT 0,
+            quality_multiplier REAL DEFAULT 1.0,
+            awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );");
+    }
+    catch { }
 
     using var tx = conn.BeginTransaction();
     try

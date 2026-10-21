@@ -232,6 +232,21 @@ public static class Database
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS cp_transactions (
+                id {pk},
+                user_id INTEGER NOT NULL,
+                subtask_id INTEGER,
+                cp_earned REAL DEFAULT 0,
+                contribution_pct INTEGER DEFAULT 100,
+                cp_points_base INTEGER DEFAULT 0,
+                quality_multiplier REAL DEFAULT 1.0,
+                awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_cp_transactions_user ON cp_transactions (user_id);
+            CREATE INDEX IF NOT EXISTS idx_cp_transactions_subtask ON cp_transactions (subtask_id);
+
+
             CREATE TABLE IF NOT EXISTS feedbacks (
                 id {pk},
                 user_id INTEGER NOT NULL,
@@ -346,6 +361,21 @@ public static class Database
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );"); } catch { }
+
+            try { conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
+                id {pk},
+                user_id INTEGER NOT NULL,
+                subtask_id INTEGER,
+                cp_earned REAL DEFAULT 0,
+                contribution_pct INTEGER DEFAULT 100,
+                cp_points_base INTEGER DEFAULT 0,
+                quality_multiplier REAL DEFAULT 1.0,
+                awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_cp_transactions_user ON cp_transactions (user_id);
+            CREATE INDEX IF NOT EXISTS idx_cp_transactions_subtask ON cp_transactions (subtask_id);
+            "); } catch { }
 
             // Loại trừ dữ liệu đánh giá hoặc điểm CP lịch sử của tài khoản Quản trị viên (Admin)
             try {
