@@ -95,25 +95,77 @@ export function ClassScheduleModal({
     }
   }, [isOpen, activeTab, listFilterUser]);
 
-  // Map shift number or text to start_time and end_time
-  const parseShiftTime = (shiftVal) => {
-    if (!shiftVal) return null;
+  // Standard RFC-compliant CSV line parser that respects quotes and delimiters
+  const splitCsvLine = (line, delimiter = ",") => {
+    const result = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(cur.replace(/^["']|["']$/g, "").trim());
+        cur = "";
+      } else {
+        cur += char;
+      }
+    }
+    result.push(cur.replace(/^["']|["']$/g, "").trim());
+    return result;
+  };
+
+  // Map shift number or text to contiguous shift periods
+  // e.g. "1,2,3" -> [{ startId: 1, endId: 3, startTime: "08:00", endTime: "12:40", shiftLabel: "Ca 1 - Ca 3 (08:00 - 12:40)" }]
+  // e.g. "5,6,7,8" -> [{ startId: 5, endId: 8, startTime: "14:45", endTime: "20:25", shiftLabel: "Ca 5 - Ca 8 (14:45 - 20:25)" }]
+  // e.g. "5,7,8,9" -> [
+  //   { startId: 5, endId: 5, startTime: "14:45", endTime: "16:15", shiftLabel: "Ca 5 (14:45 - 16:15)" },
+  //   { startId: 7, endId: 9, startTime: "18:20", endTime: "22:00", shiftLabel: "Ca 7 - Ca 9 (18:20 - 22:00)" }
+  // ]
+  const parseShiftPeriods = (shiftVal) => {
+    if (!shiftVal) return [];
     const str = shiftVal.toString().trim();
-    const nums = str.match(/\d+/g);
-    if (!nums || nums.length === 0) return null;
+    const rawNums = str.match(/\d+/g);
+    if (!rawNums || rawNums.length === 0) return [];
 
-    const startId = parseInt(nums[0], 10);
-    const endId = nums.length > 1 ? parseInt(nums[nums.length - 1], 10) : startId;
+    const nums = Array.from(new Set(rawNums.map((n) => parseInt(n, 10)).filter((n) => n >= 1 && n <= 9))).sort((a, b) => a - b);
+    if (nums.length === 0) return [];
 
-    const startShift = SHIFTS.find((s) => s.id === startId) || SHIFTS[0];
-    const endShift = SHIFTS.find((s) => s.id === endId) || startShift;
+    // Group contiguous numbers
+    const groups = [];
+    let currentGroup = [nums[0]];
+    for (let i = 1; i < nums.length; i++) {
+      if (nums[i] === nums[i - 1] + 1) {
+        currentGroup.push(nums[i]);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = [nums[i]];
+      }
+    }
+    groups.push(currentGroup);
 
-    return {
-      startTime: startShift.startTime,
-      endTime: endShift.endTime,
-      shiftLabel: startId === endId ? `Ca ${startId} (${startShift.label})` : `Ca ${startId} - Ca ${endId} (${startShift.startTime} - ${endShift.endTime})`,
-      shiftName: startId === endId ? `Ca ${startId}` : `Ca ${startId}-${endId}`
-    };
+    return groups.map((group) => {
+      const startId = group[0];
+      const endId = group[group.length - 1];
+      const startShift = SHIFTS.find((s) => s.id === startId) || SHIFTS[0];
+      const endShift = SHIFTS.find((s) => s.id === endId) || startShift;
+
+      return {
+        startId,
+        endId,
+        startTime: startShift.startTime,
+        endTime: endShift.endTime,
+        shiftLabel: startId === endId
+          ? `Ca ${startId} (${startShift.label})`
+          : `Ca ${startId} - Ca ${endId} (${startShift.startTime} - ${endShift.endTime})`,
+        shiftName: startId === endId ? `Ca ${startId}` : `Ca ${startId}-${endId}`
+      };
+    });
   };
 
   // Check if a time range overlaps with any of the 9 lab shifts
@@ -155,7 +207,7 @@ export function ClassScheduleModal({
 
     // Split headers
     const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
-    const rawHeaders = lines[0].split(delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
+    const rawHeaders = splitCsvLine(lines[0], delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
 
     // Normalize header mapping: supports course_code, class_name, start_date, end_date, shift, room
     const colIndex = {
@@ -195,7 +247,18 @@ export function ClassScheduleModal({
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
-      const parts = line.split(delimiter).map((p) => p.replace(/^["']|["']$/g, "").trim());
+      let parts = splitCsvLine(line, delimiter);
+
+      // Intelligent reconstruction if unquoted shift cell had commas (e.g. 5,6,7,8 or 1,2,3)
+      if (parts.length > rawHeaders.length && colIndex.shift !== -1) {
+        const extraCount = parts.length - rawHeaders.length;
+        const shiftParts = parts.slice(colIndex.shift, colIndex.shift + extraCount + 1);
+        parts = [
+          ...parts.slice(0, colIndex.shift),
+          shiftParts.join(","),
+          ...parts.slice(colIndex.shift + extraCount + 1),
+        ];
+      }
       
       let courseCode = colIndex.course_code !== -1 ? (parts[colIndex.course_code] || "") : "";
       let className = colIndex.class_name !== -1 ? (parts[colIndex.class_name] || "") : "";
@@ -206,18 +269,27 @@ export function ClassScheduleModal({
       let endTime = colIndex.end_time !== -1 ? (parts[colIndex.end_time] || "") : "";
       const room = colIndex.room !== -1 ? (parts[colIndex.room] || "") : "";
 
-      let shiftLabel = "";
+      let shiftPeriods = [];
       if (shiftVal) {
-        const parsedShift = parseShiftTime(shiftVal);
-        if (parsedShift) {
-          startTime = parsedShift.startTime;
-          endTime = parsedShift.endTime;
-          shiftLabel = parsedShift.shiftLabel;
-        }
+        shiftPeriods = parseShiftPeriods(shiftVal);
       }
-      if (!shiftLabel && startTime && endTime) {
-        const matching = SHIFTS.find((s) => s.startTime === startTime && s.endTime === endTime);
-        shiftLabel = matching ? `${matching.name.split(" ")[0]} (${matching.label})` : `${startTime} - ${endTime}`;
+
+      if (shiftPeriods.length === 0) {
+        let sTime = startTime;
+        let eTime = endTime;
+        if (sTime.length === 4 && sTime.includes(":")) sTime = "0" + sTime;
+        if (eTime.length === 4 && eTime.includes(":")) eTime = "0" + eTime;
+
+        let label = "";
+        if (sTime && eTime) {
+          const matching = SHIFTS.find((s) => s.startTime === sTime && s.endTime === eTime);
+          label = matching ? `Ca ${matching.id} (${matching.label})` : `${sTime} - ${eTime}`;
+        }
+        shiftPeriods = [{
+          startTime: sTime,
+          endTime: eTime,
+          shiftLabel: label || shiftVal || "Ca học"
+        }];
       }
 
       // Fallback smart lookup from GREENWICH_COURSES
@@ -228,10 +300,6 @@ export function ClassScheduleModal({
         if (foundEntry) courseCode = foundEntry[0];
       }
       if (!className && courseCode) className = courseCode;
-
-      // Standardize time format HH:mm
-      if (startTime.length === 4 && startTime.includes(":")) startTime = "0" + startTime;
-      if (endTime.length === 4 && endTime.includes(":")) endTime = "0" + endTime;
 
       const sDateStr = normalizeDate(startDateRaw);
       const eDateStr = normalizeDate(endDateRaw) || sDateStr;
@@ -263,24 +331,28 @@ export function ClassScheduleModal({
       }
 
       for (const dStr of dateList) {
-        const isValid = Boolean(className && dStr && startTime && endTime && endTime > startTime);
-        const overlapping = isValid ? getOverlappingShifts(startTime, endTime) : [];
+        for (const period of shiftPeriods) {
+          const sTime = period.startTime;
+          const eTime = period.endTime;
+          const isValid = Boolean(className && dStr && sTime && eTime && eTime > sTime);
+          const overlapping = isValid ? getOverlappingShifts(sTime, eTime) : [];
 
-        parsed.push({
-          rowNum: i + 1,
-          course_code: courseCode,
-          class_name: className,
-          work_date: dStr,
-          start_date: sDateStr,
-          end_date: eDateStr,
-          start_time: startTime,
-          end_time: endTime,
-          shiftLabel,
-          room,
-          isValid,
-          error: !isValid ? (endTime <= startTime ? "Giờ kết thúc phải sau giờ bắt đầu" : "Thiếu thông tin bắt buộc") : null,
-          overlappingShifts: overlapping
-        });
+          parsed.push({
+            rowNum: i + 1,
+            course_code: courseCode,
+            class_name: className,
+            work_date: dStr,
+            start_date: sDateStr,
+            end_date: eDateStr,
+            start_time: sTime,
+            end_time: eTime,
+            shiftLabel: period.shiftLabel,
+            room,
+            isValid,
+            error: !isValid ? (eTime <= sTime ? "Giờ kết thúc phải sau giờ bắt đầu" : "Thiếu thông tin bắt buộc") : null,
+            overlappingShifts: overlapping
+          });
+        }
       }
     }
 
@@ -301,12 +373,10 @@ export function ClassScheduleModal({
     reader.readAsText(uploadedFile);
   };
 
-
-
   // Download template CSV
   const handleDownloadTemplate = () => {
     const csvHeader = "course_code,class_name,start_date,end_date,shift,room\n";
-    const sampleRow = "COMP1752,Lập trình hướng đối tượng,2026-10-05,2026-10-05,1,Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2026-10-06,2,Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,2026-10-08,4,Room 201\n";
+    const sampleRow = 'COMP1752,Lập trình hướng đối tượng,2026-10-05,2026-10-05,"1,2,3",Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2026-10-06,"4,5,6",Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,2026-10-08,"5,6,7,8",Room 201\n';
     const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -634,7 +704,7 @@ export function ClassScheduleModal({
                                         border: "1px solid #fde68a"
                                       }}
                                     >
-                                      ⚠️ {s.name.split(" ")[0]} ({s.label})
+                                      ⚠️ Ca {s.id} ({s.label})
                                     </span>
                                   ))}
                                 </div>
