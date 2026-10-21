@@ -1,7 +1,7 @@
 import { KpiLeaderboardModal } from "../components/KpiLeaderboardModal";
 import { BulkAbsenceModal } from "../components/BulkAbsenceModal";
 import { ClassScheduleModal } from "../components/ClassScheduleModal";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { SHIFTS } from "../constants/shifts";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -914,10 +914,54 @@ export function SchedulePage() {
   };
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
-  const totalHours = myShiftsInWeek.reduce(
-    (acc, curr) => acc + (curr.shift_id === 8 ? 0.5 : 1.5),
-    0
-  );
+
+  // Real-time KPI analysis for current user
+  const myKpiStats = useMemo(() => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const nowTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    let completedHours = 0;
+    let scheduledHours = 0;
+    let absentCount = 0;
+
+    myShiftsInWeek.forEach((s) => {
+      const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+      const dur = s.actual_hours != null ? Number(s.actual_hours) : standardDuration;
+      const isAbsent = s.attendance_status === "absent";
+      const shiftMeta = SHIFTS.find((sh) => sh.id === s.shift_id);
+      const endTime = shiftMeta?.endTime || "22:00";
+
+      let isFinished = false;
+      if (s.work_date < todayStr) {
+        isFinished = true;
+      } else if (s.work_date === todayStr && nowTimeStr >= endTime) {
+        isFinished = true;
+      }
+
+      if (isAbsent) {
+        absentCount += 1;
+      } else {
+        scheduledHours += dur;
+        if (isFinished) {
+          completedHours += dur;
+        }
+      }
+    });
+
+    const completedPercent = Math.min(100, Math.round((completedHours / 20.0) * 100));
+    const scheduledPercent = Math.min(100, Math.round((scheduledHours / 20.0) * 100));
+
+    return {
+      completedHours,
+      scheduledHours,
+      completedPercent,
+      scheduledPercent,
+      absentCount,
+    };
+  }, [myShiftsInWeek]);
+
+  const totalHours = myKpiStats.scheduledHours;
 
   const getEventTypeBadge = (type) => {
     switch (type) {
@@ -1184,31 +1228,55 @@ export function SchedulePage() {
             padding: 14,
             borderLeft: "4px solid #059669",
             cursor: "pointer",
-            background: totalHours >= 20 ? "#f0fdf4" : "#ffffff",
+            background: myKpiStats.completedHours >= 20 ? "#f0fdf4" : "#ffffff",
             transition: "all 0.15s"
           }}
-          title="Click để xem chi tiết Bảng xếp hạng KPI của toàn bộ nhân sự"
+          title="Click để xem chi tiết Bảng xếp hạng KPI 20h của toàn bộ nhân sự"
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
               🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
             </div>
-            <span style={{ fontSize: 11, background: totalHours >= 20 ? "#dcfce7" : "#fef3c7", color: totalHours >= 20 ? "#15803d" : "#b45309", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
-              {totalHours >= 20 ? "Đạt chuẩn" : `${Math.round((totalHours / 20) * 100)}%`}
+            <span style={{ fontSize: 11, background: myKpiStats.completedHours >= 20 ? "#dcfce7" : "#fef3c7", color: myKpiStats.completedHours >= 20 ? "#15803d" : "#b45309", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+              {myKpiStats.completedHours >= 20 ? "Đạt chuẩn" : `${myKpiStats.completedPercent}%`}
             </span>
           </div>
 
-          <div style={{ fontSize: 18, fontWeight: 800, color: totalHours >= 20 ? "#059669" : "#0f172a", marginTop: 4 }}>
-            {totalHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.completedHours >= 20 ? "#059669" : "#0f172a" }}>
+              {myKpiStats.completedHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0h thực tế</span>
+            </div>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              Kế hoạch: <strong style={{ color: myKpiStats.scheduledHours >= 20 ? "#059669" : "#d97706" }}>{myKpiStats.scheduledHours.toFixed(1)}h</strong>
+            </div>
           </div>
 
-          <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginTop: 6 }}>
+          <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginTop: 6, position: "relative" }}>
+            {/* Planned bar */}
             <div
               style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
                 height: "100%",
-                width: `${Math.min(100, Math.round((totalHours / 20) * 100))}%`,
-                background: totalHours >= 20 ? "#10b981" : "#f59e0b"
+                width: `${Math.min(100, myKpiStats.scheduledPercent)}%`,
+                background: "#cbd5e1",
+                opacity: 0.7,
               }}
+              title={`Kế hoạch cả tuần: ${myKpiStats.scheduledPercent}%`}
+            />
+            {/* Completed actual bar */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                height: "100%",
+                width: `${Math.min(100, myKpiStats.completedPercent)}%`,
+                background: myKpiStats.completedHours >= 20 ? "#10b981" : "#f59e0b",
+                transition: "width 0.3s ease",
+              }}
+              title={`Thực tế đã hoàn thành: ${myKpiStats.completedPercent}%`}
             />
           </div>
         </div>
