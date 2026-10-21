@@ -96,7 +96,8 @@ public record CreateShiftEventRequest(
     string title,
     string? description,
     string? work_date = null,
-    string? event_type = "general"
+    string? event_type = "general",
+    List<int>? shift_ids = null
 );
 
 public record UpdateAttendanceRequest(string attendance_status);

@@ -1884,39 +1884,72 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
-
-    var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
-    if (!string.IsNullOrEmpty(req.work_date) && string.Compare(req.work_date, today, StringComparison.Ordinal) < 0)
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule && currentUser.role != "leader" && currentUser.role != "manager")
     {
-        return Results.BadRequest(new { detail = "Không thể tạo sự kiện cho ngày trong quá khứ! Chỉ được chọn ngày hiện tại hoặc tương lai." });
+        return Results.StatusCode(403);
     }
 
-    using var conn = Database.GetConnection();
-    var sid = req.shift_id ?? 0;
-    var id = conn.ExecuteScalar<long>(@"
-        INSERT INTO shift_events (shift_id, work_date, title, description, event_type)
-        VALUES (@sid, @work_date, @title, @description, @event_type) RETURNING id;",
-        new {
-            sid,
-            work_date = req.work_date,
-            title = req.title,
-            description = req.description,
-            event_type = req.event_type ?? "general"
-        });
+    if (string.IsNullOrWhiteSpace(req.title))
+    {
+        return Results.BadRequest(new { detail = "Vui lòng nhập tên sự kiện!" });
+    }
 
-    return Results.Ok(new { 
-        success = true, 
-        id, 
-        message = sid == 0 ? "Thêm sự kiện cả ngày thành công!" : "Thêm sự kiện cho ca làm việc thành công!" 
-    });
+    try
+    {
+        using var conn = Database.GetConnection();
+        var targetShifts = req.shift_ids != null && req.shift_ids.Count > 0
+            ? req.shift_ids
+            : new List<int> { req.shift_id ?? 0 };
+
+        if (targetShifts.Contains(0))
+        {
+            conn.Execute(@"
+                INSERT INTO shift_events (shift_id, work_date, title, description, event_type)
+                VALUES (0, @work_date, @title, @description, @event_type);",
+                new {
+                    work_date = req.work_date,
+                    title = req.title.Trim(),
+                    description = req.description?.Trim(),
+                    event_type = req.event_type ?? "general"
+                });
+        }
+        else
+        {
+            foreach (var sid in targetShifts)
+            {
+                conn.Execute(@"
+                    INSERT INTO shift_events (shift_id, work_date, title, description, event_type)
+                    VALUES (@sid, @work_date, @title, @description, @event_type);",
+                    new {
+                        sid,
+                        work_date = req.work_date,
+                        title = req.title.Trim(),
+                        description = req.description?.Trim(),
+                        event_type = req.event_type ?? "general"
+                    });
+            }
+        }
+
+        return Results.Ok(new { 
+            success = true, 
+            message = targetShifts.Contains(0) ? "Thêm sự kiện cả ngày thành công!" : "Thêm sự kiện cho ca làm việc thành công!" 
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] create shift event: {ex}");
+        return Results.BadRequest(new { detail = "Lỗi khi lưu sự kiện: " + ex.Message });
+    }
 });
 
 app.MapDelete("/api/shifts/events/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !currentUser.can_manage_schedule && currentUser.role != "leader" && currentUser.role != "manager")
+    {
+        return Results.StatusCode(403);
+    }
 
     using var conn = Database.GetConnection();
     conn.Execute("DELETE FROM shift_events WHERE id = @id", new { id });

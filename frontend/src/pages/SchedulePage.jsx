@@ -514,13 +514,10 @@ export function SchedulePage() {
     });
   };
 
-  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo nhiều ca, chỉ lấy hiện tại và tương lai)
+  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo nhiều ca)
   const openCreateEventModal = (shiftId = 0, workDate = "") => {
     const todayStr = new Date().toISOString().split("T")[0];
-    let initialDate = workDate || mondayDate || todayStr;
-    if (initialDate < todayStr) {
-      initialDate = todayStr;
-    }
+    const initialDate = workDate || todayStr;
     const initialShifts = (shiftId !== undefined && shiftId !== null && Number(shiftId) > 0)
       ? [Number(shiftId)]
       : [0];
@@ -575,11 +572,6 @@ export function SchedulePage() {
       showToast("Vui lòng nhập tên sự kiện!", "danger");
       return;
     }
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (createEventModal.work_date && createEventModal.work_date < todayStr) {
-      showToast("Không thể tạo sự kiện cho ngày trong quá khứ! Chỉ được chọn ngày hôm nay hoặc tương lai.", "danger");
-      return;
-    }
 
     const shifts = (createEventModal.selected_shifts && createEventModal.selected_shifts.length > 0)
       ? createEventModal.selected_shifts
@@ -591,33 +583,22 @@ export function SchedulePage() {
     }
 
     try {
-      if (shifts.includes(0)) {
-        await api.createShiftEvent({
-          shift_id: 0,
-          work_date: createEventModal.work_date || null,
-          title: createEventModal.title.trim(),
-          description: createEventModal.description?.trim() || "",
-          event_type: createEventModal.event_type || "general",
-        });
-        showToast("Thêm sự kiện cả ngày thành công!");
-      } else {
-        await Promise.all(
-          shifts.map((sId) =>
-            api.createShiftEvent({
-              shift_id: sId,
-              work_date: createEventModal.work_date || null,
-              title: createEventModal.title.trim(),
-              description: createEventModal.description?.trim() || "",
-              event_type: createEventModal.event_type || "general",
-            })
-          )
-        );
-        showToast(
-          shifts.length === 1
+      await api.createShiftEvent({
+        shift_id: shifts.includes(0) ? 0 : shifts[0],
+        shift_ids: shifts.includes(0) ? [0] : shifts,
+        work_date: createEventModal.work_date || null,
+        title: createEventModal.title.trim(),
+        description: createEventModal.description?.trim() || "",
+        event_type: createEventModal.event_type || "general",
+      });
+
+      showToast(
+        shifts.includes(0)
+          ? "Thêm sự kiện cả ngày thành công!"
+          : shifts.length === 1
             ? `Thêm sự kiện cho Ca ${shifts[0]} thành công!`
             : `Thêm sự kiện thành công cho ${shifts.length} ca (${shifts.map((id) => `Ca ${id}`).join(", ")})!`
-        );
-      }
+      );
 
       setCreateEventModal({
         open: false,
@@ -1030,7 +1011,7 @@ export function SchedulePage() {
 
           {isAdmin && (
             <button
-              onClick={() => openCreateEventModal(0, mondayDate)}
+              onClick={() => openCreateEventModal(0, new Date().toISOString().split("T")[0])}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1561,7 +1542,7 @@ export function SchedulePage() {
                               ▾ Mở rộng
                             </span>
                           )}
-                          {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
+                          {isAdmin && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1837,7 +1818,7 @@ export function SchedulePage() {
                                 >
                                   Báo vắng
                                 </button>
-                                {isAdmin && (day.dateStr >= new Date().toISOString().split("T")[0]) && (
+                                {isAdmin && (
                                   <button
                                     onClick={() => openCreateEventModal(shift.id, day.dateStr)}
                                     style={{
@@ -3459,7 +3440,6 @@ export function SchedulePage() {
                       <input
                         type="date"
                         required
-                        min={new Date().toISOString().split("T")[0]}
                         value={createEventModal.work_date || ""}
                         onChange={(e) =>
                           setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))
