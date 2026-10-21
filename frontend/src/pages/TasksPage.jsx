@@ -3767,8 +3767,6 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
     }
     return "";
   });
-  const [location, setLocation] = useState(task?.location || "");
-  const [customerInfo, setCustomerInfo] = useState(task?.customer_info || "");
   const [leaderId, setLeaderId] = useState(task?.leader_id || "");
   const [totalCp, setTotalCp] = useState(task?.total_cp || 0);
   const [loading, setLoading] = useState(false);
@@ -3787,8 +3785,6 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
       } else {
         setDeadline("");
       }
-      setLocation(task.location || "");
-      setCustomerInfo(task.customer_info || "");
       setLeaderId(task.leader_id || "");
       setTotalCp(task.total_cp || 0);
       setError("");
@@ -3827,8 +3823,8 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
         task_type: taskType,
         planned_date: plannedDate || "",
         deadline: deadline ? deadline.replace("T", " ") : "",
-        location: location ? location.trim() : "",
-        customer_info: customerInfo ? customerInfo.trim() : "",
+        location: task.location || "",
+        customer_info: task.customer_info || "",
         leader_id: leaderId ? parseInt(leaderId) : task.leader_id,
         total_cp: Math.max(0, parseInt(totalCp) || 0),
       });
@@ -4103,50 +4099,6 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
                   required
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    background: "#ffffff",
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="task-modal-grid-2col">
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Địa điểm / Phòng làm việc
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Phòng Lab AI, Khu thí nghiệm B..."
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    background: "#ffffff",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Thông tin đối tác / Khách hàng
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Viettel AI, FPT Software, ĐHBK..."
-                  value={customerInfo}
-                  onChange={(e) => setCustomerInfo(e.target.value)}
                   style={{
                     width: "100%",
                     padding: "10px 14px",
