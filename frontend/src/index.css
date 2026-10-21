@@ -399,43 +399,108 @@ html, body {
    RESPONSIVE NAVIGATION & MULTI-PLATFORM BREAKPOINTS
    ======================================================== */
 
-/* Desktop Navigation (>= 1025px and height > 550px) */
-.navbar-desktop {
+/* Main Application Layout Container */
+.app-layout {
+  min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  background: var(--bg-page);
   width: 100%;
-  max-width: 100%;
-  height: 60px;
-  gap: 12px;
-  position: relative;
-  overflow: visible !important;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
-.navbar-mobile {
-  display: none;
-}
-
-.mobile-bottom-bar {
-  display: none;
-}
-
-/* Tablet (<= 1024px), Mobile Portrait (<= 768px), AND Mobile Landscape (height <= 550px) */
-@media (max-width: 1024px), (max-height: 550px) {
-  .navbar-desktop {
-    display: none !important;
+/* 1. DESKTOP MODE (>= 1025px and height > 550px) */
+@media (min-width: 1025px) and (min-height: 551px) {
+  .desktop-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    background: #ffffff;
+    border-right: 1px solid var(--border);
+    z-index: 100;
+    display: flex !important;
+    flex-direction: column;
+    box-shadow: 1px 0 4px rgba(0, 0, 0, 0.02);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), width 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .navbar-mobile {
+  .desktop-sidebar.collapsed {
+    transform: translateX(-100%) !important;
+    pointer-events: none;
+  }
+
+  .app-main-wrapper {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    transition: margin-left 0.24s cubic-bezier(0.16, 1, 0.3, 1), width 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .app-main-wrapper.sidebar-collapsed {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .desktop-topbar {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
-    height: 52px;
+    height: 60px;
+    padding: 0 24px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   }
 
-  .mobile-bottom-bar {
+  .mobile-topbar {
     display: none !important;
+  }
+}
+
+/* 2. TABLET & MOBILE (< 1025px or height <= 550px) */
+@media (max-width: 1024px), (max-height: 550px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .desktop-sidebar {
+    display: none !important;
+  }
+
+  .desktop-topbar {
+    display: none !important;
+  }
+
+  .app-main-wrapper {
+    margin-left: 0 !important;
+    width: 100% !important;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .mobile-topbar {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    height: 54px;
+    padding: 0 16px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   }
 
   main {
@@ -458,6 +523,41 @@ html, body {
     border-radius: 16px !important;
     width: 100% !important;
   }
+}
+
+/* Sidebar Navigation Pill Buttons */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.sidebar-nav-item.active {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+}
+
+.sidebar-nav-item.active .nav-icon-box {
+  background: #dbeafe !important;
+  color: #2563eb !important;
 }
 
 /* SPECIFIC MOBILE LANDSCAPE PHONE OPTIMIZATIONS (Height <= 550px) */

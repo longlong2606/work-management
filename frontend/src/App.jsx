@@ -108,34 +108,35 @@ function MainContent() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
-      <Navbar activeTab={activeTab} setActiveTab={navigateToTab} />
-      <NotificationModal />
+    <div className="app-layout">
+      <Navbar activeTab={activeTab} setActiveTab={navigateToTab}>
+        <NotificationModal />
 
-      <main style={{ flex: 1, paddingBottom: 40, width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
-        {activeTab === "schedule" && <SchedulePage />}
-        {activeTab === "tasks" && <TasksPage />}
-        {activeTab === "cp" && <CpLeaderboardPage />}
-        {activeTab === "competency" && <CompetencyScorecardPage />}
-        {activeTab === "history" && <ShiftHistoryPage />}
-        {activeTab === "notes" && <ShiftNotesPage />}
-        {activeTab === "feedback" && <FeedbackPage />}
-        {activeTab === "staff" && canManageStaff && <StaffManagementPage onNavigateToCompetency={() => navigateToTab("competency")} />}
-        {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
-        {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
-      </main>
+        <main style={{ flex: 1, paddingBottom: 40, width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
+          {activeTab === "schedule" && <SchedulePage />}
+          {activeTab === "tasks" && <TasksPage />}
+          {activeTab === "cp" && <CpLeaderboardPage />}
+          {activeTab === "competency" && <CompetencyScorecardPage />}
+          {activeTab === "history" && <ShiftHistoryPage />}
+          {activeTab === "notes" && <ShiftNotesPage />}
+          {activeTab === "feedback" && <FeedbackPage />}
+          {activeTab === "staff" && canManageStaff && <StaffManagementPage onNavigateToCompetency={() => navigateToTab("competency")} />}
+          {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
+          {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
+        </main>
 
-      {/* Footer */}
-      <footer style={{
-        borderTop: "1px solid var(--border)",
-        background: "#ffffff",
-        padding: "16px 20px",
-        textAlign: "center",
-        fontSize: 12,
-        color: "var(--text-dim)"
-      }}>
-        WorkShiftPro &copy; 2026 - Hệ Thống Quản Lý 9 Ca Làm Việc & Đánh Giá Năng Lực Thành Viên
-      </footer>
+        {/* Footer */}
+        <footer style={{
+          borderTop: "1px solid var(--border)",
+          background: "#ffffff",
+          padding: "16px 20px",
+          textAlign: "center",
+          fontSize: 12,
+          color: "var(--text-dim)"
+        }}>
+          WorkShiftPro &copy; 2026 - Hệ Thống Quản Lý 9 Ca Làm Việc & Đánh Giá Năng Lực Thành Viên
+        </footer>
+      </Navbar>
     </div>
   );
 }
