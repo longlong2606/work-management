@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Check,
   RotateCcw,
-  PauseCircle
+  PauseCircle,
+  Edit3
 } from "lucide-react";
 
 function formatDeadline(deadlineStr) {
@@ -59,10 +60,16 @@ export function TasksPage() {
   const [reviewActionMode, setReviewActionMode] = useState("approve"); // 'approve' | 'rework' | 'penalty' 
   const [rejectModalSubtask, setRejectModalSubtask] = useState(null); // { id, title }
   const [editingSubtask, setEditingSubtask] = useState(null); // subtask object to edit
+  const [editingTask, setEditingTask] = useState(null); // root task object to edit
   const [editTaskCpModal, setEditTaskCpModal] = useState(null); // { id, title, total_cp, ... }
   const [postponeModalTask, setPostponeModalTask] = useState(null);
   const [postponeReason, setPostponeReason] = useState("");
   const [toast, setToast] = useState({ text: "", type: "success" });
+
+  const canEditTask = (t) => {
+    if (!t) return false;
+    return hasAdminRights || Boolean(user?.can_manage_tasks) || Number(t.leader_id) === Number(user?.id);
+  };
 
   const showToast = (text, type = "success") => {
     setToast({ text, type });
@@ -129,6 +136,9 @@ export function TasksPage() {
     try {
       const res = await api.getTaskDetail(taskId);
       setTaskDetail(res);
+      if (res?.task) {
+        setSelectedTask(res.task);
+      }
       fetchTasks();
     } catch (err) {
       console.error(err);
@@ -788,8 +798,34 @@ export function TasksPage() {
                     <ChevronRight size={14} />
                   </button>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {(hasAdminRights || task.leader_id === user?.id) && task.status !== "POSTPONED" && task.status !== "FINISHED" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {canEditTask(task) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                        style={{
+                          background: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          color: "#1d4ed8",
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                        title="Chỉnh sửa thông tin nhiệm vụ lớn"
+                      >
+                        <Edit3 size={12} />
+                        <span>Sửa</span>
+                      </button>
+                    )}
+
+                    {canEditTask(task) && task.status !== "POSTPONED" && task.status !== "FINISHED" && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -895,25 +931,50 @@ export function TasksPage() {
                   {taskDetail ? taskDetail.task.title : selectedTask.title}
                 </h2>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedTask(null);
-                  setTaskDetail(null);
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#64748b",
-                  padding: 6,
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <X size={20} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {canEditTask(taskDetail?.task || selectedTask) && (
+                  <button
+                    onClick={() => setEditingTask(taskDetail?.task || selectedTask)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#eff6ff",
+                      color: "#1d4ed8",
+                      border: "1px solid #bfdbfe",
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title="Chỉnh sửa thông tin nhiệm vụ lớn"
+                  >
+                    <Edit3 size={14} />
+                    <span>Chỉnh Sửa Nhiệm Vụ</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedTask(null);
+                    setTaskDetail(null);
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#64748b",
+                    padding: 6,
+                    borderRadius: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* MODAL BODY */}
@@ -989,9 +1050,34 @@ export function TasksPage() {
 
                     {/* TITLE & DESCRIPTION */}
                     <div>
-                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.4 }}>
-                        {taskDetail.task.title}
-                      </h3>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                        <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.4, flex: 1 }}>
+                          {taskDetail.task.title}
+                        </h3>
+                        {canEditTask(taskDetail.task) && (
+                          <button
+                            onClick={() => setEditingTask(taskDetail.task)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              background: "#eff6ff",
+                              border: "1px solid #bfdbfe",
+                              color: "#1d4ed8",
+                              padding: "4px 9px",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              flexShrink: 0,
+                            }}
+                            title="Chỉnh sửa thông tin nhiệm vụ lớn"
+                          >
+                            <Edit3 size={12} />
+                            <span>Sửa</span>
+                          </button>
+                        )}
+                      </div>
                       <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
                         {taskDetail.task.description || "Không có mô tả chi tiết."}
                       </p>
@@ -1126,9 +1212,35 @@ export function TasksPage() {
                       )}
                     </div>
 
-                    {/* ACTION BUTTONS (FINISH & POSTPONE) */}
+                    {/* ACTION BUTTONS (FINISH & POSTPONE & EDIT) */}
                     {canManageTaskSubtasks && (
-                      <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                      <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14, flexWrap: "wrap" }}>
+                        {canEditTask(taskDetail.task) && (
+                          <button
+                            onClick={() => setEditingTask(taskDetail.task)}
+                            style={{
+                              flex: 1,
+                              minWidth: 100,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              background: "#eff6ff",
+                              color: "#1d4ed8",
+                              border: "1.5px solid #bfdbfe",
+                              padding: "9px 12px",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: "pointer",
+                            }}
+                            title="Chỉnh sửa thông tin nhiệm vụ lớn"
+                          >
+                            <Edit3 size={15} />
+                            <span>Chỉnh Sửa</span>
+                          </button>
+                        )}
+
                         {taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => handleFinishTask(taskDetail.task.id)}
@@ -2065,6 +2177,24 @@ export function TasksPage() {
           onSuccess={(msg) => {
             showToast(msg || "Đã cập nhật điểm CP tổng của nhiệm vụ!");
             if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+            fetchTasks();
+          }}
+        />
+      )}
+
+      {/* ================= MODAL: EDIT ROOT TASK ================= */}
+      {editingTask && (
+        <EditTaskModal
+          isOpen={!!editingTask}
+          onClose={() => setEditingTask(null)}
+          task={editingTask}
+          allMembers={allMembers}
+          currentAllocatedCp={(taskDetail?.task?.id === editingTask.id ? (taskDetail?.subtasks || []) : []).reduce((sum, s) => sum + (s.cp_points || 0), 0)}
+          onSuccess={(msg) => {
+            showToast(msg || "Đã cập nhật thông tin nhiệm vụ thành công!");
+            if (selectedTask?.id === editingTask.id || taskDetail?.task?.id === editingTask.id) {
+              refreshTaskDetail(editingTask.id);
+            }
             fetchTasks();
           }}
         />
@@ -3587,6 +3717,505 @@ function EditTaskCpModal({ isOpen, onClose, task, currentAllocatedCp = 0, onSucc
               }}
             >
               {loading ? "Đang lưu..." : "Cập Nhật Điểm CP"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MODAL: EDIT ROOT TASK (CHỈNH SỬA NHIỆM VỤ LỚN) ================= */
+function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocatedCp = 0, onSuccess }) {
+  const [title, setTitle] = useState(task?.title || "");
+  const [description, setDescription] = useState(task?.description || "");
+  const [taskType, setTaskType] = useState(task?.task_type || "RESEARCH");
+  const [plannedDate, setPlannedDate] = useState(() => {
+    if (task?.planned_date) {
+      return task.planned_date.substring(0, 10);
+    }
+    return new Date().toISOString().split("T")[0];
+  });
+  const [deadline, setDeadline] = useState(() => {
+    if (task?.deadline) {
+      const s = task.deadline.replace(" ", "T");
+      return s.length >= 16 ? s.substring(0, 16) : s;
+    }
+    return "";
+  });
+  const [location, setLocation] = useState(task?.location || "");
+  const [customerInfo, setCustomerInfo] = useState(task?.customer_info || "");
+  const [leaderId, setLeaderId] = useState(task?.leader_id || "");
+  const [totalCp, setTotalCp] = useState(task?.total_cp || 0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Sync state whenever task prop changes or modal opens
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title || "");
+      setDescription(task.description || "");
+      setTaskType(task.task_type || "RESEARCH");
+      setPlannedDate(task.planned_date ? task.planned_date.substring(0, 10) : new Date().toISOString().split("T")[0]);
+      if (task.deadline) {
+        const s = task.deadline.replace(" ", "T");
+        setDeadline(s.length >= 16 ? s.substring(0, 16) : s);
+      } else {
+        setDeadline("");
+      }
+      setLocation(task.location || "");
+      setCustomerInfo(task.customer_info || "");
+      setLeaderId(task.leader_id || "");
+      setTotalCp(task.total_cp || 0);
+      setError("");
+    }
+  }, [task]);
+
+  // List of potential leaders: role === 'leader' or 'admin', and ensure current leader is included
+  const leaderMembers = useMemo(() => {
+    const list = (allMembers || []).filter((m) => m.role === "leader" || m.role === "admin");
+    if (task?.leader_id && !list.some((m) => Number(m.id) === Number(task.leader_id))) {
+      const cur = (allMembers || []).find((m) => Number(m.id) === Number(task.leader_id));
+      if (cur) list.push(cur);
+    }
+    return list;
+  }, [allMembers, task]);
+
+  if (!isOpen || !task) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError("Vui lòng nhập Tiêu đề nhiệm vụ!");
+      return;
+    }
+    if (!deadline) {
+      setError("Vui lòng chọn Hạn chót hoàn thành (Deadline)!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      await api.updateTask(task.id, {
+        title: title.trim(),
+        description: description.trim(),
+        task_type: taskType,
+        planned_date: plannedDate || "",
+        deadline: deadline ? deadline.replace("T", " ") : "",
+        location: location ? location.trim() : "",
+        customer_info: customerInfo ? customerInfo.trim() : "",
+        leader_id: leaderId ? parseInt(leaderId) : task.leader_id,
+        total_cp: Math.max(0, parseInt(totalCp) || 0),
+      });
+      onSuccess("Đã cập nhật thông tin nhiệm vụ thành công!");
+      onClose();
+    } catch (err) {
+      setError(err.message || "Lỗi khi cập nhật nhiệm vụ.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 20,
+          width: "100%",
+          maxWidth: 720,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          padding: "24px 28px",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          border: "1px solid #e2e8f0",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* HEADER */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, borderBottom: "1px solid #f1f5f9", paddingBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                boxShadow: "0 4px 10px rgba(37, 99, 235, 0.25)",
+              }}
+            >
+              <Edit3 size={20} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                Chỉnh Sửa Nhiệm Vụ Lớn
+              </h3>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "2px 0 0 0" }}>
+                Mã nhiệm vụ #{task.id} • Cập nhật thông tin chi tiết, người phụ trách và thời hạn
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#f1f5f9",
+              border: "none",
+              borderRadius: 8,
+              width: 32,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "#64748b",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 10, fontSize: 13, color: "#991b1b", marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* KHỐI 1: THÔNG TIN CỐT LÕI */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📋 1. Thông tin chung</span>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                Tiêu đề nhiệm vụ <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="VD: Nghiên cứu tối ưu mô hình mạng nơ-ron, nâng cấp hệ thống..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* QUỸ ĐIỂM CP TỔNG */}
+            <div>
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>🏆 Quỹ điểm CP tổng của nhiệm vụ:</span>
+                </span>
+                <span style={{ fontSize: 11, color: "#7c3aed", fontWeight: 700 }}>
+                  {totalCp > 0 ? `Quỹ: ${totalCp} CP` : "Chưa đặt quỹ"}
+                  {currentAllocatedCp > 0 && ` (Đã chia: ${currentAllocatedCp} CP)`}
+                </span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="VD: 50, 100, 200..."
+                value={totalCp}
+                onChange={(e) => setTotalCp(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  outlineColor: "#a855f7",
+                }}
+              />
+              {currentAllocatedCp > 0 && Number(totalCp) < currentAllocatedCp && (
+                <small style={{ fontSize: 11.5, color: "#dc2626", marginTop: 4, display: "block", fontWeight: 600 }}>
+                  ⚠️ Quỹ điểm CP mới ({totalCp} CP) đang nhỏ hơn tổng điểm các mục việc đã chia ({currentAllocatedCp} CP).
+                </small>
+              )}
+            </div>
+
+            <div className="task-modal-grid-2col">
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Loại nhiệm vụ
+                </label>
+                <select
+                  value={taskType}
+                  onChange={(e) => setTaskType(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                >
+                  <option value="RESEARCH">🔬 Nghiên cứu AI / Lab (Research)</option>
+                  <option value="INDUSTRY">🏢 Dự án doanh nghiệp (Industry)</option>
+                  <option value="LAB_MAINTENANCE">🛠️ Bảo trì Lab (Lab Maintenance)</option>
+                  <option value="EVENT">🎉 Sự kiện / Workshop (Event)</option>
+                  <option value="OTHER">📁 Khác (Other)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Trưởng nhóm (Leader) phụ trách <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select
+                  value={leaderId}
+                  onChange={(e) => setLeaderId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                >
+                  {leaderMembers.length === 0 ? (
+                    <option value="">-- Chưa có tài khoản Leader --</option>
+                  ) : (
+                    leaderMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} (@{m.username}) — [{m.role === 'leader' ? '⭐ Trưởng nhóm' : m.role === 'admin' ? '👑 Quản trị viên' : m.role}]
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* KHỐI 2: KẾ HOẠCH & THỜI HẠN */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>⏱️ 2. Kế hoạch & Thời hạn</span>
+            </div>
+
+            <div className="task-modal-grid-2col">
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Ngày dự kiến bắt đầu
+                </label>
+                <input
+                  type="date"
+                  value={plannedDate}
+                  onChange={(e) => setPlannedDate(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Hạn chót hoàn thành (Deadline) <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="task-modal-grid-2col">
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Địa điểm / Phòng làm việc
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: Phòng Lab AI, Khu thí nghiệm B..."
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                  Thông tin đối tác / Khách hàng
+                </label>
+                <input
+                  type="text"
+                  placeholder="VD: Viettel AI, FPT Software, ĐHBK..."
+                  value={customerInfo}
+                  onChange={(e) => setCustomerInfo(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* KHỐI 3: MÔ TẢ NHIỆM VỤ */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 14,
+              padding: "16px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📝 3. Mô tả nhiệm vụ</span>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                Mô tả chi tiết nhiệm vụ
+              </label>
+              <textarea
+                rows={4}
+                placeholder="Nhập nội dung, yêu cầu kỹ thuật và mục tiêu cần đạt được..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* FOOTER ACTIONS */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: "#f1f5f9",
+                color: "#475569",
+                border: "1px solid #e2e8f0",
+                padding: "10px 20px",
+                borderRadius: 10,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                color: "#ffffff",
+                border: "none",
+                padding: "10px 24px",
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                transition: "all 0.15s ease",
+              }}
+            >
+              <CheckSquare size={16} />
+              {loading ? "Đang lưu thay đổi..." : "Lưu Thay Đổi Nhiệm Vụ"}
             </button>
           </div>
         </form>

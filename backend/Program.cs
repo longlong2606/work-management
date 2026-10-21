@@ -282,31 +282,50 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
     if (existing == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
     long? existingLeaderId = existing.leader_id != null ? Convert.ToInt64(existing.leader_id) : (long?)null;
-    if (currentUser.role != "admin" && (!existingLeaderId.HasValue || existingLeaderId.Value != currentUser.id))
+    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && (!existingLeaderId.HasValue || existingLeaderId.Value != currentUser.id))
         return Results.StatusCode(403);
 
-    int totalCp = Math.Max(0, req.total_cp);
-    conn.Execute(@"
-        UPDATE tasks SET 
-            title = @title, description = @description, task_type = @task_type,
-            planned_date = @planned_date, deadline = @deadline, location = @location,
-            customer_info = @customer_info, leader_id = @leader_id, total_cp = @totalCp, updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id",
-        new
-        {
-            id,
-            title = req.title.Trim(),
-            description = req.description?.Trim(),
-            task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
-            planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
-            deadline = req.deadline.Trim(),
-            location = req.location?.Trim(),
-            customer_info = req.customer_info?.Trim(),
-            leader_id = req.leader_id,
-            totalCp
-        });
+    if (string.IsNullOrWhiteSpace(req.title))
+        return Results.BadRequest(new { detail = "Tiêu đề nhiệm vụ không được để trống!" });
 
-    return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
+    long targetLeaderId = req.leader_id > 0 ? req.leader_id : (existingLeaderId ?? currentUser.id);
+    int totalCp = Math.Max(0, req.total_cp);
+
+    try
+    {
+        conn.Execute(@"
+            UPDATE tasks SET 
+                title = @title, 
+                description = @description, 
+                task_type = @task_type,
+                planned_date = @planned_date, 
+                deadline = @deadline, 
+                location = @location,
+                customer_info = @customer_info, 
+                leader_id = @leader_id, 
+                total_cp = @totalCp, 
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = @id",
+            new
+            {
+                id,
+                title = req.title.Trim(),
+                description = req.description?.Trim(),
+                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+                planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
+                deadline = string.IsNullOrWhiteSpace(req.deadline) ? DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd HH:mm") : req.deadline.Trim(),
+                location = req.location?.Trim(),
+                customer_info = req.customer_info?.Trim(),
+                leader_id = targetLeaderId,
+                totalCp
+            });
+
+        return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: "Lỗi cập nhật thông tin nhiệm vụ: " + ex.Message, statusCode: 500);
+    }
 });
 
 app.MapPost("/api/tasks/{id:long}/postpone", (long id, PostponeTaskRequest req, HttpContext ctx) =>

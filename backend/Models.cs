@@ -213,13 +213,13 @@ public record CreateTaskRequest(
 
 public record UpdateTaskRequest(
     string title,
-    string? description,
-    string? task_type,
-    string planned_date,
-    string deadline,
-    string? location,
-    string? customer_info,
-    long leader_id,
+    string? description = null,
+    string? task_type = null,
+    string? planned_date = null,
+    string? deadline = null,
+    string? location = null,
+    string? customer_info = null,
+    long leader_id = 0,
     int total_cp = 0
 );
 
