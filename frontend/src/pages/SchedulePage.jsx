@@ -252,6 +252,7 @@ export function SchedulePage() {
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showBulkAbsenceModal, setShowBulkAbsenceModal] = useState(false);
   const [bulkAbsenceMode, setBulkAbsenceMode] = useState("absence");
+  const [bulkAbsenceDate, setBulkAbsenceDate] = useState(null);
   const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
   const [classConflicts, setClassConflicts] = useState([]);
   const LAB_KPI_TARGET = 20.0;
@@ -1195,6 +1196,7 @@ export function SchedulePage() {
 
           <button
             onClick={() => {
+              setBulkAbsenceDate(null);
               setBulkAbsenceMode("restore");
               setShowBulkAbsenceModal(true);
             }}
@@ -1827,6 +1829,27 @@ export function SchedulePage() {
                                     );
                                   }
                                   if (isMyAbsent) {
+                                    if (isAdmin) {
+                                      return (
+                                        <button
+                                          onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
+                                          style={{
+                                            background: "#dcfce7",
+                                            border: "1px solid #86efac",
+                                            borderRadius: 4,
+                                            padding: "2px 6px",
+                                            fontSize: 9.5,
+                                            fontWeight: 700,
+                                            color: "#166534",
+                                            cursor: "pointer",
+                                            whiteSpace: "nowrap",
+                                          }}
+                                          title="Đã duyệt vắng mặt. Nhấn để khôi phục có mặt lại."
+                                        >
+                                          🔄 Khôi phục
+                                        </button>
+                                      );
+                                    }
                                     return (
                                       <span
                                         style={{
@@ -2128,9 +2151,10 @@ export function SchedulePage() {
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {currentDate >= todayStr && (
+              {(isAdmin || currentDate >= todayStr) && (
                 <button
                   onClick={() => {
+                    setBulkAbsenceDate(currentDate);
                     setBulkAbsenceMode("restore");
                     setShowBulkAbsenceModal(true);
                   }}
@@ -2144,9 +2168,9 @@ export function SchedulePage() {
                     color: "#166534",
                     fontWeight: 700,
                   }}
-                  title="Khôi phục có mặt cho các ca trong ngày hoặc tuần"
+                  title="Khôi phục có mặt cho các ca trong ngày này"
                 >
-                  <RotateCcw size={14} /> Khôi Phục Có Mặt
+                  <RotateCcw size={14} /> Khôi Phục Có Mặt Ngày Này
                 </button>
               )}
               <button
@@ -2532,7 +2556,7 @@ export function SchedulePage() {
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {isAbsent ? (
-                        shift.work_date >= todayStr ? (
+                        (shift.work_date >= todayStr || isAdmin) ? (
                           <button
                             onClick={() => handleCancelAbsence(shift.shift_id, shift.work_date, user?.id)}
                             className="btn btn-primary btn-sm"
@@ -4991,12 +5015,16 @@ export function SchedulePage() {
       {/* BULK ABSENCE & RESTORE MODAL */}
       <BulkAbsenceModal
         isOpen={showBulkAbsenceModal}
-        onClose={() => setShowBulkAbsenceModal(false)}
+        onClose={() => {
+          setShowBulkAbsenceModal(false);
+          setBulkAbsenceDate(null);
+        }}
         currentUser={user}
         allMembers={allMembers}
         weekDays={weekDays}
         schedule={schedule}
         initialMode={bulkAbsenceMode}
+        initialDate={bulkAbsenceDate}
         onSuccess={(msg) => {
           showToast(msg);
           fetchSchedule();

@@ -18,7 +18,8 @@ export function BulkAbsenceModal({
   weekDays = [],
   schedule = [],
   onSuccess,
-  initialMode = "absence"
+  initialMode = "absence",
+  initialDate = null,
 }) {
   const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
 
@@ -42,8 +43,11 @@ export function BulkAbsenceModal({
     return allMembers;
   }, [allMembers, currentUser]);
 
-  // Selected target member (Staff default to themselves, Admin can pick any member)
-  const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");
+  // Selected target member (Staff default to themselves, Admin defaults to "all" in restore mode, or currentUser in absence mode)
+  const [targetUserId, setTargetUserId] = useState(() => {
+    if (isAdmin && (initialMode === "restore")) return "all";
+    return currentUser?.id || "";
+  });
   
   // Scope Mode: 'whole_week' | 'date_range' | 'custom_days'
   const [scopeMode, setScopeMode] = useState("whole_week");
@@ -73,30 +77,49 @@ export function BulkAbsenceModal({
     if (isOpen) {
       setErrorMsg("");
       setLoading(false);
-      setActionMode(initialMode || "absence");
-      if (currentUser?.id) {
-        if (isAdmin) {
-          const firstStaff = (memberOptions || allMembers || []).find((m) => m.id !== currentUser.id);
-          setTargetUserId(firstStaff?.id || currentUser.id);
+      const mode = initialMode || "absence";
+      setActionMode(mode);
+      
+      if (isAdmin && mode === "restore") {
+        setTargetUserId("all");
+      } else {
+        setTargetUserId(currentUser?.id || "");
+      }
+
+      if (initialDate) {
+        setScopeMode("custom_days");
+        setStartDate(initialDate);
+        setEndDate(initialDate);
+        setSelectedDates([initialDate]);
+      } else if (weekDays && weekDays.length > 0) {
+        setScopeMode("whole_week");
+        if (isAdmin || mode === "restore") {
+          // Allow all days in the week view
+          const start = weekDays[0]?.dateStr || todayStr;
+          const end = weekDays[weekDays.length - 1]?.dateStr || start;
+          setStartDate(start);
+          setEndDate(end);
+          setSelectedDates(weekDays.map((d) => d.dateStr));
         } else {
-          setTargetUserId(currentUser.id);
+          const futureDays = weekDays.filter((d) => d.dateStr >= todayStr);
+          const start = futureDays[0]?.dateStr || todayStr;
+          const end = futureDays[futureDays.length - 1]?.dateStr || start;
+          setStartDate(start);
+          setEndDate(end);
+          setSelectedDates(futureDays.map((d) => d.dateStr));
         }
       }
-      if (weekDays && weekDays.length > 0) {
-        const futureDays = weekDays.filter((d) => d.dateStr >= todayStr);
-        const start = futureDays[0]?.dateStr || todayStr;
-        const end = futureDays[futureDays.length - 1]?.dateStr || start;
-        setStartDate(start);
-        setEndDate(end);
-        setSelectedDates(futureDays.map((d) => d.dateStr));
-      }
     }
-  }, [isOpen, weekDays, currentUser, todayStr, initialMode]);
+  }, [isOpen, weekDays, currentUser, todayStr, initialMode, initialDate, isAdmin]);
 
-  // Determine final dates to apply (only current and future dates)
+  // Determine final dates to apply
   const finalDates = useMemo(() => {
+    // When in restore mode or user is Admin, allow past dates!
+    const allowPastDates = isAdmin || isRestore;
+
     if (scopeMode === "whole_week") {
-      return weekDays.map((d) => d.dateStr).filter((d) => d >= todayStr);
+      const dates = weekDays.map((d) => d.dateStr);
+      return allowPastDates ? dates : dates.filter((d) => d >= todayStr);
     }
     if (scopeMode === "date_range") {
       const dates = [];
@@ -111,7 +134,7 @@ export function BulkAbsenceModal({
             const m = String(cur.getMonth() + 1).padStart(2, "0");
             const d = String(cur.getDate()).padStart(2, "0");
             const ds = `${y}-${m}-${d}`;
-            if (ds >= todayStr) dates.push(ds);
+            if (allowPastDates || ds >= todayStr) dates.push(ds);
             cur.setDate(cur.getDate() + 1);
           }
         }
@@ -119,10 +142,10 @@ export function BulkAbsenceModal({
       return dates;
     }
     if (scopeMode === "custom_days") {
-      return selectedDates.filter((d) => d >= todayStr);
+      return allowPastDates ? selectedDates : selectedDates.filter((d) => d >= todayStr);
     }
     return [];
-  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr]);
+  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr, isAdmin, isRestore]);
 
   // Determine final shift IDs
   const finalShiftIds = useMemo(() => {
@@ -136,10 +159,12 @@ export function BulkAbsenceModal({
 
   // Calculate matching scheduled shifts for preview (exclude already absent and pending_absence)
   const affectedShifts = useMemo(() => {
+    const isAll = targetUserId === "all";
     const uid = Number(targetUserId) || currentUser?.id;
     return schedule.filter((s) => {
+      const matchUser = isAll ? true : s.user_id === uid;
       return (
-        s.user_id === uid &&
+        matchUser &&
         finalDates.includes(s.work_date) &&
         finalShiftIds.includes(s.shift_id) &&
         s.attendance_status !== "absent" &&
@@ -150,10 +175,12 @@ export function BulkAbsenceModal({
 
   // Detected duplicate shifts that already have an absence request or are marked absent
   const duplicateShifts = useMemo(() => {
+    const isAll = targetUserId === "all";
     const uid = Number(targetUserId) || currentUser?.id;
     return schedule.filter((s) => {
+      const matchUser = isAll ? true : s.user_id === uid;
       return (
-        s.user_id === uid &&
+        matchUser &&
         finalDates.includes(s.work_date) &&
         finalShiftIds.includes(s.shift_id) &&
         (s.attendance_status === "absent" || s.attendance_status === "pending_absence")
@@ -182,11 +209,7 @@ export function BulkAbsenceModal({
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const targetUid = Number(targetUserId) || currentUser?.id;
-    if (!targetUid) {
-      setErrorMsg("Vui lòng chọn nhân sự!");
-      return;
-    }
+
     if (finalDates.length === 0) {
       setErrorMsg(isAdmin 
         ? "Vui lòng chọn ít nhất một ngày làm việc!" 
@@ -206,11 +229,14 @@ export function BulkAbsenceModal({
       setLoading(true);
       setErrorMsg("");
       try {
-        const res = await api.cancelAbsenceBulk({
-          user_id: targetUid,
+        const payload = {
           dates: finalDates,
           shift_ids: finalShiftIds,
-        });
+        };
+        if (targetUserId !== "all") {
+          payload.user_id = Number(targetUserId) || currentUser?.id;
+        }
+        const res = await api.cancelAbsenceBulk(payload);
         if (onSuccess) {
           onSuccess(res.message || `Đã khôi phục có mặt thành công cho ${res.affected_count || duplicateShifts.length} ca trực!`);
         }
@@ -224,6 +250,12 @@ export function BulkAbsenceModal({
     }
 
     // Absence mode
+    const targetUid = Number(targetUserId) || currentUser?.id;
+    if (!targetUid) {
+      setErrorMsg("Vui lòng chọn nhân sự nộp đơn!");
+      return;
+    }
+
     if (allSelectedDuplicates) {
       setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Bạn có thể nhấn tab 'Khôi phục có mặt' ở trên để hủy nghỉ.`);
       return;
@@ -445,7 +477,7 @@ export function BulkAbsenceModal({
                 }}
               >
                 <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", marginBottom: 6, display: "block", textTransform: "uppercase" }}>
-                  👤 1. Nhân sự nộp đơn:
+                  👤 1. {isRestore ? "Nhân sự cần khôi phục có mặt:" : "Nhân sự nộp đơn:"}
                 </label>
                 {isAdmin ? (
                   <select
@@ -454,9 +486,12 @@ export function BulkAbsenceModal({
                     className="form-control"
                     style={{ fontWeight: 600, fontSize: 13, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #cbd5e1" }}
                   >
+                    {isRestore && (
+                      <option value="all">🌟 Tất cả nhân sự (Khôi phục toàn bộ)</option>
+                    )}
                     {memberOptions.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Quản trị viên)" : ""}
+                        {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Bạn / Admin)" : ""}
                       </option>
                     ))}
                   </select>
@@ -880,23 +915,32 @@ export function BulkAbsenceModal({
                     {duplicateShifts.length > 0 && (
                       <div style={{ fontSize: 11, color: "#166534", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
                         Các ca này sẽ được chuyển về <strong>🟢 Có mặt bình thường</strong>:
-                        <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {duplicateShifts.map((s, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                background: "#ffffff",
-                                padding: "2px 7px",
-                                borderRadius: 4,
-                                border: "1px solid #86efac",
-                                fontSize: 10.5,
-                                fontWeight: 600,
-                                color: "#166534",
-                              }}
-                            >
-                              Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")}) - {s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"}
-                            </span>
-                          ))}
+                        <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 5 }}>
+                          {duplicateShifts.map((s, idx) => {
+                            const memberObj = (allMembers || []).find((m) => m.id === s.user_id) || (s.user_id === currentUser?.id ? currentUser : null);
+                            const memberName = s.full_name || memberObj?.full_name || memberObj?.username || `NV #${s.user_id}`;
+                            return (
+                              <span
+                                key={idx}
+                                style={{
+                                  background: "#ffffff",
+                                  padding: "3px 8px",
+                                  borderRadius: 5,
+                                  border: "1px solid #86efac",
+                                  fontSize: 10.5,
+                                  fontWeight: 600,
+                                  color: "#166534",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                              >
+                                <span>Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")})</span>
+                                {targetUserId === "all" && <span style={{ color: "#0f766e", fontWeight: 700 }}>• {memberName}</span>}
+                                <span style={{ fontSize: 9.5, opacity: 0.85 }}>({s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"})</span>
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

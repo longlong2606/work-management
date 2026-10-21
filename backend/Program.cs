@@ -2342,7 +2342,8 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    var targetUserId = (currentUser.role == "admin" && req.user_id.HasValue) 
+    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var targetUserId = (canManage && req.user_id.HasValue && req.user_id.Value > 0) 
         ? req.user_id.Value 
         : currentUser.id;
 
@@ -2351,6 +2352,9 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
         UPDATE shift_registrations 
         SET attendance_status = 'present', 
             absence_reason = NULL,
+            absence_approved_by = NULL,
+            absence_approved_at = NULL,
+            actual_hours = NULL,
             note = 'Đã xác nhận có mặt'
         WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
         new { uid = targetUserId, sid = req.shift_id, wdate = req.work_date }
@@ -2365,13 +2369,26 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
     if (currentUser == null) return Results.Unauthorized();
 
     var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
-    var targetUserId = (canManage && req.user_id.HasValue) 
-        ? req.user_id.Value 
-        : currentUser.id;
-
+    
     using var conn = Database.GetConnection();
-    var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
-    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+    long? targetUserId = null;
+    string targetName = "tất cả nhân sự";
+
+    if (canManage)
+    {
+        if (req.user_id.HasValue && req.user_id.Value > 0)
+        {
+            targetUserId = req.user_id.Value;
+            var targetUser = conn.QueryFirstOrDefault("SELECT full_name FROM users WHERE id = @id", new { id = targetUserId.Value });
+            if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+            targetName = (string)targetUser.full_name;
+        }
+    }
+    else
+    {
+        targetUserId = currentUser.id;
+        targetName = currentUser.full_name;
+    }
 
     var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
 
@@ -2400,7 +2417,7 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
         return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày cần khôi phục có mặt!" });
     }
 
-    // Only allow restoring for today or future dates for regular members
+    // Only allow restoring for today or future dates for regular members; managers/admins can restore any dates
     var validDates = canManage 
         ? targetDates.ToList() 
         : targetDates.Where(d => string.Compare(d, todayStr, StringComparison.Ordinal) >= 0).ToList();
@@ -2415,22 +2432,45 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
         ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
         : new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
-    var affectedCount = conn.Execute(@"
-        UPDATE shift_registrations 
-        SET attendance_status = 'present', 
-            absence_reason = NULL,
-            note = 'Đã khôi phục có mặt'
-        WHERE user_id = @uid 
-          AND shift_id IN @shifts 
-          AND work_date IN @dates 
-          AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
-        new { uid = targetUserId, shifts = targetShifts, dates = validDates }
-    );
+    int affectedCount = 0;
+    if (targetUserId.HasValue)
+    {
+        affectedCount = conn.Execute(@"
+            UPDATE shift_registrations 
+            SET attendance_status = 'present', 
+                absence_reason = NULL,
+                absence_approved_by = NULL,
+                absence_approved_at = NULL,
+                actual_hours = NULL,
+                note = 'Đã khôi phục có mặt'
+            WHERE user_id = @uid 
+              AND shift_id IN @shifts 
+              AND work_date IN @dates 
+              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+            new { uid = targetUserId.Value, shifts = targetShifts, dates = validDates }
+        );
+    }
+    else
+    {
+        affectedCount = conn.Execute(@"
+            UPDATE shift_registrations 
+            SET attendance_status = 'present', 
+                absence_reason = NULL,
+                absence_approved_by = NULL,
+                absence_approved_at = NULL,
+                actual_hours = NULL,
+                note = 'Đã khôi phục có mặt'
+            WHERE shift_id IN @shifts 
+              AND work_date IN @dates 
+              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+            new { shifts = targetShifts, dates = validDates }
+        );
+    }
 
     return Results.Ok(new 
     { 
         success = true, 
-        message = $"Đã khôi phục có mặt thành công cho {affectedCount} ca trực của {targetUser.full_name}!",
+        message = $"Đã khôi phục có mặt thành công cho {affectedCount} ca trực của {targetName}!",
         affected_count = affectedCount
     });
 });
