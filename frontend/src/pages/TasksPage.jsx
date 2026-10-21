@@ -78,6 +78,7 @@ export function TasksPage() {
 
   const canEditTask = (t) => {
     if (!t) return false;
+    if (t.status === "FINISHED") return false;
     return hasAdminRights || Boolean(user?.can_manage_tasks) || Number(t.leader_id) === Number(user?.id);
   };
 
@@ -956,7 +957,7 @@ export function TasksPage() {
                 </h2>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {canEditTask(taskDetail?.task || selectedTask) && (
+                {canEditTask(taskDetail?.task || selectedTask) && (taskDetail?.task || selectedTask)?.status !== "FINISHED" && (
                   <button
                     onClick={() => setEditingTask(taskDetail?.task || selectedTask)}
                     style={{
@@ -1012,10 +1013,11 @@ export function TasksPage() {
               const totalSub = subtasks.length;
               const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
+              const isTaskFinished = taskDetail.task.status === "FINISHED";
               const isTaskLeader = Number(taskDetail.task.leader_id) === Number(user?.id);
-              // Người phụ trách nhiệm vụ (Leader phụ trách hoặc Admin):
-              const isPersonInCharge = isAdmin || isTaskLeader;
-              const canManageTaskSubtasks = isPersonInCharge || Boolean(user?.can_manage_tasks);
+              // Người phụ trách nhiệm vụ (Leader phụ trách hoặc Admin) - chỉ khi nhiệm vụ chưa hoàn thành:
+              const isPersonInCharge = !isTaskFinished && (isAdmin || isTaskLeader);
+              const canManageTaskSubtasks = !isTaskFinished && (isPersonInCharge || Boolean(user?.can_manage_tasks));
               const taskTotalCp = Number(taskDetail.task.total_cp) || 0;
               const allocatedCp = subtasks.reduce((sum, s) => sum + (Number(s.cp_points) || 0), 0);
               const remainingCp = taskTotalCp - allocatedCp;
@@ -1241,7 +1243,7 @@ export function TasksPage() {
                     {/* ACTION BUTTONS (FINISH & POSTPONE & EDIT) */}
                     {canManageTaskSubtasks && (
                       <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14, flexWrap: "wrap" }}>
-                        {canEditTask(taskDetail.task) && (
+                        {canEditTask(taskDetail.task) && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => setEditingTask(taskDetail.task)}
                             style={{
@@ -2254,7 +2256,7 @@ export function TasksPage() {
       )}
 
       {/* ================= MODAL: EDIT / REASSIGN SUBTASK ================= */}
-      {editingSubtask && (
+      {editingSubtask && taskDetail?.task?.status !== "FINISHED" && (
         <EditSubtaskModal
           isOpen={!!editingSubtask}
           onClose={() => setEditingSubtask(null)}
@@ -2287,7 +2289,7 @@ export function TasksPage() {
       )}
 
       {/* ================= MODAL: EDIT ROOT TASK ================= */}
-      {editingTask && (
+      {editingTask && editingTask.status !== "FINISHED" && (
         <EditTaskModal
           isOpen={!!editingTask}
           onClose={() => setEditingTask(null)}
