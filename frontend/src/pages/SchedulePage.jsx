@@ -345,8 +345,8 @@ export function SchedulePage() {
 
   // Open Report Absence Modal
   const openReportAbsence = (shift, day, targetUser = null) => {
-    const finalTarget = targetUser || (isAdmin ? (allMembers.find(m => m.id !== user?.id) || user) : user);
-    if (!isAdmin && finalTarget) {
+    const finalTarget = targetUser || user;
+    if (finalTarget) {
       const existing = schedule.find(
         (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === finalTarget.id
       );
