@@ -52,9 +52,9 @@ export function ShiftHistoryPage() {
     if (actionFilter === "REGISTER") {
       list = list.filter((h) => h.action === "REGISTER");
     } else if (actionFilter === "CANCEL") {
-      list = list.filter((h) => ["CANCEL", "APPROVED_CANCEL", "REQUEST_CANCEL"].includes(h.action));
+      list = list.filter((h) => ["CANCEL", "APPROVED_CANCEL", "REQUEST_CANCEL", "REJECTED_CANCEL"].includes(h.action));
     } else if (actionFilter === "CHANGE") {
-      list = list.filter((h) => ["REQUEST_CHANGE", "APPROVED_CHANGE"].includes(h.action));
+      list = list.filter((h) => ["REQUEST_CHANGE", "APPROVED_CHANGE", "REJECTED_CHANGE"].includes(h.action));
     } else if (actionFilter === "ABSENCE") {
       list = list.filter((h) => ["SUBMIT_ABSENCE_REQUEST", "APPROVE_ABSENCE", "REPORT_ABSENCE", "REJECT_ABSENCE"].includes(h.action));
     }
@@ -73,8 +73,8 @@ export function ShiftHistoryPage() {
   // Summary Metrics
   const totalCount = historyList.length;
   const registerCount = historyList.filter((h) => h.action === "REGISTER").length;
-  const cancelCount = historyList.filter((h) => ["CANCEL", "APPROVED_CANCEL"].includes(h.action)).length;
-  const changeCount = historyList.filter((h) => ["REQUEST_CHANGE", "APPROVED_CHANGE"].includes(h.action)).length;
+  const cancelCount = historyList.filter((h) => ["CANCEL", "APPROVED_CANCEL", "REQUEST_CANCEL", "REJECTED_CANCEL"].includes(h.action)).length;
+  const changeCount = historyList.filter((h) => ["REQUEST_CHANGE", "APPROVED_CHANGE", "REJECTED_CHANGE"].includes(h.action)).length;
   const absenceCount = historyList.filter((h) => ["SUBMIT_ABSENCE_REQUEST", "APPROVE_ABSENCE", "REPORT_ABSENCE"].includes(h.action)).length;
 
 
@@ -148,6 +148,23 @@ export function ShiftHistoryPage() {
             <XCircle size={13} /> ĐÃ DUYỆT HỦY CA
           </span>
         );
+      case "REJECTED_CANCEL":
+        return (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "4px 10px",
+            borderRadius: 20,
+            fontSize: 12,
+            fontWeight: 700,
+            background: "#f1f5f9",
+            color: "#475569",
+            border: "1px solid #cbd5e1"
+          }}>
+            <XCircle size={13} /> TỪ CHỐI HỦY CA
+          </span>
+        );
       case "REQUEST_CHANGE":
         return (
           <span style={{
@@ -180,6 +197,23 @@ export function ShiftHistoryPage() {
             border: "1px solid #d8b4fe"
           }}>
             <CheckCircle2 size={13} /> ĐÃ DUYỆT ĐỔI CA
+          </span>
+        );
+      case "REJECTED_CHANGE":
+        return (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "4px 10px",
+            borderRadius: 20,
+            fontSize: 12,
+            fontWeight: 700,
+            background: "#f1f5f9",
+            color: "#475569",
+            border: "1px solid #cbd5e1"
+          }}>
+            <XCircle size={13} /> TỪ CHỐI ĐỔI CA
           </span>
         );
       case "SUBMIT_ABSENCE_REQUEST":
