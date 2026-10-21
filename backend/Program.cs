@@ -311,6 +311,9 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
     var existing = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
     if (existing == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
+    if ((string)existing.status == "FINISHED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành và lưu trữ, chỉ có thể xem chi tiết chứ không thể chỉnh sửa!" });
+
     long? existingLeaderId = existing.leader_id != null ? Convert.ToInt64(existing.leader_id) : (long?)null;
     if (currentUser.role != "admin" && !currentUser.can_manage_tasks && (!existingLeaderId.HasValue || existingLeaderId.Value != currentUser.id))
         return Results.StatusCode(403);
@@ -480,6 +483,9 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ cha không tồn tại!" });
 
+    if ((string)task.status == "FINISHED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể thêm mục việc mới!" });
+
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool canCreateSubtask = currentUser.role == "admin" 
         || currentUser.role == "leader" 
@@ -583,11 +589,14 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.task_id, t.leader_id 
+        SELECT s.id, s.task_id, t.leader_id, t.status AS task_status 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+
+    if ((string)subtask.task_status == "FINISHED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, chỉ có thể xem chứ không thể chỉnh sửa mục việc!" });
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     if (currentUser.role != "admin" && !currentUser.can_manage_tasks && !currentUser.can_manage_cp && (!subtaskLeaderId.HasValue || subtaskLeaderId.Value != currentUser.id))
         return Results.StatusCode(403);
@@ -1061,11 +1070,14 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, t.leader_id, t.created_by 
+        SELECT s.id, t.leader_id, t.created_by, t.status AS task_status 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
+
+    if ((string)subtask.task_status == "FINISHED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể xóa mục việc!" });
 
     long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;

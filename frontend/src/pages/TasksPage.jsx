@@ -823,7 +823,7 @@ export function TasksPage() {
                   </button>
 
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {canEditTask(task) && (
+                    {canEditTask(task) && task.status !== "FINISHED" && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -872,7 +872,7 @@ export function TasksPage() {
                       </button>
                     )}
 
-                    {(hasAdminRights || task.leader_id === user?.id) && (
+                    {(hasAdminRights || task.leader_id === user?.id) && task.status !== "FINISHED" && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1080,7 +1080,7 @@ export function TasksPage() {
                         <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.4, flex: 1 }}>
                           {taskDetail.task.title}
                         </h3>
-                        {canEditTask(taskDetail.task) && (
+                        {canEditTask(taskDetail.task) && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => setEditingTask(taskDetail.task)}
                             style={{
@@ -1187,7 +1187,7 @@ export function TasksPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#475569" }}>
                           <span>🏆 Quỹ Điểm CP:</span>
                           <strong style={{ color: "#7c3aed", fontSize: 13 }}>{taskTotalCp} CP</strong>
-                          {isAdmin && (
+                          {isAdmin && taskDetail.task.status !== "FINISHED" && (
                             <button
                               onClick={() => setEditTaskCpModal(taskDetail.task)}
                               style={{
@@ -1306,11 +1306,11 @@ export function TasksPage() {
                             }}
                           >
                             <CheckCircle2 size={16} color="#059669" />
-                            <span>Nhiệm vụ đã hoàn thành</span>
+                            <span>Nhiệm vụ đã hoàn thành xuất sắc (Chế độ chỉ xem)</span>
                           </div>
                         )}
 
-                        {isAdmin && (
+                        {isAdmin && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => handleDeleteTask(taskDetail.task.id)}
                             style={{
@@ -1383,7 +1383,7 @@ export function TasksPage() {
                         </p>
                       </div>
 
-                      {canManageTaskSubtasks && (
+                      {canManageTaskSubtasks && taskDetail.task.status !== "FINISHED" && (
                         <button
                           onClick={() => setShowAddSubtaskModal(true)}
                           style={{
@@ -1522,7 +1522,7 @@ export function TasksPage() {
                                     )}
 
                                     {/* THÔNG BÁO CHO THÀNH VIÊN ĐƯỢC GIAO KHI Ở TRẠNG THÁI CHỜ TIẾP NHẬN */}
-                                    {sub.status === "PENDING" && isAssignedToMe && (
+                                    {sub.status === "PENDING" && isAssignedToMe && taskDetail.task.status !== "FINISHED" && (
                                       <div
                                         style={{
                                           margin: "6px 0 8px 0",
@@ -1539,7 +1539,7 @@ export function TasksPage() {
                                     )}
 
                                     {/* THÔNG BÁO CHO THÀNH VIÊN KHI ĐÃ NỘP DUYỆT (CHỜ NGHIỆM THU) */}
-                                    {sub.status === "REVIEW" && isAssignedToMe && !isPersonInCharge && (
+                                    {sub.status === "REVIEW" && isAssignedToMe && !isPersonInCharge && taskDetail.task.status !== "FINISHED" && (
                                       <div
                                         style={{
                                           margin: "6px 0 8px 0",
@@ -1556,7 +1556,7 @@ export function TasksPage() {
                                     )}
 
                                     {/* THÔNG BÁO CHO NGƯỜI PHỤ TRÁCH KHI CÓ MỤC VIỆC CẦN NGHIỆM THU */}
-                                    {sub.status === "REVIEW" && isPersonInCharge && (
+                                    {sub.status === "REVIEW" && isPersonInCharge && taskDetail.task.status !== "FINISHED" && (
                                       <div
                                         style={{
                                           margin: "6px 0 8px 0",
@@ -1629,6 +1629,7 @@ export function TasksPage() {
                                 </div>
 
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
+                                {taskDetail.task.status !== "FINISHED" && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
                                   {/* 0. Member accepts or rejects when PENDING - ONLY assigned member can accept or reject */}
                                   {sub.status === "PENDING" && isAssignedToMe && (
@@ -1871,6 +1872,7 @@ export function TasksPage() {
                                     </button>
                                   )}
                                 </div>
+                                )}
                               </div>
                             </div>
                           );
