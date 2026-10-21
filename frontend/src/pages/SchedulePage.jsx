@@ -1140,136 +1140,78 @@ export function SchedulePage() {
         </div>
       </div>
 
-      {/* SUMMARY STATS (COMPACT & COLLAPSIBLE FOR MOBILE / LANDSCAPE) */}
-      <div style={{ marginBottom: 16 }}>
-        {/* Compact summary status bar */}
-        <div
-          className="card"
-          style={{
-            padding: "10px 14px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 10,
-            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-            border: "1px solid #cbd5e1",
-            borderRadius: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 13, fontWeight: 700 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#1e293b" }}>
-              <Users size={15} color="#2563eb" />
-              <span>{totalMembers} Thành viên</span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#059669" }}>
-              <Clock size={15} color="#10b981" />
-              <span>{myShiftsInWeek.length} ca trực ({totalHours.toFixed(1)}h)</span>
-            </span>
-            <span
-              onClick={() => setShowKpiModal(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                color: totalHours >= 20 ? "#059669" : "#d97706",
-                cursor: "pointer",
-                background: totalHours >= 20 ? "#dcfce7" : "#fef3c7",
-                padding: "2px 8px",
-                borderRadius: 8,
-              }}
-              title="Click xem bảng KPI 20h"
-            >
-              <Trophy size={14} />
-              <span>KPI: {totalHours.toFixed(1)}/20h ({Math.min(100, Math.round((totalHours / 20) * 100))}%)</span>
-            </span>
+      {/* SUMMARY STATS (4 DIRECT CARDS) */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <div className="card" style={{ padding: 14, borderLeft: "4px solid #3b82f6" }}>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+            Quy chuẩn đội ngũ
           </div>
-
-          <button
-            onClick={() => setShowDetailedStats(!showDetailedStats)}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: 12, padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}
-          >
-            <span>{showDetailedStats ? "Thu gọn thẻ ▲" : "Chi tiết thống kê ▼"}</span>
-          </button>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", marginTop: 4 }}>
+            {totalMembers} <span style={{ fontSize: 13, fontWeight: 500 }}>thành viên</span>
+          </div>
         </div>
 
-        {/* 4 Detailed Cards (expanded upon click) */}
-        {showDetailedStats && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 12,
-              marginTop: 12,
-              animation: "fadeIn 0.2s ease-out",
-            }}
-          >
-            <div className="card" style={{ padding: 14, borderLeft: "4px solid #3b82f6" }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-                Quy chuẩn đội ngũ
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", marginTop: 4 }}>
-                {totalMembers} <span style={{ fontSize: 13, fontWeight: 500 }}>thành viên</span>
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: 14, borderLeft: "4px solid #10b981" }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-                Ca trực của bạn tuần này
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", marginTop: 4 }}>
-                {myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({totalHours} giờ)</span>
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: 14, borderLeft: "4px solid #8b5cf6" }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-                Sự kiện các ca trực
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#8b5cf6", marginTop: 4 }}>
-                {events.length} <span style={{ fontSize: 13, fontWeight: 500 }}>sự kiện</span>
-              </div>
-            </div>
-
-            <div
-              className="card"
-              onClick={() => setShowKpiModal(true)}
-              style={{
-                padding: 14,
-                borderLeft: "4px solid #059669",
-                cursor: "pointer",
-                background: totalHours >= 20 ? "#f0fdf4" : "#ffffff",
-                transition: "all 0.15s"
-              }}
-              title="Click để xem chi tiết Bảng xếp hạng KPI của toàn bộ nhân sự"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
-                  🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
-                </div>
-                <span style={{ fontSize: 11, background: totalHours >= 20 ? "#dcfce7" : "#fef3c7", color: totalHours >= 20 ? "#15803d" : "#b45309", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
-                  {totalHours >= 20 ? "Đạt chuẩn" : `${Math.round((totalHours / 20) * 100)}%`}
-                </span>
-              </div>
-
-              <div style={{ fontSize: 18, fontWeight: 800, color: totalHours >= 20 ? "#059669" : "#0f172a", marginTop: 4 }}>
-                {totalHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
-              </div>
-
-              <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginTop: 6 }}>
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, Math.round((totalHours / 20) * 100))}%`,
-                    background: totalHours >= 20 ? "#10b981" : "#f59e0b"
-                  }}
-                />
-              </div>
-            </div>
+        <div className="card" style={{ padding: 14, borderLeft: "4px solid #10b981" }}>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+            Ca trực của bạn tuần này
           </div>
-        )}
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", marginTop: 4 }}>
+            {myShiftsInWeek.length}{" "}
+            <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({totalHours} giờ)</span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 14, borderLeft: "4px solid #8b5cf6" }}>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+            Sự kiện các ca trực
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#8b5cf6", marginTop: 4 }}>
+            {events.length} <span style={{ fontSize: 13, fontWeight: 500 }}>sự kiện</span>
+          </div>
+        </div>
+
+        <div
+          className="card"
+          onClick={() => setShowKpiModal(true)}
+          style={{
+            padding: 14,
+            borderLeft: "4px solid #059669",
+            cursor: "pointer",
+            background: totalHours >= 20 ? "#f0fdf4" : "#ffffff",
+            transition: "all 0.15s"
+          }}
+          title="Click để xem chi tiết Bảng xếp hạng KPI của toàn bộ nhân sự"
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
+              🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
+            </div>
+            <span style={{ fontSize: 11, background: totalHours >= 20 ? "#dcfce7" : "#fef3c7", color: totalHours >= 20 ? "#15803d" : "#b45309", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+              {totalHours >= 20 ? "Đạt chuẩn" : `${Math.round((totalHours / 20) * 100)}%`}
+            </span>
+          </div>
+
+          <div style={{ fontSize: 18, fontWeight: 800, color: totalHours >= 20 ? "#059669" : "#0f172a", marginTop: 4 }}>
+            {totalHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
+          </div>
+
+          <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginTop: 6 }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.min(100, Math.round((totalHours / 20) * 100))}%`,
+                background: totalHours >= 20 ? "#10b981" : "#f59e0b"
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* NAVIGATION BAR & VIEW SWITCHER */}
