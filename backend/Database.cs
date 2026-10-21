@@ -335,86 +335,97 @@ public static class Database
             );
             ");
 
-            // Backward compatibility for existing databases
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN target_shift_id INTEGER;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN target_work_date TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN request_reason TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN attendance_status TEXT DEFAULT 'present';"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_reason TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_reported_at TIMESTAMP;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_approved_by INTEGER;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN absence_approved_at TIMESTAMP;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN actual_hours REAL;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_registrations ADD COLUMN time_note TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
-            try { conn.Execute("ALTER TABLE roles ADD COLUMN can_evaluate INTEGER DEFAULT 0;"); } catch { }
-            try { conn.Execute("ALTER TABLE roles ADD COLUMN can_manage_cp INTEGER DEFAULT 0;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'LAB_MAINTENANCE';"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN planned_date TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN deadline TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN location TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN customer_info TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN total_cp INTEGER DEFAULT 0;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'OPEN';"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN postponed_reason TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE tasks ADD COLUMN finished_at TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN description TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN position INTEGER DEFAULT 1;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN status TEXT DEFAULT 'PENDING';"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN due_at TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN review_comment TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN reject_reason TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN submitted_for_review_at TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN finished_at TEXT;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN cp_points INTEGER DEFAULT 0;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN quality_multiplier REAL DEFAULT 1.0;"); } catch { }
-            try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
-            try { conn.Execute(@"CREATE TABLE IF NOT EXISTS competency_evaluations (
-                user_id INTEGER PRIMARY KEY,
-                scores_json TEXT NOT NULL DEFAULT '{}',
-                desired_direction TEXT DEFAULT '',
-                commitment_level TEXT DEFAULT '',
-                evidence_notes TEXT DEFAULT '',
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );"); } catch { }
+            // Backward compatibility and robust schema evolution for both PostgreSQL and SQLite
+            EnsureColumn(conn, "shift_registrations", "target_shift_id", "INTEGER");
+            EnsureColumn(conn, "shift_registrations", "target_work_date", "TEXT");
+            EnsureColumn(conn, "shift_registrations", "request_reason", "TEXT");
+            EnsureColumn(conn, "shift_registrations", "attendance_status", "TEXT DEFAULT 'present'");
+            EnsureColumn(conn, "shift_registrations", "absence_reason", "TEXT");
+            EnsureColumn(conn, "shift_registrations", "absence_reported_at", "TIMESTAMP");
+            EnsureColumn(conn, "shift_registrations", "absence_approved_by", "INTEGER");
+            EnsureColumn(conn, "shift_registrations", "absence_approved_at", "TIMESTAMP");
+            EnsureColumn(conn, "shift_registrations", "actual_hours", "REAL");
+            EnsureColumn(conn, "shift_registrations", "time_note", "TEXT");
 
-            try { conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
-                id {pk},
-                user_id INTEGER NOT NULL,
-                subtask_id INTEGER,
-                cp_earned REAL DEFAULT 0,
-                contribution_pct INTEGER DEFAULT 100,
-                cp_points_base INTEGER DEFAULT 0,
-                quality_multiplier REAL DEFAULT 1.0,
-                awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
-            CREATE INDEX IF NOT EXISTS idx_cp_transactions_user ON cp_transactions (user_id);
-            CREATE INDEX IF NOT EXISTS idx_cp_transactions_subtask ON cp_transactions (subtask_id);
-            "); } catch { }
+            EnsureColumn(conn, "shift_notes", "actual_hours", "REAL");
+            EnsureColumn(conn, "shift_notes", "admin_response", "TEXT");
+            EnsureColumn(conn, "shift_notes", "status", "TEXT DEFAULT 'pending'");
+            EnsureColumn(conn, "shift_notes", "note_type", "TEXT DEFAULT 'adjusted_hours'");
+
+            EnsureColumn(conn, "roles", "can_manage_schedule", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "roles", "can_manage_tasks", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "roles", "can_manage_staff", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "roles", "can_evaluate", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "roles", "can_manage_cp", "INTEGER DEFAULT 0");
+
+            EnsureColumn(conn, "tasks", "task_type", "TEXT DEFAULT 'LAB_MAINTENANCE'");
+            EnsureColumn(conn, "tasks", "planned_date", "TEXT DEFAULT ''");
+            EnsureColumn(conn, "tasks", "deadline", "TEXT DEFAULT ''");
+            EnsureColumn(conn, "tasks", "location", "TEXT");
+            EnsureColumn(conn, "tasks", "customer_info", "TEXT");
+            EnsureColumn(conn, "tasks", "total_cp", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "tasks", "status", "TEXT DEFAULT 'OPEN'");
+            EnsureColumn(conn, "tasks", "postponed_reason", "TEXT");
+            EnsureColumn(conn, "tasks", "finished_at", "TEXT");
+
+            EnsureColumn(conn, "subtasks", "description", "TEXT");
+            EnsureColumn(conn, "subtasks", "position", "INTEGER DEFAULT 1");
+            EnsureColumn(conn, "subtasks", "status", "TEXT DEFAULT 'PENDING'");
+            EnsureColumn(conn, "subtasks", "due_at", "TEXT");
+            EnsureColumn(conn, "subtasks", "review_comment", "TEXT");
+            EnsureColumn(conn, "subtasks", "reject_reason", "TEXT");
+            EnsureColumn(conn, "subtasks", "submitted_for_review_at", "TEXT");
+            EnsureColumn(conn, "subtasks", "finished_at", "TEXT");
+            EnsureColumn(conn, "subtasks", "cp_points", "INTEGER DEFAULT 0");
+            EnsureColumn(conn, "subtasks", "quality_multiplier", "REAL DEFAULT 1.0");
+
+            EnsureColumn(conn, "subtask_assignees", "contribution_pct", "INTEGER DEFAULT 100");
+
+            try
+            {
+                conn.Execute(@"CREATE TABLE IF NOT EXISTS competency_evaluations (
+                    user_id INTEGER PRIMARY KEY,
+                    scores_json TEXT NOT NULL DEFAULT '{}',
+                    desired_direction TEXT DEFAULT '',
+                    commitment_level TEXT DEFAULT '',
+                    evidence_notes TEXT DEFAULT '',
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );");
+            }
+            catch { }
+
+            try
+            {
+                conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
+                    id {pk},
+                    user_id INTEGER NOT NULL,
+                    subtask_id INTEGER,
+                    cp_earned REAL DEFAULT 0,
+                    contribution_pct INTEGER DEFAULT 100,
+                    cp_points_base INTEGER DEFAULT 0,
+                    quality_multiplier REAL DEFAULT 1.0,
+                    awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_cp_transactions_user ON cp_transactions (user_id);
+                CREATE INDEX IF NOT EXISTS idx_cp_transactions_subtask ON cp_transactions (subtask_id);
+                ");
+            }
+            catch { }
 
             // Loại trừ dữ liệu đánh giá hoặc điểm CP lịch sử của tài khoản Quản trị viên (Admin)
-            try {
+            try
+            {
                 conn.Execute(@"
                     DELETE FROM cp_transactions WHERE user_id IN (SELECT id FROM users WHERE role = 'admin');
                     DELETE FROM competency_evaluations WHERE user_id IN (SELECT id FROM users WHERE role = 'admin');
                 ");
-            } catch { }
-
-            // Đồng bộ lại Sequence trên PostgreSQL để tránh lỗi trùng lặp khóa chính (duplicate key violates unique constraint)
-            if (IsPostgres)
-            {
-                var tablesWithSerial = new[] { "users", "tasks", "subtasks", "cp_transactions", "shift_registrations", "shift_history", "shift_notes", "class_schedules", "feedbacks", "notifications", "email_logs", "shift_events", "departments" };
-                foreach (var tbl in tablesWithSerial)
-                {
-                    try
-                    {
-                        conn.Execute($"SELECT setval(pg_get_serial_sequence('{tbl}', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM {tbl};");
-                    }
-                    catch { }
-                }
             }
+            catch { }
+
+            // Đồng bộ & xác thực tự động toàn bộ Sequence trên PostgreSQL
+            SyncPostgresSequences(conn);
 
             // 0. Synchronize standard 5 Roles (Admin: 5 quyen | Leader: phan ca, subtask, nhan su, danh gia, cp | Core, Contributor, Learning: 0 quyen)
             var defaultRoles = new[]
@@ -494,18 +505,54 @@ public static class Database
                         description = EXCLUDED.description", s);
             }
 
-            // 2. Synchronize 13 standard users
+            // 2. Synchronize initial standard users
             var userCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
             if (userCount == 0)
             {
-                var adminPass = HashPassword("admin123");
+                var defaultUsers = new[]
+                {
+                    new { u = "admin", p = HashPassword("admin123"), fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" },
+                    new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", r = "leader", d = "Tổ Trực Kỹ Thuật" },
+                    new { u = "nv_binh", p = HashPassword("123456"), fn = "Trần Thị Bình", e = "binh.tran@company.com", ph = "0912345678", r = "contributor", d = "Tổ Dịch Vụ Sinh Viên" },
+                    new { u = "nv_cuong", p = HashPassword("123456"), fn = "Nguyễn Văn Cường", e = "cuong.nguyen@company.com", ph = "0934567890", r = "contributor", d = "Tổ Trực Vận Hành" }
+                };
 
-                conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING",
-                    new { u = "admin", p = adminPass, fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" });
+                foreach (var u in defaultUsers)
+                {
+                    conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING", u);
+                }
 
                 conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type) VALUES (0, 1, @title, @msg, 'general')",
                     new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đã sẵn sàng vận hành. Quản lý có thể thêm nhân sự tại mục Quản lý nhân viên và xếp lịch trực." });
             }
+
+            // 2.1 Always ensure at least one user has the 'leader' role so task creation never blocks
+            try
+            {
+                var leaderCount = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM users WHERE role = 'leader'");
+                if (leaderCount == 0)
+                {
+                    int updated = conn.Execute("UPDATE users SET role = 'leader' WHERE username = 'nv_an'");
+                    if (updated == 0)
+                    {
+                        var firstStaff = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE role != 'admin' ORDER BY id ASC LIMIT 1");
+                        if (firstStaff != null)
+                        {
+                            long sid = Convert.ToInt64(firstStaff.id);
+                            conn.Execute("UPDATE users SET role = 'leader' WHERE id = @sid", new { sid });
+                        }
+                        else
+                        {
+                            conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, 'leader', @d) ON CONFLICT (username) DO NOTHING",
+                                new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", d = "Tổ Trực Kỹ Thuật" });
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Re-sync sequences after user updates if Postgres
+            SyncPostgresSequences(conn);
 
             // 3. System settings
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_host', 'smtp.gmail.com') ON CONFLICT (key) DO NOTHING");
@@ -516,31 +563,7 @@ public static class Database
             conn.Execute("UPDATE system_settings SET value = 'longhvn2006@gmail.com' WHERE key = 'smtp_user' AND (value IS NULL OR value = '')");
             conn.Execute("UPDATE system_settings SET value = 'wtew euaj zcuu bjtq' WHERE key = 'smtp_password' AND (value IS NULL OR value = '')");
 
-            // 4. Default shift events
-            // Disabled auto-seed for shift_events as requested by user
-            // var eventCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_events");
-            if (false)
-            {
-                var seedEvents = new[]
-                {
-                    new { shift_id = 1, title = "Họp giao ban đầu ngày & phổ biến nhiệm vụ", description = "Kiểm tra sĩ số, phân công vị trí trực ca sáng", event_type = "meeting" },
-                    new { shift_id = 1, title = "Kiểm tra hạ tầng kỹ thuật", description = "Khởi động hệ thống điều hòa, mạng phòng lab", event_type = "maintenance" },
-                    new { shift_id = 2, title = "Kiểm tra hệ thống máy chủ & mạng", description = "Rà soát ticket hỗ trợ và kiểm tra băng thông", event_type = "task" },
-                    new { shift_id = 3, title = "Giám sát lưu lượng cao điểm trưa", description = "Đảm bảo hỗ trợ sinh viên và người dùng liên tục", event_type = "general" },
-                    new { shift_id = 4, title = "Giao ban ca chiều & xử lý yêu cầu tồn", description = "Họp nhanh 10 phút đầu ca chiều", event_type = "meeting" },
-                    new { shift_id = 5, title = "Sao lưu dữ liệu định kỳ", description = "Đồng bộ snapshot cơ sở dữ liệu lên cloud", event_type = "task" },
-                    new { shift_id = 6, title = "Báo cáo tổng kết ca chiều", description = "Ghi nhận các sự cố phát sinh trong ngày", event_type = "general" },
-                    new { shift_id = 7, title = "Kiểm tra an ninh cơ sở vật chất", description = "Khóa các phòng ban phụ và kiểm tra thiết bị", event_type = "maintenance" },
-                    new { shift_id = 8, title = "Bàn giao ca tối & ký checklist", description = "Ký biên bản bàn giao thiết bị phòng trực", event_type = "handover" },
-                    new { shift_id = 9, title = "Chốt sổ vận hành & giám sát đêm", description = "Khóa hệ thống, kiểm tra an toàn PCCC", event_type = "task" }
-                };
-                foreach (var ev in seedEvents)
-                {
-                    conn.Execute("INSERT INTO shift_events (shift_id, title, description, event_type) VALUES (@shift_id, @title, @description, @event_type)", ev);
-                }
-            }
-
-            // 5. Default weekly schedule registrations
+            // 4. Default weekly schedule registrations
             var regCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_registrations");
             if (regCount == 0)
             {
@@ -551,10 +574,10 @@ public static class Database
 
                 if (adminUser != null && staffAn != null)
                 {
-                    long uidAdmin = adminUser.id;
-                    long uidAn = staffAn.id;
-                    long uidBinh = staffBinh != null ? staffBinh.id : uidAn;
-                    long uidCuong = staffCuong != null ? staffCuong.id : uidAn;
+                    long uidAdmin = Convert.ToInt64(adminUser.id);
+                    long uidAn = Convert.ToInt64(staffAn.id);
+                    long uidBinh = staffBinh != null ? Convert.ToInt64(staffBinh.id) : uidAn;
+                    long uidCuong = staffCuong != null ? Convert.ToInt64(staffCuong.id) : uidAn;
 
                     var sampleRegs = new[]
                     {
@@ -579,6 +602,85 @@ public static class Database
                     }
                 }
             }
+        }
+    }
+
+    private static void EnsureColumn(DbConnection conn, string table, string column, string typeAndDefault)
+    {
+        try
+        {
+            if (IsPostgres)
+            {
+                conn.Execute($"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {typeAndDefault};");
+            }
+            else
+            {
+                var existingCols = conn.Query("SELECT name FROM pragma_table_info(@table)", new { table })
+                    .Select(x => (string)x.name)
+                    .ToList();
+                if (!existingCols.Contains(column, StringComparer.OrdinalIgnoreCase))
+                {
+                    conn.Execute($"ALTER TABLE {table} ADD COLUMN {column} {typeAndDefault};");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Database] Schema notice for {table}.{column}: {ex.Message}");
+        }
+    }
+
+    private static void SyncPostgresSequences(DbConnection conn)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            var syncSql = @"
+            DO $$
+            DECLARE
+                tbl text;
+                seq_name text;
+                max_id bigint;
+            BEGIN
+                FOR tbl IN SELECT unnest(ARRAY[
+                    'users', 'tasks', 'subtasks', 'cp_transactions', 
+                    'shift_registrations', 'shift_history', 'shift_notes', 
+                    'class_schedules', 'feedbacks', 'notifications', 
+                    'email_logs', 'shift_events', 'departments'
+                ])
+                LOOP
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = tbl) THEN
+                        -- 1. Tìm hoặc tự động tạo sequence nếu bảng chưa có sequence gắn với column id
+                        SELECT pg_get_serial_sequence(tbl, 'id') INTO seq_name;
+                        IF seq_name IS NULL THEN
+                            seq_name := tbl || '_id_seq';
+                            EXECUTE 'CREATE SEQUENCE IF NOT EXISTS ' || quote_ident(seq_name);
+                            BEGIN
+                                EXECUTE 'ALTER TABLE ' || quote_ident(tbl) || ' ALTER COLUMN id SET DEFAULT nextval(''' || seq_name || ''')';
+                                EXECUTE 'ALTER SEQUENCE ' || quote_ident(seq_name) || ' OWNED BY ' || quote_ident(tbl) || '.id';
+                            EXCEPTION WHEN OTHERS THEN NULL;
+                            END;
+                        END IF;
+
+                        -- 2. Đồng bộ giá trị hiện tại của sequence với MAX(id) thực tế trong bảng
+                        EXECUTE 'SELECT COALESCE(MAX(id), 0) FROM ' || quote_ident(tbl) INTO max_id;
+                        IF max_id > 0 THEN
+                            PERFORM setval(seq_name, max_id, true);
+                        ELSE
+                            PERFORM setval(seq_name, 1, false);
+                        END IF;
+                    END IF;
+                END LOOP;
+            END $$;
+            ";
+
+            conn.Execute(syncSql);
+            Console.WriteLine("[Database] Successfully verified & synchronized all PostgreSQL auto-increment sequences.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Database] Warning during sequence sync: {ex.Message}");
         }
     }
 }

@@ -233,6 +233,11 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
 
     int totalCp = Math.Max(0, req.total_cp);
     using var conn = Database.GetConnection();
+
+    var leader = conn.QueryFirstOrDefault<dynamic>("SELECT id, role FROM users WHERE id = @leader_id", new { leader_id = req.leader_id });
+    if (leader == null)
+        return Results.BadRequest(new { detail = "Trưởng nhóm (Leader) được chỉ định không tồn tại trong hệ thống!" });
+
     try
     {
         string insertTaskSql = Database.IsPostgres
@@ -347,10 +352,10 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
             SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) AS failed
         FROM subtasks WHERE task_id = @id", new { id });
 
-    int total = (int)(subtaskStats?.total ?? 0);
-    int resolved = (int)(subtaskStats?.resolved ?? 0);
-    int finished = (int)(subtaskStats?.finished ?? 0);
-    int failed = (int)(subtaskStats?.failed ?? 0);
+    int total = Convert.ToInt32(subtaskStats?.total ?? 0);
+    int resolved = Convert.ToInt32(subtaskStats?.resolved ?? 0);
+    int finished = Convert.ToInt32(subtaskStats?.finished ?? 0);
+    int failed = Convert.ToInt32(subtaskStats?.failed ?? 0);
 
     if (total == 0)
         return Results.BadRequest(new { detail = "Nhiệm vụ chưa có mục checklist nào. Cần tạo và xử lý các mục checklist trước khi kết thúc nhiệm vụ!" });
@@ -386,24 +391,6 @@ app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         || (createdBy.HasValue && createdBy.Value == currentUser.id);
 
     if (!isAuthorized) return Results.StatusCode(403);
-
-    // Đảm bảo bảng cp_transactions luôn tồn tại (tránh lỗi 42P01 trên PostgreSQL nếu chưa có migration)
-    try
-    {
-        string pk = Database.IsPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
-        conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
-            id {pk},
-            user_id INTEGER NOT NULL,
-            subtask_id INTEGER,
-            cp_earned REAL DEFAULT 0,
-            contribution_pct INTEGER DEFAULT 100,
-            cp_points_base INTEGER DEFAULT 0,
-            quality_multiplier REAL DEFAULT 1.0,
-            awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );");
-    }
-    catch { }
 
     using var tx = conn.BeginTransaction();
     try
@@ -455,9 +442,6 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
 
-    // Đảm bảo cột contribution_pct luôn tồn tại trong subtask_assignees
-    try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
-
     try
     {
         int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
@@ -487,9 +471,15 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
             ? req.assignee_ids.Distinct().ToList()
             : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
 
+        var validAssigneeIds = (assigneeIds != null && assigneeIds.Any())
+            ? conn.Query<long>("SELECT id FROM users WHERE id IN @assigneeIds", new { assigneeIds }).ToList()
+            : new List<long>();
+        if (!validAssigneeIds.Any() && leaderId.HasValue) validAssigneeIds.Add(leaderId.Value);
+
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
-            foreach (var ac in req.assignee_contributions)
+            var validContributions = req.assignee_contributions.Where(ac => validAssigneeIds.Contains(ac.user_id)).ToList();
+            foreach (var ac in validContributions)
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { subtaskId, uid = ac.user_id, pct = ac.contribution_pct });
@@ -503,8 +493,8 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         }
         else
         {
-            int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
-            foreach (var uid in assigneeIds)
+            int defaultPct = validAssigneeIds.Count > 1 ? (100 / validAssigneeIds.Count) : 100;
+            foreach (var uid in validAssigneeIds)
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { subtaskId, uid, defaultPct });
@@ -551,9 +541,6 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         return Results.BadRequest(new { detail = "Tiêu đề không được để trống!" });
 
     int cpPoints = Math.Max(0, req.cp_points);
-
-    // Đảm bảo cột contribution_pct luôn tồn tại trong subtask_assignees
-    try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
 
     try
     {
@@ -871,24 +858,6 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
     if (!isAuthorized)
         return Results.StatusCode(403);
 
-    // Đảm bảo bảng cp_transactions luôn tồn tại
-    try
-    {
-        string pk = Database.IsPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
-        conn.Execute($@"CREATE TABLE IF NOT EXISTS cp_transactions (
-            id {pk},
-            user_id INTEGER NOT NULL,
-            subtask_id INTEGER,
-            cp_earned REAL DEFAULT 0,
-            contribution_pct INTEGER DEFAULT 100,
-            cp_points_base INTEGER DEFAULT 0,
-            quality_multiplier REAL DEFAULT 1.0,
-            awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );");
-    }
-    catch { }
-
     using var tx = conn.BeginTransaction();
     try
     {
@@ -960,7 +929,7 @@ app.MapGet("/api/cp/leaderboard", (HttpContext ctx) =>
 
         return new CpUserSummary
         {
-            user_id = (long)u.user_id,
+            user_id = Convert.ToInt64(u.user_id),
             username = (string)u.username,
             full_name = (string)u.full_name,
             role = (string)u.role,
