@@ -415,6 +415,15 @@ export const api = {
     request(`/subtasks/${id}/submit`, {
       method: "POST",
     }),
+  acceptSubtask: (id) =>
+    request(`/subtasks/${id}/accept`, {
+      method: "POST",
+    }),
+  rejectSubtask: (id, reason = "") =>
+    request(`/subtasks/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
   reviewSubtask: (id, approve, comment, quality_multiplier = 1.0, is_penalty = false, penalty_points = 0) =>
     request(`/subtasks/${id}/review`, {
       method: "POST",

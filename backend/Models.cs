@@ -157,9 +157,10 @@ public record SubtaskDetailDto(
     string title,
     string? description,
     int position,
-    string status, // PROCESSING, REVIEW, FINISHED
+    string status, // PENDING, PROCESSING, REVIEW, FINISHED, FAILED, REJECTED
     string? due_at,
     string? review_comment,
+    string? reject_reason,
     string? submitted_for_review_at,
     string? finished_at,
     long created_by,
@@ -184,6 +185,8 @@ public record TaskDetailDto(
     string? leader_name,
     long created_by,
     string? creator_name,
+    int total_cp,
+    int allocated_cp,
     string status, // OPEN, IN_PROGRESS, FINISHED, POSTPONED
     string? postponed_reason,
     string? finished_at,
@@ -204,7 +207,8 @@ public record CreateTaskRequest(
     string deadline,
     string? location,
     string? customer_info,
-    long leader_id
+    long leader_id,
+    int total_cp = 0
 );
 
 public record UpdateTaskRequest(
@@ -215,7 +219,8 @@ public record UpdateTaskRequest(
     string deadline,
     string? location,
     string? customer_info,
-    long leader_id
+    long leader_id,
+    int total_cp = 0
 );
 
 public record PostponeTaskRequest(
@@ -240,6 +245,10 @@ public record UpdateSubtaskRequest(
     List<long>? assignee_ids,
     int cp_points = 0,
     List<AssigneeContribution>? assignee_contributions = null
+);
+
+public record RejectSubtaskRequest(
+    string? reason = null
 );
 
 public record ReviewSubtaskRequest(

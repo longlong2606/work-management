@@ -64,7 +64,10 @@ app.MapGet("/api/tasks", (
     var sql = @"
         SELECT 
             t.id, t.title, t.description, t.task_type, t.planned_date, t.deadline,
-            t.location, t.customer_info, t.leader_id, t.created_by, t.status,
+            t.location, t.customer_info, t.leader_id, t.created_by,
+            COALESCE(t.total_cp, 0) AS total_cp,
+            (SELECT COALESCE(SUM(s.cp_points), 0) FROM subtasks s WHERE s.task_id = t.id) AS allocated_cp,
+            t.status,
             t.postponed_reason, t.finished_at, t.created_at, t.updated_at,
             u1.full_name AS leader_name,
             u2.full_name AS creator_name,
@@ -129,7 +132,10 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     var task = conn.QueryFirstOrDefault(@"
         SELECT 
             t.id, t.title, t.description, t.task_type, t.planned_date, t.deadline,
-            t.location, t.customer_info, t.leader_id, t.created_by, t.status,
+            t.location, t.customer_info, t.leader_id, t.created_by,
+            COALESCE(t.total_cp, 0) AS total_cp,
+            (SELECT COALESCE(SUM(s.cp_points), 0) FROM subtasks s WHERE s.task_id = t.id) AS allocated_cp,
+            t.status,
             t.postponed_reason, t.finished_at, t.created_at, t.updated_at,
             u1.full_name AS leader_name,
             u2.full_name AS creator_name,
@@ -147,7 +153,7 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     var subtasksRaw = conn.Query(@"
         SELECT 
             s.id, s.task_id, s.title, s.description, s.position, s.status,
-            s.due_at, s.review_comment, s.submitted_for_review_at, s.finished_at,
+            s.due_at, s.review_comment, s.reject_reason, s.submitted_for_review_at, s.finished_at,
             s.created_by, u.full_name AS creator_name, s.created_at, s.updated_at,
             COALESCE(s.cp_points, 0) AS cp_points,
             COALESCE(s.quality_multiplier, 1.0) AS quality_multiplier
@@ -192,6 +198,7 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         status = (string)s.status,
         due_at = (string?)s.due_at,
         review_comment = (string?)s.review_comment,
+        reject_reason = (string?)s.reject_reason,
         submitted_for_review_at = (string?)s.submitted_for_review_at,
         finished_at = (string?)s.finished_at,
         created_by = (long)s.created_by,
@@ -224,10 +231,11 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
     if (req.leader_id <= 0)
         return Results.BadRequest(new { detail = "Vui lòng chỉ định Trưởng nhóm (Leader) phụ trách!" });
 
+    int totalCp = Math.Max(0, req.total_cp);
     using var conn = Database.GetConnection();
     var taskId = conn.ExecuteScalar<long>(@"
-        INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, status, created_at, updated_at)
-        VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
+        VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
         SELECT last_insert_rowid();",
         new
         {
@@ -239,7 +247,8 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
             location = req.location?.Trim(),
             customer_info = req.customer_info?.Trim(),
             leader_id = req.leader_id,
-            created_by = currentUser.id
+            created_by = currentUser.id,
+            totalCp
         });
 
     return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
@@ -257,11 +266,12 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
     if (currentUser.role != "admin" && (long)existing.leader_id != currentUser.id)
         return Results.StatusCode(403);
 
+    int totalCp = Math.Max(0, req.total_cp);
     conn.Execute(@"
         UPDATE tasks SET 
             title = @title, description = @description, task_type = @task_type,
             planned_date = @planned_date, deadline = @deadline, location = @location,
-            customer_info = @customer_info, leader_id = @leader_id, updated_at = CURRENT_TIMESTAMP
+            customer_info = @customer_info, leader_id = @leader_id, total_cp = @totalCp, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id",
         new
         {
@@ -273,7 +283,8 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
             deadline = req.deadline.Trim(),
             location = req.location?.Trim(),
             customer_info = req.customer_info?.Trim(),
-            leader_id = req.leader_id
+            leader_id = req.leader_id,
+            totalCp
         });
 
     return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
@@ -403,7 +414,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
 
     long subtaskId = conn.ExecuteScalar<long>(@"
         INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
-        VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
         SELECT last_insert_rowid();",
         new
         {
@@ -425,6 +436,12 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     {
         conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct)",
             new { subtaskId, uid, defaultPct });
+
+        if (uid != currentUser.id)
+        {
+            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+        }
     }
 
     // Auto transition parent task from OPEN to IN_PROGRESS
@@ -458,7 +475,10 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     conn.Execute(@"
         UPDATE subtasks SET 
-            title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints, updated_at = CURRENT_TIMESTAMP
+            title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints,
+            status = CASE WHEN status = 'REJECTED' THEN 'PENDING' ELSE status END,
+            reject_reason = CASE WHEN status = 'REJECTED' THEN NULL ELSE reject_reason END,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = @id",
         new
         {
@@ -490,6 +510,80 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
     }
 
     return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
+});
+
+app.MapPost("/api/subtasks/{id:long}/accept", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.title, s.status, s.task_id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
+
+    bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id) || currentUser.can_manage_tasks;
+
+    if (!isAssigned && !isLeaderOrAdmin)
+        return Results.StatusCode(403);
+
+    if ((string)subtask.status != "PENDING")
+        return Results.BadRequest(new { detail = $"Chỉ có thể tiếp nhận khi mục việc ở trạng thái Chờ tiếp nhận. Hiện tại: {subtask.status}" });
+
+    conn.Execute(@"
+        UPDATE subtasks SET 
+            status = 'PROCESSING', reject_reason = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new { id });
+
+    if (subtask.leader_id != null && (long)subtask.leader_id != currentUser.id)
+    {
+        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@leaderId, @senderId, @title, @msg, 'task', @taskId)",
+            new { leaderId = (long)subtask.leader_id, senderId = currentUser.id, title = "Thành viên đã tiếp nhận mục việc", msg = $"{currentUser.full_name} đã xác nhận tiếp nhận mục việc: \"{subtask.title}\".", taskId = (long)subtask.task_id });
+    }
+
+    return Results.Ok(new { message = "Đã tiếp nhận mục việc thành công! Trạng thái chuyển sang Đang thực hiện." });
+});
+
+app.MapPost("/api/subtasks/{id:long}/reject", (long id, RejectSubtaskRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.title, s.status, s.task_id, t.leader_id 
+        FROM subtasks s JOIN tasks t ON s.task_id = t.id 
+        WHERE s.id = @id", new { id });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
+
+    bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtask.leader_id != null && (long)subtask.leader_id == currentUser.id) || currentUser.can_manage_tasks;
+
+    if (!isAssigned && !isLeaderOrAdmin)
+        return Results.StatusCode(403);
+
+    if ((string)subtask.status != "PENDING")
+        return Results.BadRequest(new { detail = $"Chỉ có thể từ chối khi mục việc ở trạng thái Chờ tiếp nhận. Hiện tại: {subtask.status}" });
+
+    string reason = string.IsNullOrWhiteSpace(req.reason) ? "Thành viên từ chối tiếp nhận mục việc" : req.reason.Trim();
+
+    conn.Execute(@"
+        UPDATE subtasks SET 
+            status = 'REJECTED', reject_reason = @reason, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new { id, reason });
+
+    if (subtask.leader_id != null && (long)subtask.leader_id != currentUser.id)
+    {
+        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@leaderId, @senderId, @title, @msg, 'task', @taskId)",
+            new { leaderId = (long)subtask.leader_id, senderId = currentUser.id, title = "Thành viên từ chối nhận mục việc", msg = $"{currentUser.full_name} đã từ chối nhận mục việc \"{subtask.title}\" với lý do: {reason}", taskId = (long)subtask.task_id });
+    }
+
+    return Results.Ok(new { message = "Đã từ chối nhận mục việc và gửi thông báo phản hồi cho Trưởng nhóm!" });
 });
 
 app.MapPost("/api/subtasks/{id:long}/submit", (long id, HttpContext ctx) =>

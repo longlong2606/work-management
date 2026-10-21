@@ -190,6 +190,7 @@ public static class Database
                 customer_info TEXT,
                 leader_id INTEGER NOT NULL,
                 created_by INTEGER NOT NULL,
+                total_cp INTEGER DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'OPEN',
                 postponed_reason TEXT,
                 finished_at TEXT,
@@ -207,12 +208,15 @@ public static class Database
                 title TEXT NOT NULL,
                 description TEXT,
                 position INTEGER DEFAULT 1,
-                status TEXT NOT NULL DEFAULT 'PROCESSING',
+                status TEXT NOT NULL DEFAULT 'PENDING',
                 due_at TEXT,
                 review_comment TEXT,
+                reject_reason TEXT,
                 submitted_for_review_at TEXT,
                 finished_at TEXT,
                 created_by INTEGER NOT NULL,
+                cp_points INTEGER DEFAULT 0,
+                quality_multiplier REAL DEFAULT 1.0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
@@ -329,6 +333,10 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
             try { conn.Execute("ALTER TABLE roles ADD COLUMN can_evaluate INTEGER DEFAULT 0;"); } catch { }
             try { conn.Execute("ALTER TABLE roles ADD COLUMN can_manage_cp INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN total_cp INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN reject_reason TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN cp_points INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN quality_multiplier REAL DEFAULT 1.0;"); } catch { }
             try { conn.Execute(@"CREATE TABLE IF NOT EXISTS competency_evaluations (
                 user_id INTEGER PRIMARY KEY,
                 scores_json TEXT NOT NULL DEFAULT '{}',

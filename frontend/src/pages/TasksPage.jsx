@@ -57,6 +57,9 @@ export function TasksPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewPenaltyPoints, setReviewPenaltyPoints] = useState(1);
   const [reviewActionMode, setReviewActionMode] = useState("approve"); // 'approve' | 'rework' | 'penalty' 
+  const [rejectModalSubtask, setRejectModalSubtask] = useState(null); // { id, title }
+  const [editingSubtask, setEditingSubtask] = useState(null); // subtask object to edit
+  const [editTaskCpModal, setEditTaskCpModal] = useState(null); // { id, title, total_cp, ... }
   const [postponeModalTask, setPostponeModalTask] = useState(null);
   const [postponeReason, setPostponeReason] = useState("");
   const [toast, setToast] = useState({ text: "", type: "success" });
@@ -219,6 +222,29 @@ export function TasksPage() {
       if (taskDetail) refreshTaskDetail(taskDetail.task.id);
     } catch (err) {
       showToast(err.message || "Lỗi khi nộp duyệt.", "danger");
+    }
+  };
+
+  const handleAcceptSubtask = async (subtaskId) => {
+    try {
+      const res = await api.acceptSubtask(subtaskId);
+      showToast(res.message || "Đã tiếp nhận mục việc thành công! Trạng thái chuyển sang Đang thực hiện.");
+      if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+      fetchTasks();
+    } catch (err) {
+      showToast(err.message || "Lỗi khi tiếp nhận mục việc.", "danger");
+    }
+  };
+
+  const handleRejectSubtask = async (subtaskId, reason) => {
+    try {
+      const res = await api.rejectSubtask(subtaskId, reason);
+      showToast(res.message || "Đã từ chối nhận mục việc và gửi phản hồi đến Trưởng nhóm!");
+      setRejectModalSubtask(null);
+      if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+      fetchTasks();
+    } catch (err) {
+      showToast(err.message || "Lỗi khi từ chối nhận mục việc.", "danger");
     }
   };
 
@@ -602,20 +628,56 @@ export function TasksPage() {
               >
                 <div>
                   {/* BADGES & TYPE */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "3px 9px",
-                        borderRadius: 6,
-                        background: typeBadge.bg,
-                        color: typeBadge.color,
-                        border: `1px solid ${typeBadge.border}`,
-                      }}
-                    >
-                      {typeBadge.label}
-                    </span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "3px 9px",
+                          borderRadius: 6,
+                          background: typeBadge.bg,
+                          color: typeBadge.color,
+                          border: `1px solid ${typeBadge.border}`,
+                        }}
+                      >
+                        {typeBadge.label}
+                      </span>
+                      {task.total_cp > 0 ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            background: "#f5f3ff",
+                            color: "#7c3aed",
+                            border: "1px solid #ddd6fe",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                          title={`Tổng quỹ điểm: ${task.total_cp} CP`}
+                        >
+                          🏆 {task.total_cp} CP
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            background: "#f8fafc",
+                            color: "#94a3b8",
+                            border: "1px solid #e2e8f0",
+                          }}
+                          title="Chưa thiết lập quỹ CP tổng"
+                        >
+                          🏆 0 CP
+                        </span>
+                      )}
+                    </div>
 
                     <span
                       style={{
@@ -867,6 +929,10 @@ export function TasksPage() {
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
               const isTaskAssignee = Number(taskDetail.task.leader_id) === Number(user?.id);
               const canManageTaskSubtasks = isAdmin || isLeader || isTaskAssignee || Boolean(user?.can_manage_tasks);
+              const taskTotalCp = Number(taskDetail.task.total_cp) || 0;
+              const allocatedCp = subtasks.reduce((sum, s) => sum + (Number(s.cp_points) || 0), 0);
+              const remainingCp = taskTotalCp - allocatedCp;
+              const cpPercent = taskTotalCp > 0 ? Math.round((allocatedCp / taskTotalCp) * 100) : 0;
 
               return (
                 <div
@@ -1001,6 +1067,63 @@ export function TasksPage() {
                           }}
                         />
                       </div>
+                    </div>
+
+                    {/* CP BUDGET & ALLOCATION PROGRESS BAR */}
+                    <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#475569" }}>
+                          <span>🏆 Quỹ Điểm CP:</span>
+                          <strong style={{ color: "#7c3aed", fontSize: 13 }}>{taskTotalCp} CP</strong>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditTaskCpModal(taskDetail.task)}
+                              style={{
+                                background: "#f3e8ff",
+                                border: "1px solid #d8b4fe",
+                                color: "#7c3aed",
+                                padding: "2px 7px",
+                                borderRadius: 5,
+                                fontSize: 10.5,
+                                cursor: "pointer",
+                                fontWeight: 700,
+                              }}
+                              title="Chỉnh sửa điểm CP tổng của nhiệm vụ"
+                            >
+                              ✏️ Sửa CP
+                            </button>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: taskTotalCp === 0 ? "#94a3b8" : remainingCp < 0 ? "#dc2626" : remainingCp === 0 ? "#059669" : "#7c3aed" }}>
+                          {taskTotalCp === 0 
+                            ? "Chưa đặt quỹ" 
+                            : remainingCp < 0 
+                              ? `⚠️ Vượt quá ${-remainingCp} CP!` 
+                              : remainingCp === 0 
+                                ? "✅ Đã chia 100%" 
+                                : `Còn lại: ${remainingCp} CP`}
+                        </span>
+                      </div>
+
+                      {taskTotalCp > 0 && (
+                        <div>
+                          <div style={{ width: "100%", height: 8, background: "#e2e8f0", borderRadius: 999, overflow: "hidden" }}>
+                            <div
+                              style={{
+                                width: `${Math.min(100, cpPercent)}%`,
+                                height: "100%",
+                                background: remainingCp < 0 ? "#ef4444" : remainingCp === 0 ? "#10b981" : "linear-gradient(90deg, #7c3aed, #a855f7)",
+                                borderRadius: 999,
+                                transition: "width 0.3s ease",
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                            <span>Đã chia: <strong style={{ color: "#1e293b" }}>{allocatedCp} CP</strong> ({cpPercent}%)</span>
+                            <span>Tổng quỹ: <strong style={{ color: "#7c3aed" }}>{taskTotalCp} CP</strong></span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* ACTION BUTTONS (FINISH & POSTPONE) */}
@@ -1157,9 +1280,13 @@ export function TasksPage() {
                         {subtasks.map((sub, idx) => {
                           const isAssignedToMe = sub.assignees?.some((a) => a.user_id === user?.id);
 
-                          let statusBadge = { label: "Đang làm", bg: "#fef3c7", color: "#b45309", border: "#fde68a" };
-                          if (sub.status === "REVIEW") {
-                            statusBadge = { label: "🟡 Chờ duyệt", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+                          let statusBadge = { label: "Đang làm", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+                          if (sub.status === "PENDING") {
+                            statusBadge = { label: "⏳ Chờ tiếp nhận", bg: "#fef9c3", color: "#854d0e", border: "#fef08a" };
+                          } else if (sub.status === "REJECTED") {
+                            statusBadge = { label: "❌ Đã từ chối", bg: "#fef2f2", color: "#991b1b", border: "#fecaca" };
+                          } else if (sub.status === "REVIEW") {
+                            statusBadge = { label: "🟡 Chờ duyệt", bg: "#fffbeb", color: "#b45309", border: "#fde68a" };
                           } else if (sub.status === "FINISHED") {
                             statusBadge = { label: "🟢 Hoàn thành", bg: "#ecfdf5", color: "#047857", border: "#a7f3d0" };
                           } else if (sub.status === "FAILED") {
@@ -1172,8 +1299,8 @@ export function TasksPage() {
                               style={{
                                 padding: 14,
                                 borderRadius: 10,
-                                background: sub.status === "FINISHED" ? "#fcfdfd" : sub.status === "FAILED" ? "#fff5f5" : sub.status === "REVIEW" ? "#fffbeb" : "#ffffff",
-                                border: sub.status === "FAILED" ? "1.5px solid #f87171" : sub.status === "REVIEW" ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
+                                background: sub.status === "FINISHED" ? "#fcfdfd" : (sub.status === "FAILED" || sub.status === "REJECTED") ? "#fff5f5" : sub.status === "REVIEW" ? "#fffbeb" : sub.status === "PENDING" ? "#fffdf5" : "#ffffff",
+                                border: (sub.status === "FAILED" || sub.status === "REJECTED") ? "1.5px solid #f87171" : sub.status === "REVIEW" ? "1.5px solid #f59e0b" : sub.status === "PENDING" ? "1.5px solid #fde047" : "1px solid #e2e8f0",
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                               }}
                             >
@@ -1184,8 +1311,8 @@ export function TasksPage() {
                                       width: 26,
                                       height: 26,
                                       borderRadius: 6,
-                                      background: sub.status === "FINISHED" ? "#10b981" : sub.status === "FAILED" ? "#ef4444" : "#e2e8f0",
-                                      color: sub.status === "FINISHED" || sub.status === "FAILED" ? "#ffffff" : "#475569",
+                                      background: sub.status === "FINISHED" ? "#10b981" : (sub.status === "FAILED" || sub.status === "REJECTED") ? "#ef4444" : sub.status === "PENDING" ? "#f59e0b" : "#e2e8f0",
+                                      color: (sub.status === "FINISHED" || sub.status === "FAILED" || sub.status === "REJECTED") ? "#ffffff" : "#475569",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -1194,7 +1321,7 @@ export function TasksPage() {
                                       flexShrink: 0,
                                     }}
                                   >
-                                    {sub.status === "FINISHED" ? <Check size={15} /> : sub.status === "FAILED" ? <X size={15} /> : idx + 1}
+                                    {sub.status === "FINISHED" ? <Check size={15} /> : (sub.status === "FAILED" || sub.status === "REJECTED") ? <X size={15} /> : idx + 1}
                                   </div>
 
                                   <div style={{ flex: 1 }}>
@@ -1237,6 +1364,41 @@ export function TasksPage() {
                                         {sub.description}
                                       </p>
                                     )}
+
+                                    {/* THÔNG BÁO CHO THÀNH VIÊN ĐƯỢC GIAO KHI Ở TRẠNG THÁI CHỜ TIẾP NHẬN */}
+                                    {sub.status === "PENDING" && isAssignedToMe && (
+                                      <div
+                                        style={{
+                                          margin: "6px 0 8px 0",
+                                          padding: "6px 12px",
+                                          borderRadius: 8,
+                                          background: "#fefce8",
+                                          border: "1px solid #fef08a",
+                                          fontSize: 12,
+                                          color: "#854d0e",
+                                        }}
+                                      >
+                                        👉 <strong>Mục việc được giao cho bạn:</strong> Vui lòng bấm <strong>Chấp nhận</strong> để bắt đầu làm hoặc <strong>Từ chối</strong> nếu không thể nhận việc.
+                                      </div>
+                                    )}
+
+                                    {/* LÝ DO TỪ CHỐI */}
+                                    {sub.reject_reason && (
+                                      <div
+                                        style={{
+                                          margin: "6px 0 8px 0",
+                                          padding: "6px 12px",
+                                          borderRadius: 8,
+                                          background: "#fef2f2",
+                                          borderLeft: "3px solid #ef4444",
+                                          fontSize: 12,
+                                          color: "#991b1b",
+                                        }}
+                                      >
+                                        <strong>❌ Lý do từ chối nhận việc:</strong> {sub.reject_reason}
+                                      </div>
+                                    )}
+
                                     {sub.review_comment && (
                                       <div
                                         style={{
@@ -1273,28 +1435,85 @@ export function TasksPage() {
                                         </div>
                                       )}
                                     </div>
-
-                                    {sub.review_comment && (
-                                      <div
-                                        style={{
-                                          marginTop: 8,
-                                          padding: "6px 10px",
-                                          background: sub.status === "FINISHED" ? "#f0fdf4" : "#fef2f2",
-                                          border: `1px solid ${sub.status === "FINISHED" ? "#bbf7d0" : "#fecdd3"}`,
-                                          borderRadius: 6,
-                                          fontSize: 11,
-                                          color: sub.status === "FINISHED" ? "#166534" : "#991b1b",
-                                        }}
-                                      >
-                                        <strong>Nhận xét:</strong> {sub.review_comment}
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
 
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
-                                  {/* 1. Member submits */}
+                                  {/* 0. Member accepts or rejects when PENDING */}
+                                  {sub.status === "PENDING" && (isAssignedToMe || canManageTaskSubtasks) && (
+                                    <>
+                                      <button
+                                        onClick={() => handleAcceptSubtask(sub.id)}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 5,
+                                          background: "#ecfdf5",
+                                          color: "#047857",
+                                          border: "1.5px solid #a7f3d0",
+                                          padding: "6px 14px",
+                                          borderRadius: 999,
+                                          fontSize: 12,
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                          boxShadow: "0 1px 3px rgba(16, 185, 129, 0.2)",
+                                        }}
+                                        title="Tiếp nhận mục việc này"
+                                      >
+                                        <Check size={14} />
+                                        <span>Chấp Nhận</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setRejectModalSubtask(sub);
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 5,
+                                          background: "#fef2f2",
+                                          color: "#b91c1c",
+                                          border: "1.5px solid #fecaca",
+                                          padding: "6px 14px",
+                                          borderRadius: 999,
+                                          fontSize: 12,
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                        }}
+                                        title="Từ chối mục việc này"
+                                      >
+                                        <X size={14} />
+                                        <span>Từ Chối</span>
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {/* If REJECTED, leader/admin can reassign/edit */}
+                                  {sub.status === "REJECTED" && canManageTaskSubtasks && (
+                                    <button
+                                      onClick={() => setEditingSubtask(sub)}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#eff6ff",
+                                        color: "#2563eb",
+                                        border: "1.5px solid #bfdbfe",
+                                        padding: "6px 14px",
+                                        borderRadius: 999,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Giao lại cho thành viên khác hoặc sửa thông tin"
+                                    >
+                                      <RotateCcw size={13} />
+                                      <span>Giao Lại / Đổi Người</span>
+                                    </button>
+                                  )}
+
+                                  {/* 1. Member submits when in PROCESSING */}
                                   {sub.status === "PROCESSING" && (isAssignedToMe || canManageTaskSubtasks) && (
                                     <button
                                       onClick={() => handleSubmitSubtask(sub.id)}
@@ -1400,6 +1619,26 @@ export function TasksPage() {
                                     </button>
                                   )}
 
+                                  {/* Edit subtask button */}
+                                  {canManageTaskSubtasks && sub.status !== "FINISHED" && (
+                                    <button
+                                      onClick={() => setEditingSubtask(sub)}
+                                      style={{
+                                        background: "#f8fafc",
+                                        border: "1px solid #cbd5e1",
+                                        color: "#475569",
+                                        padding: "6px 10px",
+                                        borderRadius: 8,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                      title="Sửa thông tin mục checklist"
+                                    >
+                                      ✏️ Sửa
+                                    </button>
+                                  )}
+
                                   {/* Delete subtask */}
                                   {canManageTaskSubtasks && (
                                     <button
@@ -1457,8 +1696,11 @@ export function TasksPage() {
             name: taskDetail.task.leader_name
           }}
           allMembers={allMembers}
+          totalCp={taskDetail.task.total_cp || 0}
+          currentAllocatedCp={(taskDetail.subtasks || []).reduce((sum, s) => sum + (s.cp_points || 0), 0)}
           onSuccess={() => {
             refreshTaskDetail(taskDetail.task.id);
+            fetchTasks();
             showToast("Đã thêm mục việc thành công!");
           }}
         />
@@ -1781,6 +2023,52 @@ export function TasksPage() {
           </div>
         </div>
       )}
+      {/* ================= MODAL: REJECT SUBTASK ================= */}
+      {rejectModalSubtask && (
+        <RejectSubtaskModal
+          isOpen={!!rejectModalSubtask}
+          onClose={() => setRejectModalSubtask(null)}
+          subtask={rejectModalSubtask}
+          onSuccess={(msg) => {
+            showToast(msg);
+            if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+            fetchTasks();
+          }}
+        />
+      )}
+
+      {/* ================= MODAL: EDIT / REASSIGN SUBTASK ================= */}
+      {editingSubtask && (
+        <EditSubtaskModal
+          isOpen={!!editingSubtask}
+          onClose={() => setEditingSubtask(null)}
+          subtask={editingSubtask}
+          taskDeadline={taskDetail?.task?.deadline}
+          allMembers={allMembers}
+          totalCp={taskDetail?.task?.total_cp || 0}
+          currentAllocatedCp={(taskDetail?.subtasks || []).reduce((sum, s) => s.id === editingSubtask.id ? sum : sum + (s.cp_points || 0), 0)}
+          onSuccess={(msg) => {
+            showToast(msg || "Đã cập nhật mục việc thành công!");
+            if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+            fetchTasks();
+          }}
+        />
+      )}
+
+      {/* ================= MODAL: EDIT TASK CP ================= */}
+      {editTaskCpModal && (
+        <EditTaskCpModal
+          isOpen={!!editTaskCpModal}
+          onClose={() => setEditTaskCpModal(null)}
+          task={editTaskCpModal}
+          currentAllocatedCp={(taskDetail?.subtasks || []).reduce((sum, s) => sum + (s.cp_points || 0), 0)}
+          onSuccess={(msg) => {
+            showToast(msg || "Đã cập nhật điểm CP tổng của nhiệm vụ!");
+            if (taskDetail) refreshTaskDetail(taskDetail.task.id);
+            fetchTasks();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1793,6 +2081,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [plannedDate, setPlannedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
   const [leaderId, setLeaderId] = useState(allMembers[0]?.id || 1);
+  const [totalCp, setTotalCp] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1815,6 +2104,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         location: "",
         customer_info: "",
         leader_id: parseInt(leaderId),
+        total_cp: Math.max(0, parseInt(totalCp) || 0),
       });
       onSuccess();
       onClose();
@@ -1948,6 +2238,39 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                   outline: "none"
                 }}
               />
+            </div>
+
+            {/* QUY DIEM CP TONG */}
+            <div>
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>🏆 Điểm CP tổng của nhiệm vụ (Quỹ điểm thưởng CP):</span>
+                </span>
+                <span style={{ fontSize: 11, color: "#7c3aed", fontWeight: 700 }}>
+                  {totalCp > 0 ? `Quỹ: ${totalCp} CP` : "Chưa đặt quỹ"}
+                </span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="VD: 50, 100, 200... (Điểm này sẽ chia cho các subtask nhỏ)"
+                value={totalCp}
+                onChange={(e) => setTotalCp(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  outlineColor: "#a855f7",
+                }}
+              />
+              <small style={{ fontSize: 11.5, color: "#64748b", marginTop: 4, display: "block" }}>
+                💡 Nhập tổng điểm CP cho nhiệm vụ lớn. Sau đó các mục việc nhỏ (subtask) sẽ được chia điểm từ quỹ điểm tổng này.
+              </small>
             </div>
 
             <div className="task-modal-grid-2col">
@@ -2152,11 +2475,12 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
 
 /* ================= MODAL COMPONENT: ADD SUBTASK (BỐ CỤC CHUẨN TIẾNG VIỆT) ================= */
-function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader, allMembers = [], onSuccess }) {
+function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader, allMembers = [], totalCp = 0, currentAllocatedCp = 0, onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
-  const [cpPoints, setCpPoints] = useState(1);
+  const remainingCp = Math.max(0, totalCp - currentAllocatedCp);
+  const [cpPoints, setCpPoints] = useState(() => (totalCp > 0 && remainingCp > 0 ? Math.min(1, remainingCp) : 1));
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
     if (assignedLeader?.id) return [Number(assignedLeader.id)];
     if (allMembers && allMembers.length > 0) return [Number(allMembers[0].id)];
@@ -2200,7 +2524,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
         description: description.trim(),
         due_at: dueAt ? dueAt.replace("T", " ") : "",
         assignee_ids: selectedAssignees,
-        cp_points: Number(cpPoints) || 0,
+        cp_points: Math.max(0, parseInt(cpPoints) || 0),
       });
       onSuccess();
       onClose();
@@ -2233,7 +2557,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
           background: "#ffffff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 480,
+          maxWidth: 520,
           padding: 24,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
@@ -2251,6 +2575,60 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
         {error && (
           <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
             {error}
+          </div>
+        )}
+
+        {/* THÔNG TIN QUỸ ĐIỂM CP TỔNG NẾU NHIỆM VỤ CÓ ĐIỂM TỔNG */}
+        {totalCp > 0 && (
+          <div
+            style={{
+              background: "#faf5ff",
+              border: "1px solid #e9d5ff",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+              <span style={{ color: "#6b21a8", fontWeight: 700 }}>
+                🏆 Quỹ CP tổng nhiệm vụ: <strong>{totalCp} CP</strong>
+              </span>
+              <span style={{ color: "#64748b" }}>
+                Đã phân bổ: <strong>{currentAllocatedCp} CP</strong>
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: remainingCp > 0 ? "#16a34a" : "#dc2626" }}>
+                Điểm CP còn lại để chia: {remainingCp} CP
+              </span>
+              {remainingCp > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCpPoints(remainingCp)}
+                  style={{
+                    background: "#7c3aed",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "4px 10px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  title="Gán toàn bộ điểm còn lại cho mục việc này"
+                >
+                  ⚡ Gán hết {remainingCp} CP
+                </button>
+              )}
+            </div>
+            {Number(cpPoints) > remainingCp && remainingCp > 0 && (
+              <div style={{ fontSize: 11, color: "#b91c1c", fontWeight: 600 }}>
+                ⚠️ Điểm chia ({cpPoints} CP) vượt quá điểm còn lại của quỹ ({remainingCp} CP).
+              </div>
+            )}
           </div>
         )}
 
@@ -2406,8 +2784,8 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
             )}
             <small style={{ fontSize: 11, color: "#64748b", marginTop: 4, display: "block" }}>
               {isMulti
-                ? `Đã chọn ${selectedAssignees.length} thành viên. Điểm CP sẽ được ghi nhận khi hoàn thành.`
-                : "Thành viên được chọn sẽ phụ trách thực hiện mục việc này."}
+                ? `Đã chọn ${selectedAssignees.length} thành viên. Mục việc sẽ ở trạng thái 'Chờ tiếp nhận' để thành viên xác nhận.`
+                : "Mục việc sẽ ở trạng thái 'Chờ tiếp nhận' để thành viên xác nhận chấp nhận hoặc từ chối."}
             </small>
           </div>
 
@@ -2489,6 +2867,701 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
               }}
             >
               {loading ? "Đang lưu..." : "Thêm mục việc"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MODAL: REJECT SUBTASK (TỪ CHỐI NHẬN MỤC VIỆC) ================= */
+function RejectSubtaskModal({ isOpen, onClose, subtask, onSuccess }) {
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!isOpen || !subtask) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim()) {
+      setError("Vui lòng nhập lý do từ chối nhận mục việc!");
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+      const res = await api.rejectSubtask(subtask.id, reason.trim());
+      onSuccess(res?.message || "Đã từ chối nhận mục việc và gửi phản hồi đến Trưởng nhóm!");
+      onClose();
+    } catch (err) {
+      setError(err.message || "Lỗi khi từ chối nhận mục việc.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 480,
+          padding: 24,
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: "#b91c1c", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>❌</span>
+            <span>Từ Chối Tiếp Nhận Mục Việc</span>
+          </h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 16, padding: "10px 14px", background: "#fef2f2", borderRadius: 10, border: "1px solid #fecaca", fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
+          Bạn đang từ chối nhận mục việc: <strong>{subtask.title}</strong>{subtask.cp_points > 0 ? ` (${subtask.cp_points} CP)` : ""}.
+          <div style={{ marginTop: 4, fontSize: 12, color: "#7f1d1d" }}>
+            Mục việc sẽ chuyển sang trạng thái <strong>Đã từ chối</strong> để Trưởng nhóm nắm được lý do và giao lại cho nhân sự phù hợp.
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Lý do từ chối: <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <textarea
+              rows={3}
+              required
+              placeholder="VD: Trùng lịch thi / bận việc đột xuất, chưa có chuyên môn phù hợp, khối lượng việc đang quá tải..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: 8,
+                border: "1.5px solid #fca5a5",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#f87171",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#475569",
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Quay lại
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                background: "#dc2626",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 20px",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(220,38,38,0.25)",
+              }}
+            >
+              {loading ? "Đang gửi..." : "Xác Nhận Từ Chối"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MODAL: EDIT / REASSIGN SUBTASK ================= */
+function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers = [], totalCp = 0, currentAllocatedCp = 0, onSuccess }) {
+  const [title, setTitle] = useState(subtask?.title || "");
+  const [description, setDescription] = useState(subtask?.description || "");
+  const [dueAt, setDueAt] = useState(subtask?.due_at ? subtask.due_at.replace(" ", "T").slice(0, 16) : "");
+  const [cpPoints, setCpPoints] = useState(subtask?.cp_points ?? 1);
+  const [selectedAssignees, setSelectedAssignees] = useState(() => {
+    if (subtask?.assignees && subtask.assignees.length > 0) {
+      return subtask.assignees.map((a) => Number(a.user_id));
+    }
+    return [];
+  });
+  const [isMulti, setIsMulti] = useState(() => (subtask?.assignees?.length || 0) > 1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const remainingCp = Math.max(0, totalCp - currentAllocatedCp);
+
+  const toggleAssignee = (userId) => {
+    const idNum = Number(userId);
+    setSelectedAssignees((prev) =>
+      prev.includes(idNum) ? prev.filter((id) => id !== idNum) : [...prev, idNum]
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError("Vui lòng nhập Tiêu đề mục việc!");
+      return;
+    }
+    if (selectedAssignees.length === 0) {
+      setError("Vui lòng chọn ít nhất 1 thành viên được giao mục việc!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      await api.updateSubtask(subtask.id, {
+        title: title.trim(),
+        description: description.trim(),
+        due_at: dueAt ? dueAt.replace("T", " ") : "",
+        assignee_ids: selectedAssignees,
+        cp_points: Math.max(0, parseInt(cpPoints) || 0),
+      });
+      onSuccess("Đã cập nhật mục việc thành công!");
+      onClose();
+    } catch (err) {
+      setError(err.message || "Lỗi khi cập nhật mục việc.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen || !subtask) return null;
+
+  const wasRejected = subtask.status === "REJECTED";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 520,
+          padding: 24,
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{wasRejected ? "🔄" : "✏️"}</span>
+            <span>{wasRejected ? "Giao Lại Mục Việc Bị Từ Chối" : "Chỉnh Sửa Mục Việc"}</span>
+          </h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {wasRejected && (
+          <div style={{ marginBottom: 14, padding: "10px 14px", background: "#fef2f2", borderRadius: 10, border: "1px solid #fecaca", fontSize: 13, color: "#991b1b" }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>⚠️ Mục việc này đã bị từ chối trước đó:</div>
+            <div style={{ fontStyle: "italic" }}>"{subtask.reject_reason || "Không ghi rõ lý do"}"</div>
+            <div style={{ fontSize: 12, marginTop: 4, color: "#7f1d1d" }}>
+              Khi bạn đổi người hoặc lưu lại, mục việc sẽ được chuyển về <strong>Chờ tiếp nhận</strong> để nhân sự mới xác nhận.
+            </div>
+          </div>
+        )}
+
+        {totalCp > 0 && (
+          <div
+            style={{
+              background: "#faf5ff",
+              border: "1px solid #e9d5ff",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+              <span style={{ color: "#6b21a8", fontWeight: 700 }}>
+                🏆 Quỹ CP tổng: <strong>{totalCp} CP</strong>
+              </span>
+              <span style={{ color: "#64748b" }}>
+                Các mục khác đã chia: <strong>{currentAllocatedCp} CP</strong>
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: remainingCp > 0 ? "#16a34a" : "#dc2626" }}>
+                Hạn mức tối đa cho mục này: {remainingCp} CP
+              </span>
+              {remainingCp > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCpPoints(remainingCp)}
+                  style={{
+                    background: "#7c3aed",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "4px 10px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  title="Gán mức CP tối đa cho mục này"
+                >
+                  ⚡ Gán hết {remainingCp} CP
+                </button>
+              )}
+            </div>
+            {Number(cpPoints) > remainingCp && remainingCp > 0 && (
+              <div style={{ fontSize: 11, color: "#b91c1c", fontWeight: 600 }}>
+                ⚠️ Điểm chia ({cpPoints} CP) vượt quá điểm còn lại của quỹ ({remainingCp} CP).
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Tiêu đề mục việc: <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+              Mô tả chi tiết:
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 14,
+                boxSizing: "border-box",
+                outlineColor: "#93c5fd",
+              }}
+            />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
+                Thành viên được giao: <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              {allMembers && allMembers.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsMulti(!isMulti)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  {isMulti ? "Chỉ chọn 1 người" : "+ Giao cho nhiều người"}
+                </button>
+              )}
+            </div>
+
+            {!isMulti ? (
+              <select
+                value={selectedAssignees[0] || ""}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setSelectedAssignees(val ? [val] : []);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  background: "#ffffff",
+                  color: "#1e293b",
+                  outlineColor: "#93c5fd",
+                  cursor: "pointer",
+                }}
+              >
+                {allMembers.map((m) => {
+                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} (@{m.username}) — [{roleBadge}]
+                    </option>
+                  );
+                })}
+              </select>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  padding: "8px 10px",
+                  border: "1.5px solid #cbd5e1",
+                  borderRadius: 8,
+                  background: "#f8fafc",
+                }}
+              >
+                {allMembers.map((m) => {
+                  const isChecked = selectedAssignees.includes(Number(m.id));
+                  const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
+                  return (
+                    <label
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "5px 8px",
+                        borderRadius: 6,
+                        background: isChecked ? "#eff6ff" : "#ffffff",
+                        border: isChecked ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: "#1e293b",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleAssignee(m.id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontWeight: isChecked ? 600 : 400 }}>
+                        {m.full_name} <span style={{ color: "#64748b", fontSize: 12 }}>(@{m.username})</span>
+                      </span>
+                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}>
+                        [{roleBadge}]
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Điểm cống hiến (CP):
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={cpPoints}
+                onChange={(e) => setCpPoints(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
+                Hạn chót:
+              </label>
+              <input
+                type="datetime-local"
+                value={dueAt}
+                max={taskDeadline ? taskDeadline.replace(" ", "T") : undefined}
+                onChange={(e) => setDueAt(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outlineColor: "#93c5fd",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#475569",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: "8px 20px",
+                borderRadius: 8,
+                border: "none",
+                background: "#2563eb",
+                color: "#ffffff",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(37, 99, 235, 0.25)",
+              }}
+            >
+              {loading ? "Đang lưu..." : "Cập Nhật Mục Việc"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MODAL: EDIT TASK CP BUDGET ================= */
+function EditTaskCpModal({ isOpen, onClose, task, currentAllocatedCp = 0, onSuccess }) {
+  const [totalCp, setTotalCp] = useState(task?.total_cp || 0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!isOpen || !task) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError("");
+      await api.updateTask(task.id, {
+        title: task.title,
+        description: task.description || "",
+        task_type: task.task_type || "RESEARCH",
+        planned_date: task.planned_date || "",
+        deadline: task.deadline || "",
+        location: task.location || "",
+        customer_info: task.customer_info || "",
+        leader_id: task.leader_id,
+        total_cp: Math.max(0, parseInt(totalCp) || 0),
+      });
+      onSuccess("Đã cập nhật quỹ điểm CP tổng của nhiệm vụ!");
+      onClose();
+    } catch (err) {
+      setError(err.message || "Lỗi khi cập nhật điểm CP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 460,
+          padding: 24,
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: "#1e293b", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>🏆</span>
+            <span>Điều Chỉnh Quỹ CP Tổng Nhiệm Vụ</span>
+          </h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 16, fontSize: 13, color: "#64748b" }}>
+          Nhiệm vụ: <strong style={{ color: "#0f172a" }}>{task.title}</strong>
+        </div>
+
+        <div style={{ padding: "12px 14px", background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, marginBottom: 16, fontSize: 13 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ color: "#6b21a8", fontWeight: 600 }}>Điểm đã chia cho các subtask:</span>
+            <strong style={{ color: "#7c3aed" }}>{currentAllocatedCp} CP</strong>
+          </div>
+          <div style={{ fontSize: 12, color: "#7c3aed" }}>
+            💡 Quỹ điểm tổng nên lớn hơn hoặc bằng số điểm đã chia ({currentAllocatedCp} CP) để Trưởng nhóm tiếp tục phân bổ.
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecdd3", borderRadius: 8, fontSize: 13, color: "#991b1b", marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Điểm CP tổng mới (Quỹ thưởng):
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              required
+              value={totalCp}
+              onChange={(e) => setTotalCp(e.target.value)}
+              placeholder="VD: 50, 100, 200..."
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: 8,
+                border: "1.5px solid #cbd5e1",
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#7c3aed",
+                boxSizing: "border-box",
+                outlineColor: "#a855f7",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#475569",
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                background: "#7c3aed",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 20px",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(124,58,237,0.25)",
+              }}
+            >
+              {loading ? "Đang lưu..." : "Cập Nhật Điểm CP"}
             </button>
           </div>
         </form>
