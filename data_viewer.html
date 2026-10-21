@@ -1,0 +1,3210 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkShiftPro - Dữ Liệu Thực Tế & Định Dạng Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #111827;
+      --border: #1f293d;
+      --border-light: #2d3748;
+      --text: #f3f4f6;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #8b5cf6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 800; color: #fff;
+    }
+    .brand-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand-sub { font-size: 12px; color: var(--text-muted); }
+    .stats-bar {
+      display: flex; gap: 16px; padding: 16px 28px;
+      background: #0f172a; border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .stat-pill {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 16px; display: flex;
+      align-items: center; gap: 10px; min-width: 150px;
+    }
+    .stat-num { font-size: 18px; font-weight: 700; color: #60a5fa; }
+    .stat-lbl { font-size: 12px; color: var(--text-muted); }
+    .layout {
+      display: flex; flex: 1; overflow: hidden;
+    }
+    .sidebar {
+      width: 280px; background: #0f172a; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+    }
+    .sidebar-title {
+      padding: 16px 20px 8px; font-size: 11px; font-weight: 700;
+      color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .table-list {
+      list-style: none; overflow-y: auto; flex: 1; padding: 0 10px 20px;
+    }
+    .table-item {
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 4px;
+      cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; font-size: 13px; font-weight: 500;
+      color: #cbd5e1; transition: all 0.15s ease;
+    }
+    .table-item:hover { background: #1e293b; color: #fff; }
+    .table-item.active {
+      background: #1e3a8a; color: #93c5fd; font-weight: 600;
+      border-left: 3px solid var(--primary);
+    }
+    .table-badge {
+      font-size: 11px; padding: 2px 7px; border-radius: 999px;
+      background: #1e293b; color: #94a3b8;
+    }
+    .table-item.active .table-badge {
+      background: #2563eb; color: #fff;
+    }
+    .main {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--bg);
+    }
+    .toolbar {
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px; background: #101726; flex-wrap: wrap;
+    }
+    .search-input {
+      background: #1e293b; border: 1px solid var(--border-light);
+      border-radius: 8px; padding: 8px 14px; font-size: 13px;
+      color: #fff; width: 320px; outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .view-modes {
+      display: flex; gap: 8px; background: #1e293b; padding: 4px; border-radius: 8px;
+    }
+    .view-btn {
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      border: none; background: transparent; color: var(--text-muted);
+      border-radius: 6px; cursor: pointer; transition: all 0.15s ease;
+    }
+    .view-btn.active {
+      background: var(--primary); color: #fff;
+    }
+    .table-container {
+      flex: 1; overflow: auto; padding: 20px 24px;
+    }
+    table.data-tbl {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden; font-size: 13px;
+    }
+    table.data-tbl th {
+      background: #131c2e; padding: 12px 14px; text-align: left;
+      font-weight: 600; color: #94a3b8; font-size: 12px;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0;
+      white-space: nowrap;
+    }
+    table.data-tbl td {
+      padding: 10px 14px; border-bottom: 1px solid #1a2234;
+      color: #e2e8f0; vertical-align: top; max-width: 320px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    table.data-tbl tr:hover td { background: #141e33; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-primary { background: #1e3a8a; color: #93c5fd; }
+    .badge-success { background: #064e3b; color: #6ee7b7; }
+    .badge-warning { background: #78350f; color: #fde68a; }
+    .badge-date {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      background: #1e293b; color: #38bdf8; padding: 2px 6px; border-radius: 4px;
+    }
+    .json-box {
+      background: #0f172a; border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: #38bdf8; line-height: 1.6;
+      max-height: 600px; overflow: auto; white-space: pre-wrap;
+    }
+    .copy-btn {
+      padding: 6px 12px; background: #1e293b; border: 1px solid var(--border-light);
+      border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .copy-btn:hover { background: #334155; }
+    .empty-state {
+      padding: 60px 20px; text-align: center; color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-icon">WM</div>
+      <div>
+        <div class="brand-title">Trình Xem Dữ Liệu & Format Test (WorkShiftPro)</div>
+        <div class="brand-sub">Dữ liệu thực tế từ work_management.db • Hoàn toàn độc lập, không chạm vào mã nguồn hệ thống</div>
+      </div>
+    </div>
+    <div>
+      <button class="copy-btn" onclick="exportCurrentTableJson()">📥 Tải JSON Bảng Này</button>
+    </div>
+  </header>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Danh Sách Bảng Dữ Liệu</div>
+      <ul class="table-list" id="tableList"></ul>
+    </aside>
+
+    <main class="main">
+      <div class="toolbar">
+        <div>
+          <span style="font-weight: 700; font-size: 16px;" id="currentTableTitle">users</span>
+          <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;" id="currentTableRowCount"></span>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Tìm kiếm trong bảng..." oninput="handleSearch()">
+          <div class="view-modes">
+            <button class="view-btn active" id="btnTableView" onclick="setViewMode('table')">📊 Bảng Chi Tiết</button>
+            <button class="view-btn" id="btnJsonView" onclick="setViewMode('json')">{ } Format Test (JSON)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-container" id="contentArea"></div>
+    </main>
+  </div>
+
+  <script>
+    const dbData = {
+  "class_schedules": {
+    "total_rows": 0,
+    "sample_rows": []
+  },
+  "competency_evaluations": {
+    "total_rows": 5,
+    "sample_rows": [
+      {
+        "user_id": 1,
+        "scores_json": "{\u0022c1\u0022:0.5,\u0022c2\u0022:2,\u0022c3\u0022:5,\u0022c4\u0022:2,\u0022c5\u0022:9,\u0022c6\u0022:8,\u0022c7\u0022:8,\u0022c8\u0022:8,\u0022c9\u0022:8,\u0022c10\u0022:8,\u0022c11\u0022:9,\u0022c12\u0022:9,\u0022c13\u0022:8,\u0022c14\u0022:8,\u0022c15\u0022:8,\u0022c16\u0022:8,\u0022c17\u0022:8,\u0022c18\u0022:9}",
+        "desired_direction": "To\u00E0n quy\u1EC1n qu\u1EA3n tr\u1ECB h\u1EC7 th\u1ED1ng, \u0111i\u1EC1u ph\u1ED1i h\u1EA1 t\u1EA7ng ph\u00F2ng m\u00E1y Lab v\u00E0 quy chu\u1EA9n v\u1EADn h\u00E0nh.",
+        "commitment_level": "100% To\u00E0n th\u1EDDi gian",
+        "evidence_notes": "Qu\u1EA3n tr\u1ECB xu\u1EA5t s\u1EAFc h\u1EC7 th\u1ED1ng ph\u00F2ng m\u00E1y, \u0111i\u1EC1u ph\u1ED1i nh\u00E2n s\u1EF1 v\u00E0 v\u1EADn h\u00E0nh \u1ED5n \u0111\u1ECBnh.",
+        "updated_at": "2026-10-19 09:29:25"
+      },
+      {
+        "user_id": 15,
+        "scores_json": "{\u0022crit_1\u0022: 8.5}",
+        "desired_direction": "test direction",
+        "commitment_level": "100%",
+        "evidence_notes": "test evidence",
+        "updated_at": "2026-10-14 16:49:45"
+      },
+      {
+        "user_id": 16,
+        "scores_json": "{\u0022c1\u0022: 7, \u0022c2\u0022: 7, \u0022c3\u0022: 7, \u0022c4\u0022: 8, \u0022c5\u0022: 8, \u0022c6\u0022: 7, \u0022c7\u0022: 8, \u0022c8\u0022: 8, \u0022c9\u0022: 7, \u0022c10\u0022: 7, \u0022c11\u0022: 8, \u0022c12\u0022: 8, \u0022c13\u0022: 8, \u0022c14\u0022: 8, \u0022c15\u0022: 8, \u0022c16\u0022: 8, \u0022c17\u0022: 8, \u0022c18\u0022: 9}",
+        "desired_direction": "D\u1EABn d\u1EAFt c\u00E1c \u0111\u1EC1 t\u00E0i nghi\u00EAn c\u1EE9u qu\u1ED1c t\u1EBF, h\u1ED7 tr\u1EE3 th\u00E0nh vi\u00EAn c\u00F4ng b\u1ED1 khoa h\u1ECDc v\u00E0 chuy\u1EC3n giao AI.",
+        "commitment_level": "R\u1EA5t cao (Tr\u00E1ch nhi\u1EC7m Tr\u01B0\u1EDFng nh\u00F3m)",
+        "evidence_notes": "Ch\u1EE7 tr\u00EC 2 \u0111\u1EC1 t\u00E0i Lab, h\u01B0\u1EDBng d\u1EABn sinh vi\u00EAn nghi\u00EAn c\u1EE9u v\u00E0 ph\u1EA3n bi\u1EC7n b\u00E0i b\u00E1o xu\u1EA5t s\u1EAFc.",
+        "updated_at": "2026-10-14 10:51:05"
+      },
+      {
+        "user_id": 17,
+        "scores_json": "{\u0022c1\u0022: 6, \u0022c2\u0022: 6, \u0022c3\u0022: 6, \u0022c4\u0022: 7, \u0022c5\u0022: 7, \u0022c6\u0022: 6, \u0022c7\u0022: 7, \u0022c8\u0022: 7, \u0022c9\u0022: 7, \u0022c10\u0022: 7, \u0022c11\u0022: 7, \u0022c12\u0022: 7, \u0022c13\u0022: 6, \u0022c14\u0022: 6, \u0022c15\u0022: 6, \u0022c16\u0022: 6, \u0022c17\u0022: 6, \u0022c18\u0022: 7}",
+        "desired_direction": "N\u00E2ng cao n\u0103ng l\u1EF1c v\u1EADn h\u00E0nh ca tr\u1EF1c, h\u1ED7 tr\u1EE3 ki\u1EC3m tra thi\u1EBFt b\u1ECB v\u00E0 tr\u1EF1c ca \u0111\u00FAng gi\u1EDD.",
+        "commitment_level": "\u0110\u1EA7y \u0111\u1EE7 c\u00E1c ca tr\u1EF1c \u0111\u01B0\u1EE3c giao",
+        "evidence_notes": "Ch\u0103m ch\u1EC9, t\u00EDch c\u1EF1c h\u1ED7 tr\u1EE3 gi\u1EA3i quy\u1EBFt s\u1EF1 c\u1ED1 m\u1EA1ng v\u00E0 b\u00E0n giao ca \u0111\u1EA7y \u0111\u1EE7.",
+        "updated_at": "2026-10-14 10:51:05"
+      },
+      {
+        "user_id": 18,
+        "scores_json": "{\u0022c1\u0022: 7, \u0022c2\u0022: 7, \u0022c3\u0022: 7, \u0022c4\u0022: 8, \u0022c5\u0022: 8, \u0022c6\u0022: 6, \u0022c7\u0022: 8, \u0022c8\u0022: 8, \u0022c9\u0022: 7, \u0022c10\u0022: 7, \u0022c11\u0022: 8, \u0022c12\u0022: 8, \u0022c13\u0022: 8, \u0022c14\u0022: 8, \u0022c15\u0022: 8, \u0022c16\u0022: 8, \u0022c17\u0022: 8, \u0022c18\u0022: 9}",
+        "desired_direction": "Ph\u00E1t tri\u1EC3n c\u00E1c m\u00F4 h\u00ECnh AI Foundation, d\u1EABn d\u1EAFt c\u00E1c \u0111\u1EC1 t\u00E0i qu\u1ED1c t\u1EBF c\u1EA5p Lab v\u00E0 h\u01B0\u1EDBng d\u1EABn c\u00F4ng b\u1ED1 Q1.",
+        "commitment_level": "100% To\u00E0n th\u1EDDi gian",
+        "evidence_notes": "\u0110\u00E3 ch\u1EE7 tr\u00EC 2 \u0111\u1EC1 t\u00E0i qu\u1ED1c t\u1EBF, h\u01B0\u1EDBng d\u1EABn 5 sinh vi\u00EAn xu\u1EA5t s\u1EAFc, ho\u00E0n th\u00E0nh h\u1EC7 th\u1ED1ng benchmark t\u1EF1 \u0111\u1ED9ng.",
+        "updated_at": "2026-10-14 17:37:59"
+      }
+    ]
+  },
+  "cp_transactions": {
+    "total_rows": 9,
+    "sample_rows": [
+      {
+        "id": 1,
+        "user_id": 15,
+        "subtask_id": 13,
+        "cp_earned": 20,
+        "contribution_pct": 100,
+        "cp_points_base": 20,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-15 07:36:12"
+      },
+      {
+        "id": 2,
+        "user_id": 15,
+        "subtask_id": 14,
+        "cp_earned": 28,
+        "contribution_pct": 70,
+        "cp_points_base": 40,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-15 07:36:12"
+      },
+      {
+        "id": 3,
+        "user_id": 17,
+        "subtask_id": 14,
+        "cp_earned": 12,
+        "contribution_pct": 30,
+        "cp_points_base": 40,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-15 07:36:12"
+      },
+      {
+        "id": 4,
+        "user_id": 18,
+        "subtask_id": 15,
+        "cp_earned": 60,
+        "contribution_pct": 100,
+        "cp_points_base": 50,
+        "quality_multiplier": 1.2,
+        "awarded_at": "2026-10-15 07:36:12"
+      },
+      {
+        "id": 5,
+        "user_id": 15,
+        "subtask_id": 16,
+        "cp_earned": 30,
+        "contribution_pct": 100,
+        "cp_points_base": 30,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-15 07:48:10"
+      },
+      {
+        "id": 6,
+        "user_id": 15,
+        "subtask_id": 18,
+        "cp_earned": 15,
+        "contribution_pct": 100,
+        "cp_points_base": 15,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-15 08:17:38"
+      },
+      {
+        "id": 7,
+        "user_id": 15,
+        "subtask_id": 19,
+        "cp_earned": 15,
+        "contribution_pct": 100,
+        "cp_points_base": 15,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-16 10:59:28"
+      },
+      {
+        "id": 8,
+        "user_id": 15,
+        "subtask_id": 20,
+        "cp_earned": 15,
+        "contribution_pct": 100,
+        "cp_points_base": 15,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-16 11:05:54"
+      },
+      {
+        "id": 9,
+        "user_id": 15,
+        "subtask_id": 21,
+        "cp_earned": 10,
+        "contribution_pct": 100,
+        "cp_points_base": 10,
+        "quality_multiplier": 1,
+        "awarded_at": "2026-10-19 09:31:04"
+      }
+    ]
+  },
+  "departments": {
+    "total_rows": 9,
+    "sample_rows": [
+      {
+        "id": 1,
+        "name": "T\u1ED5 Tr\u1EF1c V\u1EADn H\u00E0nh",
+        "code": "VAN_HANH",
+        "description": "Ch\u1ECBu tr\u00E1ch nhi\u1EC7m tr\u1EF1c gi\u00E1m s\u00E1t v\u00E0 v\u1EADn h\u00E0nh thi\u1EBFt b\u1ECB ph\u00F2ng m\u00E1y",
+        "manager_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "color": "#2563eb",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 2,
+        "name": "T\u1ED5 Tr\u1EF1c K\u1EF9 Thu\u1EADt",
+        "code": "KY_THUAT",
+        "description": "X\u1EED l\u00FD s\u1EF1 c\u1ED1 ph\u1EA7n c\u1EE9ng, m\u1EA1ng v\u00E0 b\u1EA3o tr\u00EC \u0111\u1ECBnh k\u1EF3",
+        "manager_name": "Nguy\u1EC5n V\u0103n C\u01B0\u1EDDng",
+        "color": "#059669",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 3,
+        "name": "T\u1ED5 D\u1ECBch V\u1EE5 Sinh Vi\u00EAn",
+        "code": "DICH_VU",
+        "description": "H\u1ED7 tr\u1EE3 sinh vi\u00EAn m\u01B0\u1EE3n tr\u1EA3 ph\u00F2ng m\u00E1y v\u00E0 gi\u1EA3i \u0111\u00E1p th\u1EAFc m\u1EAFc",
+        "manager_name": "Tr\u1EA7n Th\u1ECB B\u00ECnh",
+        "color": "#0891b2",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 4,
+        "name": "H\u1ED7 Tr\u1EE3 K\u1EF9 Thu\u1EADt",
+        "code": "HO_TRO",
+        "description": "H\u1ED7 tr\u1EE3 k\u1EF9 thu\u1EADt \u1EE9ng c\u1EE9u nhanh v\u00E0 tr\u1EF1c hotline",
+        "manager_name": "L\u00EA V\u0103n An",
+        "color": "#d97706",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 5,
+        "name": "K\u1EF9 Thu\u1EADt H\u1EA1 T\u1EA7ng",
+        "code": "HA_TANG",
+        "description": "Qu\u1EA3n l\u00FD h\u1EC7 th\u1ED1ng m\u00E1y ch\u1EE7, l\u01B0u \u0111i\u1EC7n UPS v\u00E0 \u0111i\u1EC1u h\u00F2a ph\u00F2ng server",
+        "manager_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "color": "#7c3aed",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 6,
+        "name": "V\u1EADn H\u00E0nh M\u1EA1ng",
+        "code": "MANG_NOC",
+        "description": "Gi\u00E1m s\u00E1t b\u0103ng th\u00F4ng v\u00E0 an ninh m\u1EA1ng n\u1ED9i b\u1ED9",
+        "manager_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "color": "#0284c7",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 7,
+        "name": "Ch\u0103m S\u00F3c Kh\u00E1ch H\u00E0ng",
+        "code": "CSKH",
+        "description": "Ti\u1EBFp nh\u1EADn ph\u1EA3n h\u1ED3i v\u00E0 \u0111\u00E1nh gi\u00E1 ch\u1EA5t l\u01B0\u1EE3ng d\u1ECBch v\u1EE5 ph\u00F2ng m\u00E1y",
+        "manager_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "color": "#ec4899",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 8,
+        "name": "Gi\u00E1m S\u00E1t Ca \u0110\u00EAm",
+        "code": "CA_DEM",
+        "description": "Tr\u1EF1c ca \u0111\u00EAm v\u00E0 tu\u1EA7n tra an to\u00E0n thi\u1EBFt b\u1ECB ph\u00F2ng m\u00E1y",
+        "manager_name": "L\u00EA V\u0103n An",
+        "color": "#f59e0b",
+        "created_at": "2026-10-10 17:00:10"
+      },
+      {
+        "id": 9,
+        "name": "Ban Qu\u1EA3n Tr\u1ECB",
+        "code": "BAN_QT",
+        "description": "Ban qu\u1EA3n l\u00FD v\u00E0 \u0111i\u1EC1u h\u00E0nh chung h\u1EC7 th\u1ED1ng Lab",
+        "manager_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "color": "#6366f1",
+        "created_at": "2026-10-10 17:00:10"
+      }
+    ]
+  },
+  "email_logs": {
+    "total_rows": 11,
+    "sample_rows": [
+      {
+        "id": 167,
+        "recipient_email": "longhvn2006@gmail.com",
+        "recipient_name": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long",
+        "subject": "M\u1EADt kh\u1EA9u m\u1EDBi \u0111\u0103ng nh\u1EADp h\u1EC7 th\u1ED1ng WorkShiftPro",
+        "html_body": "\r\n    \u003Cdiv style=\u0022font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;\u0022\u003E\r\n        \u003Cdiv style=\u0022text-align: center; margin-bottom: 20px;\u0022\u003E\r\n            \u003Ch2 style=\u0022color: #2563eb; margin: 0;\u0022\u003EKh\u00F4i Ph\u1EE5c M\u1EADt Kh\u1EA9u - WorkShiftPro\u003C/h2\u003E\r\n            \u003Cp style=\u0022font-size: 13px; color: #64748b; margin: 4px 0 0 0;\u0022\u003EC\u1ED5ng Th\u00F4ng Tin \u0026 Qu\u1EA3n L\u00FD Ph\u00E2n Ca\u003C/p\u003E\r\n        \u003C/div\u003E\r\n        \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003ENguy\u1EC5n V\u0169 Ho\u00E0ng Long\u003C/strong\u003E (T\u00EAn \u0111\u0103ng nh\u1EADp: \u003Ccode\u003Elonghvn\u003C/code\u003E),\u003C/p\u003E\r\n        \u003Cp\u003EH\u1EC7 th\u1ED1ng nh\u1EADn \u0111\u01B0\u1EE3c y\u00EAu c\u1EA7u c\u1EA5p l\u1EA1i m\u1EADt kh\u1EA9u \u0111\u0103ng nh\u1EADp cho t\u00E0i kho\u1EA3n c\u1EE7a b\u1EA1n. M\u1EADt kh\u1EA9u m\u1EDBi \u0111\u00E3 \u0111\u01B0\u1EE3c kh\u1EDFi t\u1EA1o v\u00E0 g\u1EEDi ri\u00EAng t\u1EDBi email n\u00E0y:\u003C/p\u003E\r\n        \u003Cdiv style=\u0022background: #eff6ff; padding: 18px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1.5px dashed #3b82f6;\u0022\u003E\r\n            \u003Cp style=\u0022margin: 0 0 6px 0; font-size: 13px; color: #475569;\u0022\u003EM\u1EADt kh\u1EA9u \u0111\u0103ng nh\u1EADp m\u1EDBi c\u1EE7a b\u1EA1n l\u00E0:\u003C/p\u003E\r\n            \u003Cspan style=\u0022font-size: 26px; font-weight: bold; letter-spacing: 2px; color: #1d4ed8; font-family: monospace;\u0022\u003EWM975429\u003C/span\u003E\r\n        \u003C/div\u003E\r\n        \u003Cdiv style=\u0022background: #f8fafc; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 4px; font-size: 12px; color: #78350f; margin-bottom: 16px;\u0022\u003E\r\n            \u003Cstrong\u003EL\u01B0u \u00FD b\u1EA3o m\u1EADt:\u003C/strong\u003E Vui l\u00F2ng d\u00F9ng m\u1EADt kh\u1EA9u tr\u00EAn \u0111\u1EC3 \u0111\u0103ng nh\u1EADp. Sau khi v\u00E0o h\u1EC7 th\u1ED1ng, b\u1EA1n n\u00EAn b\u1EA5m v\u00E0o n\u00FAt \u003Cstrong\u003E\uD83D\uDD11 \u0110\u1ED5i m\u1EADt kh\u1EA9u\u003C/strong\u003E \u1EDF thanh \u0111i\u1EC1u h\u01B0\u1EDBng \u0111\u1EC3 \u0111\u1ED5i sang m\u1EADt kh\u1EA9u ri\u00EAng.\r\n        \u003C/div\u003E\r\n        \u003Chr style=\u0022border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;\u0022 /\u003E\r\n        \u003Cp style=\u0022font-size: 11px; color: #94a3b8; margin: 0; text-align: center;\u0022\u003EWorkShiftPro - Email t\u1EF1 \u0111\u1ED9ng t\u1EEB h\u1EC7 th\u1ED1ng qu\u1EA3n l\u00FD ca tr\u1EF1c.\u003C/p\u003E\r\n    \u003C/div\u003E",
+        "status": "sent",
+        "sent_at": "2026-09-25 10:06:32"
+      },
+      {
+        "id": 168,
+        "recipient_email": "admin@company.com",
+        "recipient_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-09-21)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-09-21\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EQu\u1EA3n L\u00FD V\u1EADn H\u00E0nh\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-09-25 10:08:00"
+      },
+      {
+        "id": 169,
+        "recipient_email": "longhvn2006@gmail.com",
+        "recipient_name": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-09-21)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-09-21\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003ENguy\u1EC5n V\u0169 Ho\u00E0ng Long\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-09-25 10:08:03"
+      },
+      {
+        "id": 170,
+        "recipient_email": "admin@company.com",
+        "recipient_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-05)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-05\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EQu\u1EA3n L\u00FD V\u1EADn H\u00E0nh\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-11 03:32:39"
+      },
+      {
+        "id": 171,
+        "recipient_email": "longhvn2006@gmail.com",
+        "recipient_name": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-05)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-05\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003ENguy\u1EC5n V\u0169 Ho\u00E0ng Long\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-11 03:32:42"
+      },
+      {
+        "id": 172,
+        "recipient_email": "leader1@greenwich.edu.vn",
+        "recipient_name": "Alice Tr\u1EA7n (Tr\u01B0\u1EDFng Nh\u00F3m)",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-05)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-05\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EAlice Tr\u1EA7n (Tr\u01B0\u1EDFng Nh\u00F3m)\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-11 03:32:46"
+      },
+      {
+        "id": 173,
+        "recipient_email": "admin@company.com",
+        "recipient_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-12)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-12\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EQu\u1EA3n L\u00FD V\u1EADn H\u00E0nh\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr style=\u0022border-bottom: 1px solid #e2e8f0;\u0022\u003E\r\n                \u003Ctd style=\u0022padding: 12px; font-weight: 600; color: #1e293b;\u0022\u003E2026-10-14\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #0284c7; font-weight: bold;\u0022\u003ECa 1 (Shift 1)\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #475569;\u0022\u003E08:00 - 09:30\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #16a34a; font-weight: 500;\u0022\u003Eregistered\u003C/td\u003E\r\n            \u003C/tr\u003E\r\n            \u003Ctr style=\u0022border-bottom: 1px solid #e2e8f0;\u0022\u003E\r\n                \u003Ctd style=\u0022padding: 12px; font-weight: 600; color: #1e293b;\u0022\u003E2026-10-14\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #0284c7; font-weight: bold;\u0022\u003ECa 2 (Shift 2)\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #475569;\u0022\u003E09:35 - 11:05\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #16a34a; font-weight: 500;\u0022\u003Eregistered\u003C/td\u003E\r\n            \u003C/tr\u003E\r\n            \u003Ctr style=\u0022border-bottom: 1px solid #e2e8f0;\u0022\u003E\r\n                \u003Ctd style=\u0022padding: 12px; font-weight: 600; color: #1e293b;\u0022\u003E2026-10-14\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #0284c7; font-weight: bold;\u0022\u003ECa 3 (Shift 3)\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #475569;\u0022\u003E11:10 - 12:40\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #16a34a; font-weight: 500;\u0022\u003Eregistered\u003C/td\u003E\r\n            \u003C/tr\u003E\r\n            \u003Ctr style=\u0022border-bottom: 1px solid #e2e8f0;\u0022\u003E\r\n                \u003Ctd style=\u0022padding: 12px; font-weight: 600; color: #1e293b;\u0022\u003E2026-10-14\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #0284c7; font-weight: bold;\u0022\u003ECa 7 (Shift 7)\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #475569;\u0022\u003E18:20 - 19:50\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #16a34a; font-weight: 500;\u0022\u003Eregistered\u003C/td\u003E\r\n            \u003C/tr\u003E\r\n            \u003Ctr style=\u0022border-bottom: 1px solid #e2e8f0;\u0022\u003E\r\n                \u003Ctd style=\u0022padding: 12px; font-weight: 600; color: #1e293b;\u0022\u003E2026-10-14\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #0284c7; font-weight: bold;\u0022\u003ECa 8 (Shift 8)\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #475569;\u0022\u003E19:55 - 20:25\u003C/td\u003E\r\n                \u003Ctd style=\u0022padding: 12px; color: #16a34a; font-weight: 500;\u0022\u003Eregistered\u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-14 10:56:24"
+      },
+      {
+        "id": 174,
+        "recipient_email": "longhvn2006@gmail.com",
+        "recipient_name": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-12)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-12\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003ENguy\u1EC5n V\u0169 Ho\u00E0ng Long\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-14 10:56:28"
+      },
+      {
+        "id": 175,
+        "recipient_email": "leader1@greenwich.edu.vn",
+        "recipient_name": "Alice Tr\u1EA7n (Tr\u01B0\u1EDFng Nh\u00F3m)",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-12)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-12\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EAlice Tr\u1EA7n (Tr\u01B0\u1EDFng Nh\u00F3m)\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-14 10:56:32"
+      },
+      {
+        "id": 176,
+        "recipient_email": "long@gmail.com",
+        "recipient_name": "Nguy\u1EC5n V\u0103n Long",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-12)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-12\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003ENguy\u1EC5n V\u0103n Long\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-14 10:56:36"
+      },
+      {
+        "id": 177,
+        "recipient_email": "phu@gmail.com",
+        "recipient_name": "Hu\u1EF3nh Vinh Ph\u00FA",
+        "subject": "[WorkShiftPro] L\u1ECBch L\u00E0m Vi\u1EC7c Tu\u1EA7n M\u1EDBi (2026-10-12)",
+        "html_body": "\r\n        \u003C!DOCTYPE html\u003E\r\n        \u003Chtml\u003E\r\n        \u003Chead\u003E\r\n            \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n            \u003Cstyle\u003E\r\n                body { font-family: -apple-system, BlinkMacSystemFont, \u0027Segoe UI\u0027, Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }\r\n                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }\r\n                .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 24px; text-align: center; }\r\n                .content { padding: 24px; }\r\n                .announcement { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #1e40af; font-size: 14px; }\r\n                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }\r\n                th { background: #f1f5f9; padding: 12px; text-align: left; color: #475569; font-weight: 600; }\r\n                .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\r\n                .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }\r\n            \u003C/style\u003E\r\n        \u003C/head\u003E\r\n        \u003Cbody\u003E\r\n            \u003Cdiv class=\u0022container\u0022\u003E\r\n                \u003Cdiv class=\u0022header\u0022\u003E\r\n                    \u003Ch2 style=\u0022margin:0; font-size: 20px; color: #ffffff;\u0022\u003ETH\u00D4NG B\u00C1O L\u1ECACH L\u00C0M VI\u1EC6C TU\u1EA6N\u003C/h2\u003E\r\n                    \u003Cp style=\u0022margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #e0e7ff;\u0022\u003ETu\u1EA7n b\u1EAFt \u0111\u1EA7u t\u1EEB: 2026-10-12\u003C/p\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022content\u0022\u003E\r\n                    \u003Cp\u003EXin ch\u00E0o \u003Cstrong\u003EHu\u1EF3nh Vinh Ph\u00FA\u003C/strong\u003E,\u003C/p\u003E\r\n                    \u003Cdiv class=\u0022announcement\u0022\u003E\r\n                        \u003Cstrong\u003ETh\u00F4ng b\u00E1o t\u1EEB Qu\u1EA3n l\u00FD:\u003C/strong\u003E\u003Cbr/\u003E\r\n                        Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.\r\n                    \u003C/div\u003E\r\n                    \u003Cp\u003ED\u01B0\u1EDBi \u0111\u00E2y l\u00E0 chi ti\u1EBFt c\u00E1c ca l\u00E0m vi\u1EC7c c\u1EE7a b\u1EA1n theo timeline chu\u1EA9n (9 ca/ng\u00E0y t\u1EEB 08:00 \u0111\u1EBFn 22:00):\u003C/p\u003E\r\n                    \u003Ctable\u003E\r\n                        \u003Cthead\u003E\r\n                            \u003Ctr\u003E\r\n                                \u003Cth\u003ENg\u00E0y l\u00E0m\u003C/th\u003E\r\n                                \u003Cth\u003ECa\u003C/th\u003E\r\n                                \u003Cth\u003EKhung gi\u1EDD\u003C/th\u003E\r\n                                \u003Cth\u003ETr\u1EA1ng th\u00E1i\u003C/th\u003E\r\n                            \u003C/tr\u003E\r\n                        \u003C/thead\u003E\r\n                        \u003Ctbody\u003E\r\n                            \r\n            \u003Ctr\u003E\r\n                \u003Ctd colspan=\u00224\u0022 style=\u0022padding: 16px; text-align: center; color: #64748b;\u0022\u003E\r\n                    Tu\u1EA7n n\u00E0y b\u1EA1n ch\u01B0a c\u00F3 ca l\u00E0m vi\u1EC7c n\u00E0o \u0111\u01B0\u1EE3c ph\u00E2n c\u00F4ng ho\u1EB7c \u0111ang c\u1EADp nh\u1EADt b\u1ED5 sung.\r\n                \u003C/td\u003E\r\n            \u003C/tr\u003E\r\n                        \u003C/tbody\u003E\r\n                    \u003C/table\u003E\r\n                    \u003Cdiv style=\u0022text-align: center;\u0022\u003E\r\n                        \u003Ca href=\u0022http://localhost:5173\u0022 class=\u0022btn\u0022\u003EV\u00E0o H\u1EC7 Th\u1ED1ng X\u00E1c Nh\u1EADn Ca\u003C/a\u003E\r\n                    \u003C/div\u003E\r\n                \u003C/div\u003E\r\n                \u003Cdiv class=\u0022footer\u0022\u003E\r\n                    H\u1EC7 th\u1ED1ng Qu\u1EA3n l\u00FD Ca l\u00E0m vi\u1EC7c \u0026 \u0110\u0103ng k\u00FD L\u1ECBch tr\u1EF1c n\u1ED9i b\u1ED9 WorkShiftPro.\u003Cbr/\u003E\r\n                    Vui l\u00F2ng kh\u00F4ng ph\u1EA3n h\u1ED3i tr\u1EF1c ti\u1EBFp qua email t\u1EF1 \u0111\u1ED9ng n\u00E0y.\r\n                \u003C/div\u003E\r\n            \u003C/div\u003E\r\n        \u003C/body\u003E\r\n        \u003C/html\u003E",
+        "status": "sent",
+        "sent_at": "2026-10-14 10:56:39"
+      }
+    ]
+  },
+  "feedback_likes": {
+    "total_rows": 0,
+    "sample_rows": []
+  },
+  "feedbacks": {
+    "total_rows": 0,
+    "sample_rows": []
+  },
+  "notifications": {
+    "total_rows": 61,
+    "sample_rows": [
+      {
+        "id": 81,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "Ch\u00E0o m\u1EEBng \u0111\u1EBFn v\u1EDBi C\u1ED5ng Qu\u1EA3n L\u00FD Ca L\u00E0m Vi\u1EC7c",
+        "message": "H\u1EC7 th\u1ED1ng \u0111\u00E3 s\u1EB5n s\u00E0ng v\u1EADn h\u00E0nh. Qu\u1EA3n l\u00FD c\u00F3 th\u1EC3 th\u00EAm nh\u00E2n s\u1EF1 t\u1EA1i m\u1EE5c Qu\u1EA3n l\u00FD nh\u00E2n vi\u00EAn v\u00E0 x\u1EBFp l\u1ECBch tr\u1EF1c.",
+        "type": "general",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-25 06:15:56"
+      },
+      {
+        "id": 82,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "L\u1ECBch l\u00E0m vi\u1EC7c tu\u1EA7n m\u1EDBi \u0111\u00E3 \u0111\u01B0\u1EE3c xu\u1EA5t b\u1EA3n!",
+        "message": "Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.",
+        "type": "schedule_published",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-25 10:07:56"
+      },
+      {
+        "id": 83,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin ngh\u1EC9 v\u1EAFng ca m\u1EDBi c\u1EA7n duy\u1EC7t",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-27. L\u00FD do: \u0027\u0111\u00E2sda\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-27 11:13:54"
+      },
+      {
+        "id": 84,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 \u0111\u01B0\u1EE3c Qu\u1EA3n l\u00FD ph\u00EA duy\u1EC7t",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 PH\u00CA DUY\u1EC6T \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-27 c\u1EE7a b\u1EA1n.",
+        "type": "absence_approved",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-27 11:13:56"
+      },
+      {
+        "id": 85,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin ngh\u1EC9 v\u1EAFng ca m\u1EDBi c\u1EA7n duy\u1EC7t",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-28. L\u00FD do: \u0027jdasdlskajdklasjd\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-28 09:39:16"
+      },
+      {
+        "id": 86,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 \u0111\u01B0\u1EE3c Qu\u1EA3n l\u00FD ph\u00EA duy\u1EC7t",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 PH\u00CA DUY\u1EC6T \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-28 c\u1EE7a b\u1EA1n.",
+        "type": "absence_approved",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-28 09:39:17"
+      },
+      {
+        "id": 87,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "Nh\u00E2n vi\u00EAn g\u1EEDi b\u00E1o b\u1EADn / \u0111i\u1EC1u ch\u1EC9nh gi\u1EDD tr\u1EF1c",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 g\u1EEDi y\u00EAu c\u1EA7u \u0111i\u1EC1u ch\u1EC9nh ca tr\u1EF1c (2026-09-30): \u00E0dadsfas",
+        "type": "shift_note_submitted",
+        "related_id": 14,
+        "is_read": 1,
+        "created_at": "2026-09-30 06:44:55"
+      },
+      {
+        "id": 94,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "Nh\u00E2n vi\u00EAn g\u1EEDi b\u00E1o b\u1EADn / \u0111i\u1EC1u ch\u1EC9nh gi\u1EDD tr\u1EF1c",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 g\u1EEDi y\u00EAu c\u1EA7u \u0111i\u1EC1u ch\u1EC9nh ca tr\u1EF1c (2026-09-30): fdasda",
+        "type": "shift_note_submitted",
+        "related_id": 15,
+        "is_read": 1,
+        "created_at": "2026-09-30 07:32:58"
+      },
+      {
+        "id": 96,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "Nh\u00E2n vi\u00EAn g\u1EEDi b\u00E1o b\u1EADn / \u0111i\u1EC1u ch\u1EC9nh gi\u1EDD tr\u1EF1c",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 g\u1EEDi y\u00EAu c\u1EA7u \u0111i\u1EC1u ch\u1EC9nh ca tr\u1EF1c (2026-09-30): sfaddfa",
+        "type": "shift_note_submitted",
+        "related_id": 16,
+        "is_read": 1,
+        "created_at": "2026-09-30 07:40:27"
+      },
+      {
+        "id": 98,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin ngh\u1EC9 v\u1EAFng ca m\u1EDBi c\u1EA7n duy\u1EC7t",
+        "message": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30. L\u00FD do: \u0027bnhjhv\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-30 09:11:09"
+      },
+      {
+        "id": 99,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 \u0111\u01B0\u1EE3c Qu\u1EA3n l\u00FD ph\u00EA duy\u1EC7t",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 PH\u00CA DUY\u1EC6T \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30 c\u1EE7a b\u1EA1n.",
+        "type": "absence_approved",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:11:45"
+      },
+      {
+        "id": 100,
+        "target_user_id": 0,
+        "sender_id": 15,
+        "title": "\u0110\u01A1n xin v\u1EAFng h\u00E0ng lo\u1EA1t (27 ca) c\u1EA7n duy\u1EC7t",
+        "message": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG 27 ca l\u00E0m vi\u1EC7c (2026-10-01 \u0111\u1EBFn 2026-10-03). L\u00FD do: \u0027B\u1ECB \u1ED1m / S\u1ED1t c\u1EA7n ngh\u1EC9 ng\u01A1i\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-30 09:33:06"
+      },
+      {
+        "id": 101,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin ngh\u1EC9 v\u1EAFng ca m\u1EDBi c\u1EA7n duy\u1EC7t",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30. L\u00FD do: \u0027qdsdadsad\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-30 09:36:34"
+      },
+      {
+        "id": 102,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 \u0111\u01B0\u1EE3c Qu\u1EA3n l\u00FD ph\u00EA duy\u1EC7t",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 PH\u00CA DUY\u1EC6T \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30 c\u1EE7a b\u1EA1n.",
+        "type": "absence_approved",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-30 09:36:35"
+      },
+      {
+        "id": 103,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin ngh\u1EC9 v\u1EAFng ca m\u1EDBi c\u1EA7n duy\u1EC7t",
+        "message": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30. L\u00FD do: \u0027fsdfsdfsf\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 1,
+        "created_at": "2026-09-30 09:37:16"
+      },
+      {
+        "id": 104,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 \u0111\u01B0\u1EE3c Qu\u1EA3n l\u00FD ph\u00EA duy\u1EC7t",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 PH\u00CA DUY\u1EC6T \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-09-30 c\u1EE7a b\u1EA1n.",
+        "type": "absence_approved",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:37:26"
+      },
+      {
+        "id": 105,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 9 (Shift 9) (20:30 - 22:00) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:31"
+      },
+      {
+        "id": 106,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 8 (Shift 8) (19:55 - 20:25) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 107,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 7 (Shift 7) (18:20 - 19:50) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 108,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 6 (Shift 6) (16:45 - 18:15) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 109,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 5 (Shift 5) (14:45 - 16:15) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 110,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 4 (Shift 4) (13:10 - 14:40) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 111,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 3 (Shift 3) (11:10 - 12:40) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 112,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 2 (Shift 2) (09:35 - 11:05) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 113,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-10-03 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 114,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 9 (Shift 9) (20:30 - 22:00) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 115,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 8 (Shift 8) (19:55 - 20:25) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 116,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 7 (Shift 7) (18:20 - 19:50) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 117,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 6 (Shift 6) (16:45 - 18:15) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 118,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 5 (Shift 5) (14:45 - 16:15) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 119,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 4 (Shift 4) (13:10 - 14:40) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 120,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 3 (Shift 3) (11:10 - 12:40) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 121,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 2 (Shift 2) (09:35 - 11:05) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 122,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-10-02 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 123,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 9 (Shift 9) (20:30 - 22:00) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 124,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 8 (Shift 8) (19:55 - 20:25) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 125,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 7 (Shift 7) (18:20 - 19:50) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 126,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 6 (Shift 6) (16:45 - 18:15) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 127,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 5 (Shift 5) (14:45 - 16:15) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 128,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 4 (Shift 4) (13:10 - 14:40) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:37"
+      },
+      {
+        "id": 129,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 3 (Shift 3) (11:10 - 12:40) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:38"
+      },
+      {
+        "id": 130,
+        "target_user_id": 15,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 2 (Shift 2) (09:35 - 11:05) ng\u00E0y 2026-10-01 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-09-30 09:58:38"
+      },
+      {
+        "id": 131,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "L\u1ECBch l\u00E0m vi\u1EC7c tu\u1EA7n m\u1EDBi \u0111\u00E3 \u0111\u01B0\u1EE3c xu\u1EA5t b\u1EA3n!",
+        "message": "Qu\u1EA3n l\u00FD \u0111\u00E3 xu\u1EA5t b\u1EA3n l\u1ECBch l\u00E0m vi\u1EC7c cho tu\u1EA7n m\u1EDBi. C\u00E1c b\u1EA1n nh\u00E2n vi\u00EAn vui l\u00F2ng ki\u1EC3m tra ca tr\u1EF1c c\u1EE7a m\u00ECnh v\u00E0 chu\u1EA9n b\u1ECB \u0111\u00FAng gi\u1EDD.",
+        "type": "schedule_published",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-11 03:32:34"
+      },
+      {
+        "id": 132,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin v\u1EAFng h\u00E0ng lo\u1EA1t (3 ca) c\u1EA7n duy\u1EC7t",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG 3 ca l\u00E0m vi\u1EC7c (2026-10-14 \u0111\u1EBFn 2026-10-14). L\u00FD do: \u0027B\u1ECB \u1ED1m / S\u1ED1t c\u1EA7n ngh\u1EC9 ng\u01A1i\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:13:21"
+      },
+      {
+        "id": 133,
+        "target_user_id": 0,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n xin v\u1EAFng h\u00E0ng lo\u1EA1t (2 ca) c\u1EA7n duy\u1EC7t",
+        "message": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EEBa n\u1ED9p \u0111\u01A1n XIN V\u1EAENG 2 ca l\u00E0m vi\u1EC7c (2026-10-14 \u0111\u1EBFn 2026-10-14). L\u00FD do: \u0027B\u1ECB \u1ED1m / S\u1ED1t c\u1EA7n ngh\u1EC9 ng\u01A1i\u0027. Vui l\u00F2ng xem x\u00E9t v\u00E0 ph\u00EA duy\u1EC7t.",
+        "type": "absence_request",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:42"
+      },
+      {
+        "id": 134,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 8 (Shift 8) (19:55 - 20:25) ng\u00E0y 2026-10-14 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:51"
+      },
+      {
+        "id": 135,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 7 (Shift 7) (18:20 - 19:50) ng\u00E0y 2026-10-14 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:53"
+      },
+      {
+        "id": 136,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 3 (Shift 3) (11:10 - 12:40) ng\u00E0y 2026-10-14 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:53"
+      },
+      {
+        "id": 137,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 2 (Shift 2) (09:35 - 11:05) ng\u00E0y 2026-10-14 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:55"
+      },
+      {
+        "id": 138,
+        "target_user_id": 1,
+        "sender_id": 1,
+        "title": "\u0110\u01A1n b\u00E1o v\u1EAFng \u0111\u00E3 b\u1ECB Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i",
+        "message": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1) (08:00 - 09:30) ng\u00E0y 2026-10-14 c\u1EE7a b\u1EA1n. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng.",
+        "type": "absence_rejected",
+        "related_id": null,
+        "is_read": 0,
+        "created_at": "2026-10-12 10:20:56"
+      }
+    ]
+  },
+  "roles": {
+    "total_rows": 5,
+    "sample_rows": [
+      {
+        "id": "admin",
+        "display_name": "Admin (Qu\u1EA3n tr\u1ECB vi\u00EAn)",
+        "description": "To\u00E0n quy\u1EC1n qu\u1EA3n tr\u1ECB h\u1EC7 th\u1ED1ng, c\u1EA5p quy\u1EC1n, c\u1EA5u h\u00ECnh email v\u00E0 h\u1EC7 th\u1ED1ng",
+        "color": "#7c3aed",
+        "is_system": 1,
+        "can_manage_schedule": 1,
+        "can_manage_tasks": 1,
+        "can_manage_staff": 1,
+        "created_at": "2026-10-10 17:00:10",
+        "can_evaluate": 1
+      },
+      {
+        "id": "leader",
+        "display_name": "Leader (Tr\u01B0\u1EDFng nh\u00F3m / Tr\u01B0\u1EDFng ca)",
+        "description": "Tr\u01B0\u1EDFng ca / Project Lead / Research Lead, \u0111i\u1EC1u h\u00E0nh ca tr\u1EF1c, giao nhi\u1EC7m v\u1EE5 v\u00E0 ki\u1EC3m duy\u1EC7t checklist",
+        "color": "#059669",
+        "is_system": 1,
+        "can_manage_schedule": 1,
+        "can_manage_tasks": 1,
+        "can_manage_staff": 0,
+        "created_at": "2026-10-10 17:00:10",
+        "can_evaluate": 1
+      },
+      {
+        "id": "core",
+        "display_name": "Core (Th\u00E0nh vi\u00EAn C\u1ED1t c\u00E1n)",
+        "description": "Th\u00E0nh vi\u00EAn n\u00F2ng c\u1ED1t Lab, qu\u1EA3n l\u00FD nh\u00E2n s\u1EF1, l\u1ECBch ph\u00E2n ca v\u00E0 \u0111i\u1EC1u ph\u1ED1i to\u00E0n b\u1ED9 d\u1EF1 \u00E1n",
+        "color": "#2563eb",
+        "is_system": 1,
+        "can_manage_schedule": 1,
+        "can_manage_tasks": 1,
+        "can_manage_staff": 1,
+        "created_at": "2026-10-14 07:43:36",
+        "can_evaluate": 1
+      },
+      {
+        "id": "contributor",
+        "display_name": "Contributor (Th\u00E0nh vi\u00EAn \u0110\u00F3ng g\u00F3p)",
+        "description": "Th\u00E0nh vi\u00EAn \u0111\u00F3ng g\u00F3p chuy\u00EAn m\u00F4n",
+        "color": "#3b82f6",
+        "is_system": 1,
+        "can_manage_schedule": 0,
+        "can_manage_tasks": 0,
+        "can_manage_staff": 0,
+        "created_at": "2026-10-14 07:43:36",
+        "can_evaluate": 0
+      },
+      {
+        "id": "learning",
+        "display_name": "Learning (H\u1ECDc vi\u00EAn / Th\u1EF1c t\u1EADp sinh)",
+        "description": "H\u1ECDc vi\u00EAn, th\u1EF1c t\u1EADp sinh m\u1EDBi, tham gia h\u1ECDc vi\u1EC7c, h\u1ED7 tr\u1EE3 ca tr\u1EF1c theo h\u01B0\u1EDBng d\u1EABn c\u1EE7a mentor",
+        "color": "#8b5cf6",
+        "is_system": 1,
+        "can_manage_schedule": 0,
+        "can_manage_tasks": 0,
+        "can_manage_staff": 0,
+        "created_at": "2026-10-14 07:43:36",
+        "can_evaluate": 0
+      }
+    ]
+  },
+  "shift_events": {
+    "total_rows": 2,
+    "sample_rows": [
+      {
+        "id": 21,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "title": "dsakldhadhaskj",
+        "description": "shdklahklahdla",
+        "event_type": "meeting",
+        "created_at": "2026-09-30 11:35:01"
+      },
+      {
+        "id": 22,
+        "shift_id": 2,
+        "work_date": "2026-09-30",
+        "title": "dsakldhadhaskj",
+        "description": "shdklahklahdla",
+        "event_type": "meeting",
+        "created_at": "2026-09-30 11:35:01"
+      }
+    ]
+  },
+  "shift_history": {
+    "total_rows": 50,
+    "sample_rows": [
+      {
+        "id": 68,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-27",
+        "action": "SUBMIT_ABSENCE_REQUEST",
+        "note": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 n\u1ED9p \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1). L\u00FD do: \u0111\u00E2sda (Ch\u1EDD Qu\u1EA3n l\u00FD duy\u1EC7t)",
+        "created_at": "2026-09-27 11:13:54"
+      },
+      {
+        "id": 69,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-27",
+        "action": "APPROVE_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 ph\u00EA duy\u1EC7t cho Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EAFng ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-27 11:13:56"
+      },
+      {
+        "id": 70,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-28",
+        "action": "SUBMIT_ABSENCE_REQUEST",
+        "note": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 n\u1ED9p \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1). L\u00FD do: jdasdlskajdklasjd (Ch\u1EDD Qu\u1EA3n l\u00FD duy\u1EC7t)",
+        "created_at": "2026-09-28 09:39:16"
+      },
+      {
+        "id": 71,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-28",
+        "action": "APPROVE_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 ph\u00EA duy\u1EC7t cho Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EAFng ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-28 09:39:17"
+      },
+      {
+        "id": 72,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "SUBMIT_ABSENCE_REQUEST",
+        "note": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long \u0111\u00E3 n\u1ED9p \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1). L\u00FD do: bnhjhv (Ch\u1EDD Qu\u1EA3n l\u00FD duy\u1EC7t)",
+        "created_at": "2026-09-30 09:11:09"
+      },
+      {
+        "id": 73,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "APPROVE_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 ph\u00EA duy\u1EC7t cho Nguy\u1EC5n V\u0169 Ho\u00E0ng Long v\u1EAFng ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-30 09:11:45"
+      },
+      {
+        "id": 74,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "SUBMIT_ABSENCE_REQUEST",
+        "note": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 n\u1ED9p \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1). L\u00FD do: qdsdadsad (Ch\u1EDD Qu\u1EA3n l\u00FD duy\u1EC7t)",
+        "created_at": "2026-09-30 09:36:34"
+      },
+      {
+        "id": 75,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "APPROVE_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 ph\u00EA duy\u1EC7t cho Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh v\u1EAFng ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-30 09:36:35"
+      },
+      {
+        "id": 76,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "SUBMIT_ABSENCE_REQUEST",
+        "note": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long \u0111\u00E3 n\u1ED9p \u0111\u01A1n xin v\u1EAFng ca Ca 1 (Shift 1). L\u00FD do: fsdfsdfsf (Ch\u1EDD Qu\u1EA3n l\u00FD duy\u1EC7t)",
+        "created_at": "2026-09-30 09:37:16"
+      },
+      {
+        "id": 77,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "action": "APPROVE_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 ph\u00EA duy\u1EC7t cho Nguy\u1EC5n V\u0169 Ho\u00E0ng Long v\u1EAFng ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-30 09:37:26"
+      },
+      {
+        "id": 78,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 9 (Shift 9).",
+        "created_at": "2026-09-30 09:58:31"
+      },
+      {
+        "id": 79,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 8 (Shift 8).",
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 80,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 7 (Shift 7).",
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 81,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 6 (Shift 6).",
+        "created_at": "2026-09-30 09:58:32"
+      },
+      {
+        "id": 82,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 5 (Shift 5).",
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 83,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 4 (Shift 4).",
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 84,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 3 (Shift 3).",
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 85,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 2 (Shift 2).",
+        "created_at": "2026-09-30 09:58:33"
+      },
+      {
+        "id": 86,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-10-03",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 87,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 9 (Shift 9).",
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 88,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 8 (Shift 8).",
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 89,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 7 (Shift 7).",
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 90,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 6 (Shift 6).",
+        "created_at": "2026-09-30 09:58:34"
+      },
+      {
+        "id": 91,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 5 (Shift 5).",
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 92,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 4 (Shift 4).",
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 93,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 3 (Shift 3).",
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 94,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 2 (Shift 2).",
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 95,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-10-02",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 1 (Shift 1).",
+        "created_at": "2026-09-30 09:58:35"
+      },
+      {
+        "id": 96,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 9 (Shift 9).",
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 97,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 8 (Shift 8).",
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 98,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 7 (Shift 7).",
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 99,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 6 (Shift 6).",
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 100,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 5 (Shift 5).",
+        "created_at": "2026-09-30 09:58:36"
+      },
+      {
+        "id": 101,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 4 (Shift 4).",
+        "created_at": "2026-09-30 09:58:37"
+      },
+      {
+        "id": 102,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 3 (Shift 3).",
+        "created_at": "2026-09-30 09:58:38"
+      },
+      {
+        "id": 103,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-01",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Nguy\u1EC5n V\u0169 Ho\u00E0ng Long cho ca Ca 2 (Shift 2).",
+        "created_at": "2026-09-30 09:58:38"
+      },
+      {
+        "id": 104,
+        "user_id": 1,
+        "shift_id": 8,
+        "work_date": "2026-10-14",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 8 (Shift 8).",
+        "created_at": "2026-10-12 10:20:51"
+      },
+      {
+        "id": 105,
+        "user_id": 1,
+        "shift_id": 7,
+        "work_date": "2026-10-14",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 7 (Shift 7).",
+        "created_at": "2026-10-12 10:20:53"
+      },
+      {
+        "id": 106,
+        "user_id": 1,
+        "shift_id": 3,
+        "work_date": "2026-10-14",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 3 (Shift 3).",
+        "created_at": "2026-10-12 10:20:53"
+      },
+      {
+        "id": 107,
+        "user_id": 1,
+        "shift_id": 2,
+        "work_date": "2026-10-14",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 2 (Shift 2).",
+        "created_at": "2026-10-12 10:20:55"
+      },
+      {
+        "id": 108,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-10-14",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 1 (Shift 1).",
+        "created_at": "2026-10-12 10:20:56"
+      },
+      {
+        "id": 109,
+        "user_id": 1,
+        "shift_id": 9,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 9 (Shift 9).",
+        "created_at": "2026-10-16 11:07:19"
+      },
+      {
+        "id": 110,
+        "user_id": 1,
+        "shift_id": 8,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 8 (Shift 8).",
+        "created_at": "2026-10-16 11:07:19"
+      },
+      {
+        "id": 111,
+        "user_id": 1,
+        "shift_id": 7,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 7 (Shift 7).",
+        "created_at": "2026-10-16 11:07:20"
+      },
+      {
+        "id": 112,
+        "user_id": 1,
+        "shift_id": 6,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 6 (Shift 6).",
+        "created_at": "2026-10-16 11:07:20"
+      },
+      {
+        "id": 113,
+        "user_id": 1,
+        "shift_id": 5,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 5 (Shift 5).",
+        "created_at": "2026-10-16 11:07:20"
+      },
+      {
+        "id": 114,
+        "user_id": 1,
+        "shift_id": 4,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 4 (Shift 4).",
+        "created_at": "2026-10-16 11:07:20"
+      },
+      {
+        "id": 115,
+        "user_id": 1,
+        "shift_id": 3,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 3 (Shift 3).",
+        "created_at": "2026-10-16 11:07:20"
+      },
+      {
+        "id": 116,
+        "user_id": 1,
+        "shift_id": 2,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 2 (Shift 2).",
+        "created_at": "2026-10-16 11:07:22"
+      },
+      {
+        "id": 117,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-10-16",
+        "action": "REJECT_ABSENCE",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 t\u1EEB ch\u1ED1i \u0111\u01A1n xin v\u1EAFng c\u1EE7a Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh cho ca Ca 1 (Shift 1).",
+        "created_at": "2026-10-16 11:07:23"
+      }
+    ]
+  },
+  "shift_notes": {
+    "total_rows": 0,
+    "sample_rows": []
+  },
+  "shift_registrations": {
+    "total_rows": 48,
+    "sample_rows": [
+      {
+        "id": 42,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-09-25",
+        "status": "registered",
+        "note": "Ca tr\u1EF1c th\u1EF1c t\u1EBF",
+        "created_at": "2026-09-25 11:27:14",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": null,
+        "absence_approved_at": null,
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 43,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-27",
+        "status": "registered",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-27 11:13:54",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": "2026-09-27 11:13:54",
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-27 11:13:56",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 44,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-28",
+        "status": "registered",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-28 09:39:16",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": "2026-09-28 09:39:16",
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-28 09:39:17",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 45,
+        "user_id": 1,
+        "shift_id": 2,
+        "work_date": "2026-09-30",
+        "status": "confirmed",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-30 04:57:36",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": null,
+        "absence_approved_at": null,
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 46,
+        "user_id": 1,
+        "shift_id": 5,
+        "work_date": "2026-09-30",
+        "status": "approved",
+        "note": null,
+        "created_at": "2026-09-30 07:11:51",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": null,
+        "absence_approved_at": null,
+        "actual_hours": 1,
+        "time_note": "\u0110\u00E3 duy\u1EC7t \u0111i\u1EC1u ch\u1EC9nh (14:45 - 14:50 ho\u1EB7c th\u1ECFa thu\u1EADn): \u00E0dadsfas"
+      },
+      {
+        "id": 47,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "status": "approved",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-30 07:40:30",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": "2026-09-30 09:36:34",
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:36:35",
+        "actual_hours": 1,
+        "time_note": "Test \u0111i mu\u1ED9n"
+      },
+      {
+        "id": 48,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-09-30",
+        "status": "registered",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-30 09:11:09",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": "2026-09-30 09:37:16",
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:37:26",
+        "actual_hours": 1.2,
+        "time_note": null
+      },
+      {
+        "id": 49,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "\u0110\u00E3 x\u00E1c nh\u1EADn c\u00F3 m\u1EB7t",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": "2026-09-30 09:33:06",
+        "absence_approved_by": null,
+        "absence_approved_at": null,
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 50,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:38",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 51,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:38",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 52,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:37",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 53,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:36",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 54,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:36",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 55,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:36",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 56,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:36",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 57,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-01",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:36",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 58,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:35",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 59,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:35",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 60,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:35",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 61,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:35",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 62,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:35",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 63,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:34",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 64,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:34",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 65,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:34",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 66,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-02",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:34",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 67,
+        "user_id": 15,
+        "shift_id": 1,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:34",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 68,
+        "user_id": 15,
+        "shift_id": 2,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:33",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 69,
+        "user_id": 15,
+        "shift_id": 3,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:33",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 70,
+        "user_id": 15,
+        "shift_id": 4,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:33",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 71,
+        "user_id": 15,
+        "shift_id": 5,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:33",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 72,
+        "user_id": 15,
+        "shift_id": 6,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:32",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 73,
+        "user_id": 15,
+        "shift_id": 7,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:32",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 74,
+        "user_id": 15,
+        "shift_id": 8,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:32",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 75,
+        "user_id": 15,
+        "shift_id": 9,
+        "work_date": "2026-10-03",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-09-30 09:33:06",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-09-30 09:58:31",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 76,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-10-14",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-12 10:13:21",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-12 10:20:56",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 77,
+        "user_id": 1,
+        "shift_id": 2,
+        "work_date": "2026-10-14",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-12 10:13:21",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-12 10:20:55",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 78,
+        "user_id": 1,
+        "shift_id": 3,
+        "work_date": "2026-10-14",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-12 10:13:21",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-12 10:20:53",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 79,
+        "user_id": 1,
+        "shift_id": 7,
+        "work_date": "2026-10-14",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-12 10:20:42",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-12 10:20:53",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 80,
+        "user_id": 1,
+        "shift_id": 8,
+        "work_date": "2026-10-14",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-12 10:20:42",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-12 10:20:51",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 81,
+        "user_id": 1,
+        "shift_id": 1,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:23",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 82,
+        "user_id": 1,
+        "shift_id": 2,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:22",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 83,
+        "user_id": 1,
+        "shift_id": 3,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:20",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 84,
+        "user_id": 1,
+        "shift_id": 4,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:20",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 85,
+        "user_id": 1,
+        "shift_id": 5,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:20",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 86,
+        "user_id": 1,
+        "shift_id": 6,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:20",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 87,
+        "user_id": 1,
+        "shift_id": 7,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:20",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 88,
+        "user_id": 1,
+        "shift_id": 8,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:19",
+        "actual_hours": null,
+        "time_note": null
+      },
+      {
+        "id": 89,
+        "user_id": 1,
+        "shift_id": 9,
+        "work_date": "2026-10-16",
+        "status": "registered",
+        "note": "Qu\u1EA3n l\u00FD Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh \u0111\u00E3 T\u1EEA CH\u1ED0I \u0111\u01A1n ngh\u1EC9 v\u1EAFng. L\u00FD do t\u1EEB ch\u1ED1i: Qu\u1EA3n l\u00FD t\u1EEB ch\u1ED1i \u0111\u01A1n ngh\u1EC9 v\u1EAFng",
+        "created_at": "2026-10-16 11:07:01",
+        "target_shift_id": null,
+        "target_work_date": null,
+        "request_reason": null,
+        "attendance_status": "present",
+        "absence_reason": null,
+        "absence_reported_at": null,
+        "absence_approved_by": 1,
+        "absence_approved_at": "2026-10-16 11:07:19",
+        "actual_hours": null,
+        "time_note": null
+      }
+    ]
+  },
+  "shift_templates": {
+    "total_rows": 10,
+    "sample_rows": [
+      {
+        "id": 0,
+        "name": "C\u1EA3 ng\u00E0y (All Day)",
+        "start_time": "08:00",
+        "end_time": "22:00",
+        "label": "08:00 - 22:00",
+        "description": "S\u1EF1 ki\u1EC7n \u00E1p d\u1EE5ng cho c\u1EA3 ng\u00E0y"
+      },
+      {
+        "id": 1,
+        "name": "Ca 1 (Shift 1)",
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "label": "08:00 - 09:30",
+        "description": "Ca 1: 08:00 - 09:30"
+      },
+      {
+        "id": 2,
+        "name": "Ca 2 (Shift 2)",
+        "start_time": "09:35",
+        "end_time": "11:05",
+        "label": "09:35 - 11:05",
+        "description": "Ca 2: 09:35 - 11:05"
+      },
+      {
+        "id": 3,
+        "name": "Ca 3 (Shift 3)",
+        "start_time": "11:10",
+        "end_time": "12:40",
+        "label": "11:10 - 12:40",
+        "description": "Ca 3: 11:10 - 12:40"
+      },
+      {
+        "id": 4,
+        "name": "Ca 4 (Shift 4)",
+        "start_time": "13:10",
+        "end_time": "14:40",
+        "label": "13:10 - 14:40",
+        "description": "Ca 4: 13:10 - 14:40"
+      },
+      {
+        "id": 5,
+        "name": "Ca 5 (Shift 5)",
+        "start_time": "14:45",
+        "end_time": "16:15",
+        "label": "14:45 - 16:15",
+        "description": "Ca 5: 14:45 - 16:15"
+      },
+      {
+        "id": 6,
+        "name": "Ca 6 (Shift 6)",
+        "start_time": "16:45",
+        "end_time": "18:15",
+        "label": "16:45 - 18:15",
+        "description": "Ca 6: 16:45 - 18:15"
+      },
+      {
+        "id": 7,
+        "name": "Ca 7 (Shift 7)",
+        "start_time": "18:20",
+        "end_time": "19:50",
+        "label": "18:20 - 19:50",
+        "description": "Ca 7: 18:20 - 19:50"
+      },
+      {
+        "id": 8,
+        "name": "Ca 8 (Shift 8)",
+        "start_time": "19:55",
+        "end_time": "20:25",
+        "label": "19:55 - 20:25",
+        "description": "Ca 8: 19:55 - 20:25"
+      },
+      {
+        "id": 9,
+        "name": "Ca 9 (Shift 9)",
+        "start_time": "20:30",
+        "end_time": "22:00",
+        "label": "20:30 - 22:00",
+        "description": "Ca 9: 20:30 - 22:00"
+      }
+    ]
+  },
+  "subtask_assignees": {
+    "total_rows": 8,
+    "sample_rows": [
+      {
+        "subtask_id": 13,
+        "user_id": 15,
+        "contribution_pct": 100
+      },
+      {
+        "subtask_id": 14,
+        "user_id": 15,
+        "contribution_pct": 70
+      },
+      {
+        "subtask_id": 14,
+        "user_id": 17,
+        "contribution_pct": 30
+      },
+      {
+        "subtask_id": 15,
+        "user_id": 18,
+        "contribution_pct": 100
+      },
+      {
+        "subtask_id": 16,
+        "user_id": 15,
+        "contribution_pct": 100
+      },
+      {
+        "subtask_id": 19,
+        "user_id": 15,
+        "contribution_pct": 100
+      },
+      {
+        "subtask_id": 20,
+        "user_id": 15,
+        "contribution_pct": 100
+      },
+      {
+        "subtask_id": 21,
+        "user_id": 15,
+        "contribution_pct": 100
+      }
+    ]
+  },
+  "subtasks": {
+    "total_rows": 8,
+    "sample_rows": [
+      {
+        "id": 13,
+        "task_id": 16,
+        "title": "Thi\u1EBFt k\u1EBF s\u01A1 \u0111\u1ED3 m\u1EA1ch c\u1EA3m bi\u1EBFn DHT22 \u0026 \u0110\u1EA5t",
+        "description": "Ho\u00E0n th\u00E0nh schematic KiCad \u0111\u1EA1t chu\u1EA9n DoD v\u00E0 layout PCB 2 l\u1EDBp.",
+        "position": 1,
+        "status": "FINISHED",
+        "due_at": "2026-10-16 17:00",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu m\u1EA1ch ch\u1EA1y \u1ED5n \u0111\u1ECBnh, \u0111\u00FAng chu\u1EA9n k\u1EF9 thu\u1EADt",
+        "submitted_for_review_at": "2026-10-15 07:36:12",
+        "finished_at": "2026-10-15 07:36:12",
+        "created_by": 16,
+        "created_at": "2026-10-15 07:36:12",
+        "updated_at": "2026-10-15 07:36:12",
+        "cp_points": 20,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 14,
+        "task_id": 16,
+        "title": "L\u1EADp tr\u00ECnh Firmware ESP32 k\u1EBFt n\u1ED1i MQTT \u0026 WiFi",
+        "description": "G\u1EEDi telemetry m\u1ED7i 5s l\u00EAn broker, x\u1EED l\u00FD reconnect t\u1EF1 \u0111\u1ED9ng.",
+        "position": 2,
+        "status": "FINISHED",
+        "due_at": "2026-10-18 18:00",
+        "review_comment": "Code s\u1EA1ch, \u0111\u1EA1t hi\u1EC7u n\u0103ng cao v\u01B0\u1EE3t mong \u0111\u1EE3i",
+        "submitted_for_review_at": "2026-10-15 07:36:12",
+        "finished_at": "2026-10-15 07:36:12",
+        "created_by": 16,
+        "created_at": "2026-10-15 07:36:12",
+        "updated_at": "2026-10-15 07:36:12",
+        "cp_points": 40,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 15,
+        "task_id": 16,
+        "title": "L\u1EAFp r\u00E1p m\u00F4 h\u00ECnh khung nh\u00E0 k\u00EDnh \u0026 h\u1EC7 th\u1ED1ng b\u01A1m n\u01B0\u1EDBc",
+        "description": "L\u1EAFp ho\u00E0n thi\u1EC7n gi\u00E0n khung nh\u00F4m, van t\u1EEB solenoid v\u00E0 b\u1EC3 c\u1EA5p n\u01B0\u1EDBc.",
+        "position": 3,
+        "status": "FINISHED",
+        "due_at": "2026-10-19 12:00",
+        "review_comment": "Thi c\u00F4ng r\u1EA5t ch\u1EAFc ch\u1EAFn, g\u1ECDn g\u00E0ng, th\u01B0\u1EDFng h\u1EC7 s\u1ED1 1.2x",
+        "submitted_for_review_at": "2026-10-15 07:36:12",
+        "finished_at": "2026-10-15 07:36:12",
+        "created_by": 16,
+        "created_at": "2026-10-15 07:36:12",
+        "updated_at": "2026-10-15 07:36:12",
+        "cp_points": 50,
+        "quality_multiplier": 1.2
+      },
+      {
+        "id": 16,
+        "task_id": 16,
+        "title": "Thi\u1EBFt k\u1EBF giao di\u1EC7n Dashboard theo d\u00F5i nhi\u1EC7t \u0111\u1ED9 / \u0111\u1ED9 \u1EA9m",
+        "description": "Giao di\u1EC7n th\u1EDDi gian th\u1EF1c k\u00E8m \u0111\u1ED3 th\u1ECB l\u1ECBch s\u1EED 24h qua Recharts.",
+        "position": 4,
+        "status": "FINISHED",
+        "due_at": "2026-10-20 18:00",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu \u0111\u1EA1t chu\u1EA9n",
+        "submitted_for_review_at": "2026-10-15 07:36:12",
+        "finished_at": "2026-10-15 07:48:10",
+        "created_by": 16,
+        "created_at": "2026-10-15 07:36:12",
+        "updated_at": "2026-10-15 07:48:10",
+        "cp_points": 30,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 18,
+        "task_id": 17,
+        "title": "dsadadas",
+        "description": "adsada",
+        "position": 1,
+        "status": "FINISHED",
+        "due_at": "2026-10-27 18:17",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu \u0111\u1EA1t chu\u1EA9n",
+        "submitted_for_review_at": "2026-10-15 08:17:36",
+        "finished_at": "2026-10-15 08:17:38",
+        "created_by": 1,
+        "created_at": "2026-10-15 08:17:20",
+        "updated_at": "2026-10-15 08:17:38",
+        "cp_points": 15,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 19,
+        "task_id": 18,
+        "title": "jalkshdlaskhdjlkas",
+        "description": "ujyjggjhghjgu",
+        "position": 1,
+        "status": "FINISHED",
+        "due_at": "2026-10-19 18:58",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu \u0111\u1EA1t chu\u1EA9n",
+        "submitted_for_review_at": "2026-10-16 10:59:24",
+        "finished_at": "2026-10-16 10:59:28",
+        "created_by": 1,
+        "created_at": "2026-10-16 10:59:08",
+        "updated_at": "2026-10-16 10:59:28",
+        "cp_points": 15,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 20,
+        "task_id": 19,
+        "title": "dasdsadas",
+        "description": "dasdadasd",
+        "position": 1,
+        "status": "FINISHED",
+        "due_at": "2026-10-21 19:05",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu \u0111\u1EA1t chu\u1EA9n",
+        "submitted_for_review_at": "2026-10-16 11:05:51",
+        "finished_at": "2026-10-16 11:05:54",
+        "created_by": 1,
+        "created_at": "2026-10-16 11:05:45",
+        "updated_at": "2026-10-16 11:05:54",
+        "cp_points": 15,
+        "quality_multiplier": 1
+      },
+      {
+        "id": 21,
+        "task_id": 20,
+        "title": "khjkhkjh",
+        "description": "bbjkbjk",
+        "position": 1,
+        "status": "FINISHED",
+        "due_at": "",
+        "review_comment": "\u0110\u00E3 nghi\u1EC7m thu \u0111\u1EA1t chu\u1EA9n",
+        "submitted_for_review_at": "2026-10-19 09:31:01",
+        "finished_at": "2026-10-19 09:31:04",
+        "created_by": 1,
+        "created_at": "2026-10-19 09:30:55",
+        "updated_at": "2026-10-19 09:31:04",
+        "cp_points": 10,
+        "quality_multiplier": 1
+      }
+    ]
+  },
+  "system_settings": {
+    "total_rows": 6,
+    "sample_rows": [
+      {
+        "key": "smtp_use_tls",
+        "value": "1"
+      },
+      {
+        "key": "smtp_host",
+        "value": "smtp.gmail.com"
+      },
+      {
+        "key": "smtp_port",
+        "value": "587"
+      },
+      {
+        "key": "smtp_user",
+        "value": "longhvn2006@gmail.com"
+      },
+      {
+        "key": "smtp_from_name",
+        "value": "H\u1EC7 Th\u1ED1ng Ph\u00E2n Ca WorkShiftPro"
+      },
+      {
+        "key": "smtp_password",
+        "value": "wtew euaj zcuu bjtq"
+      }
+    ]
+  },
+  "tasks": {
+    "total_rows": 5,
+    "sample_rows": [
+      {
+        "id": 16,
+        "title": "Tri\u1EC3n khai H\u1EC7 th\u1ED1ng Smart Greenhouse IoT",
+        "description": "D\u1EF1 \u00E1n n\u00F4ng nghi\u1EC7p c\u00F4ng ngh\u1EC7 cao t\u00EDch h\u1EE3p gi\u00E1m s\u00E1t v\u00E0 c\u1EA3nh b\u00E1o th\u1EDDi gian th\u1EF1c.",
+        "task_type": "RESEARCH",
+        "planned_date": "2026-10-15",
+        "deadline": "2026-10-30",
+        "location": null,
+        "customer_info": null,
+        "leader_id": 16,
+        "created_by": 1,
+        "status": "FINISHED",
+        "postponed_reason": null,
+        "finished_at": "2026-10-15 08:16:01",
+        "created_at": "2026-10-15 07:36:12",
+        "updated_at": "2026-10-15 08:16:01"
+      },
+      {
+        "id": 17,
+        "title": "bkjabdabdkj",
+        "description": "dasdsda",
+        "task_type": "RESEARCH",
+        "planned_date": "2026-10-15",
+        "deadline": "2026-10-26 16:16",
+        "location": "adadada",
+        "customer_info": "adsaasd",
+        "leader_id": 1,
+        "created_by": 1,
+        "status": "IN_PROGRESS",
+        "postponed_reason": null,
+        "finished_at": null,
+        "created_at": "2026-10-15 08:16:53",
+        "updated_at": "2026-10-15 08:17:20"
+      },
+      {
+        "id": 18,
+        "title": "fjfhjghj",
+        "description": "fhfghjfghfgh",
+        "task_type": "RESEARCH",
+        "planned_date": "2026-10-16",
+        "deadline": "2026-10-22 18:58",
+        "location": "ffhgfghf",
+        "customer_info": "fjffjhf",
+        "leader_id": 1,
+        "created_by": 1,
+        "status": "IN_PROGRESS",
+        "postponed_reason": null,
+        "finished_at": null,
+        "created_at": "2026-10-16 10:58:33",
+        "updated_at": "2026-10-16 10:59:08"
+      },
+      {
+        "id": 19,
+        "title": "dnalkdnasklnal",
+        "description": "dasadasd",
+        "task_type": "INDUSTRY",
+        "planned_date": "2026-10-16",
+        "deadline": "2026-10-22 19:05",
+        "location": "dasdadas",
+        "customer_info": "dasdasd",
+        "leader_id": 16,
+        "created_by": 1,
+        "status": "IN_PROGRESS",
+        "postponed_reason": null,
+        "finished_at": null,
+        "created_at": "2026-10-16 11:05:15",
+        "updated_at": "2026-10-16 11:05:45"
+      },
+      {
+        "id": 20,
+        "title": "hjhkh",
+        "description": "\u0111\u00E2sda",
+        "task_type": "RESEARCH",
+        "planned_date": "2026-10-19",
+        "deadline": "2026-10-20 17:30",
+        "location": "fdasaf",
+        "customer_info": "\u0111\u00E2s",
+        "leader_id": 1,
+        "created_by": 1,
+        "status": "IN_PROGRESS",
+        "postponed_reason": null,
+        "finished_at": null,
+        "created_at": "2026-10-19 09:30:31",
+        "updated_at": "2026-10-19 09:30:55"
+      }
+    ]
+  },
+  "users": {
+    "total_rows": 5,
+    "sample_rows": [
+      {
+        "id": 1,
+        "username": "admin",
+        "password_hash": "3560bd46e40f2dd68fcb32f52e6cb285669f6e68c175520d6d461c818b4a49a9",
+        "full_name": "Qu\u1EA3n L\u00FD V\u1EADn H\u00E0nh",
+        "email": "admin@company.com",
+        "phone": "0901234567",
+        "role": "admin",
+        "department": "Ban Qu\u1EA3n Tr\u1ECB",
+        "status": "active",
+        "created_at": "2026-09-21 08:09:25"
+      },
+      {
+        "id": 15,
+        "username": "longhvn",
+        "password_hash": "66af4a83996633519430acbc9c9c2b00a6bebf2baaaeee90abc289cc0fff3f0c",
+        "full_name": "Nguy\u1EC5n V\u0169 Ho\u00E0ng Long",
+        "email": "longhvn2006@gmail.com",
+        "phone": "0934567890",
+        "role": "contributor",
+        "department": "T\u1ED5 Tr\u1EF1c V\u1EADn H\u00E0nh",
+        "status": "active",
+        "created_at": "2026-09-25 10:05:52"
+      },
+      {
+        "id": 16,
+        "username": "leader1",
+        "password_hash": "66af4a83996633519430acbc9c9c2b00a6bebf2baaaeee90abc289cc0fff3f0c",
+        "full_name": "Alice Tr\u1EA7n (Tr\u01B0\u1EDFng Nh\u00F3m)",
+        "email": "leader1@greenwich.edu.vn",
+        "phone": "0901234567",
+        "role": "core",
+        "department": "Ph\u00F2ng R\u0026D Lab C\u00F4ng Ngh\u1EC7",
+        "status": "active",
+        "created_at": "2026-09-30 11:13:36"
+      },
+      {
+        "id": 17,
+        "username": "longlong",
+        "password_hash": "881b0b24ef9ca1db403318836140a77abbcd6c5fac74de1d9d704b099ddac4b8",
+        "full_name": "Nguy\u1EC5n V\u0103n Long",
+        "email": "long@gmail.com",
+        "phone": null,
+        "role": "contributor",
+        "department": "V\u1EADn h\u00E0nh",
+        "status": "active",
+        "created_at": "2026-10-12 10:27:39"
+      },
+      {
+        "id": 18,
+        "username": "Learner",
+        "password_hash": "a00a0f610c296289e7adb585ad61e4d973e72865df4aee7762b67a65db761b44",
+        "full_name": "Hu\u1EF3nh Vinh Ph\u00FA",
+        "email": "phu@gmail.com",
+        "phone": "73138178",
+        "role": "contributor",
+        "department": "T\u1ED5 Tr\u1EF1c V\u1EADn H\u00E0nh",
+        "status": "active",
+        "created_at": "2026-10-14 10:55:54"
+      }
+    ]
+  }
+};
+
+    let currentTable = 'users';
+    let currentView = 'table';
+    let searchQuery = '';
+
+    function init() {
+      renderStats();
+      renderTableList();
+      loadTable('users');
+    }
+
+    function renderStats() {
+      const stats = [
+        { label: 'Tổng số bảng', val: Object.keys(dbData).length, icon: '🗄️' },
+        { label: 'Tài khoản người dùng', val: (dbData.users?.total_rows || 0), icon: '👥' },
+        { label: 'Ca trực chuẩn', val: (dbData.shift_templates?.total_rows || 0), icon: '⏰' },
+        { label: 'Lượt phân ca & trực', val: (dbData.shift_registrations?.total_rows || 0), icon: '📅' },
+        { label: 'Dự án & Nhiệm vụ', val: (dbData.tasks?.total_rows || 0), icon: '🚀' },
+        { label: 'Đánh giá năng lực', val: (dbData.competency_evaluations?.total_rows || 0), icon: '⭐' }
+      ];
+
+      const bar = document.getElementById('statsBar');
+      bar.innerHTML = stats.map(s => `
+        <div class="stat-pill">
+          <span style="font-size: 22px;">${s.icon}</span>
+          <div>
+            <div class="stat-num">${s.val}</div>
+            <div class="stat-lbl">${s.label}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderTableList() {
+      const list = document.getElementById('tableList');
+      const tableNames = Object.keys(dbData).sort((a,b) => {
+        // prioritize non-empty tables
+        return (dbData[b].total_rows || 0) - (dbData[a].total_rows || 0);
+      });
+
+      list.innerHTML = tableNames.map(t => {
+        const count = dbData[t].total_rows || 0;
+        return `
+          <li class="table-item ${t === currentTable ? 'active' : ''}" onclick="loadTable('${t}')">
+            <span>${t}</span>
+            <span class="table-badge">${count}</span>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function loadTable(tableName) {
+      currentTable = tableName;
+      document.getElementById('searchInput').value = '';
+      searchQuery = '';
+      renderTableList();
+      renderContent();
+    }
+
+    function setViewMode(mode) {
+      currentView = mode;
+      document.getElementById('btnTableView').className = 'view-btn ' + (mode === 'table' ? 'active' : '');
+      document.getElementById('btnJsonView').className = 'view-btn ' + (mode === 'json' ? 'active' : '');
+      renderContent();
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+      renderContent();
+    }
+
+    function renderContent() {
+      const tbl = dbData[currentTable];
+      document.getElementById('currentTableTitle').innerText = currentTable;
+      document.getElementById('currentTableRowCount').innerText = `(${tbl.total_rows} dòng dữ liệu)`;
+
+      const area = document.getElementById('contentArea');
+      const rows = tbl.sample_rows || [];
+
+      if (rows.length === 0) {
+        area.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size: 40px; margin-bottom: 12px;">📭</div>
+            <div style="font-size: 16px; font-weight: 600; color: #fff;">Bảng [${currentTable}] hiện chưa có dữ liệu</div>
+            <p style="font-size: 13px; margin-top: 6px;">Bảng này được tạo cấu trúc sẵn trong database nhưng chưa có bản ghi nào.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Filter rows by search query
+      const filtered = rows.filter(r => {
+        if (!searchQuery) return true;
+        return Object.values(r).some(v => String(v || '').toLowerCase().includes(searchQuery));
+      });
+
+      if (currentView === 'json') {
+        const jsonStr = JSON.stringify(filtered.length > 0 ? (filtered.length === 1 ? filtered[0] : filtered) : rows[0], null, 2);
+        area.innerHTML = `
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; color: #94a3b8;">Format JSON mẫu để copy đem vào Postman, Swagger hoặc viết test script:</span>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('jsonCode').innerText); alert('Đã sao chép format JSON vào Clipboard!');">📋 Copy JSON</button>
+          </div>
+          <div class="json-box" id="jsonCode">${escapeHtml(jsonStr)}</div>
+        `;
+        return;
+      }
+
+      // Table View
+      const columns = Object.keys(rows[0]);
+      let html = '<table class="data-tbl"><thead><tr>';
+      columns.forEach(c => {
+        html += `<th>${c}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      filtered.forEach(r => {
+        html += '<tr>';
+        columns.forEach(c => {
+          let val = r[c];
+          let formatted = formatValue(c, val);
+          html += `<td>${formatted}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      area.innerHTML = html;
+    }
+
+    function formatValue(colName, val) {
+      if (val === null || val === undefined) return '<span style="color:#64748b; font-style:italic;">null</span>';
+      
+      const str = String(val);
+      // Date or timestamp detection
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return `<span class="badge-date">${str}</span>`;
+      }
+      if (colName === 'status' || colName === 'attendance_status') {
+        if (str === 'active' || str === 'present' || str === 'FINISHED' || str === 'sent') {
+          return `<span class="badge badge-success">${str}</span>`;
+        }
+        if (str === 'pending' || str === 'registered' || str === 'IN_PROGRESS') {
+          return `<span class="badge badge-primary">${str}</span>`;
+        }
+        return `<span class="badge badge-warning">${str}</span>`;
+      }
+      if (colName === 'role') {
+        return `<span class="badge badge-primary">${str}</span>`;
+      }
+      if (colName.includes('password_hash')) {
+        return `<span style="font-family: monospace; font-size: 11px; color:#64748b;">${str.substring(0, 12)}...</span>`;
+      }
+      if (colName.includes('body') || colName.includes('scores_json')) {
+        return `<span style="font-family: monospace; font-size: 11px; color:#94a3b8;" title="${escapeHtml(str)}">${escapeHtml(str.substring(0, 45))}...</span>`;
+      }
+      return escapeHtml(str);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    function exportCurrentTableJson() {
+      const tbl = dbData[currentTable];
+      const blob = new Blob([JSON.stringify(tbl.sample_rows, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${currentTable}_data.json`;
+      a.click();
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
