@@ -227,6 +227,7 @@ public static class Database
             CREATE TABLE IF NOT EXISTS subtask_assignees (
                 subtask_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
+                contribution_pct INTEGER DEFAULT 100,
                 PRIMARY KEY (subtask_id, user_id),
                 FOREIGN KEY (subtask_id) REFERENCES subtasks(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -348,10 +349,26 @@ public static class Database
             try { conn.Execute("ALTER TABLE shift_notes ADD COLUMN actual_hours REAL;"); } catch { }
             try { conn.Execute("ALTER TABLE roles ADD COLUMN can_evaluate INTEGER DEFAULT 0;"); } catch { }
             try { conn.Execute("ALTER TABLE roles ADD COLUMN can_manage_cp INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'LAB_MAINTENANCE';"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN planned_date TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN deadline TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN location TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN customer_info TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE tasks ADD COLUMN total_cp INTEGER DEFAULT 0;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'OPEN';"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN postponed_reason TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE tasks ADD COLUMN finished_at TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN description TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN position INTEGER DEFAULT 1;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN status TEXT DEFAULT 'PENDING';"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN due_at TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN review_comment TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE subtasks ADD COLUMN reject_reason TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN submitted_for_review_at TEXT;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtasks ADD COLUMN finished_at TEXT;"); } catch { }
             try { conn.Execute("ALTER TABLE subtasks ADD COLUMN cp_points INTEGER DEFAULT 0;"); } catch { }
             try { conn.Execute("ALTER TABLE subtasks ADD COLUMN quality_multiplier REAL DEFAULT 1.0;"); } catch { }
+            try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
             try { conn.Execute(@"CREATE TABLE IF NOT EXISTS competency_evaluations (
                 user_id INTEGER PRIMARY KEY,
                 scores_json TEXT NOT NULL DEFAULT '{}',
@@ -384,6 +401,20 @@ public static class Database
                     DELETE FROM competency_evaluations WHERE user_id IN (SELECT id FROM users WHERE role = 'admin');
                 ");
             } catch { }
+
+            // Đồng bộ lại Sequence trên PostgreSQL để tránh lỗi trùng lặp khóa chính (duplicate key violates unique constraint)
+            if (IsPostgres)
+            {
+                var tablesWithSerial = new[] { "users", "tasks", "subtasks", "cp_transactions", "shift_registrations", "shift_history", "shift_notes", "class_schedules", "feedbacks", "notifications", "email_logs", "shift_events", "departments" };
+                foreach (var tbl in tablesWithSerial)
+                {
+                    try
+                    {
+                        conn.Execute($"SELECT setval(pg_get_serial_sequence('{tbl}', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM {tbl};");
+                    }
+                    catch { }
+                }
+            }
 
             // 0. Synchronize standard 5 Roles (Admin: 5 quyen | Leader: phan ca, subtask, nhan su, danh gia, cp | Core, Contributor, Learning: 0 quyen)
             var defaultRoles = new[]

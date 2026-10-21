@@ -233,30 +233,37 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
 
     int totalCp = Math.Max(0, req.total_cp);
     using var conn = Database.GetConnection();
-    string insertTaskSql = Database.IsPostgres
-        ? @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
-            VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING id;"
-        : @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
-            VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-            SELECT last_insert_rowid();";
+    try
+    {
+        string insertTaskSql = Database.IsPostgres
+            ? @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
+                VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING id;"
+            : @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
+                VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+                SELECT last_insert_rowid();";
 
-    var taskId = conn.ExecuteScalar<long>(insertTaskSql,
-        new
-        {
-            title = req.title.Trim(),
-            description = req.description?.Trim(),
-            task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
-            planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
-            deadline = req.deadline.Trim(),
-            location = req.location?.Trim(),
-            customer_info = req.customer_info?.Trim(),
-            leader_id = req.leader_id,
-            created_by = currentUser.id,
-            totalCp
-        });
+        long taskId = Convert.ToInt64(conn.ExecuteScalar(insertTaskSql,
+            new
+            {
+                title = req.title.Trim(),
+                description = req.description?.Trim(),
+                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+                planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
+                deadline = req.deadline.Trim(),
+                location = req.location?.Trim(),
+                customer_info = req.customer_info?.Trim(),
+                leader_id = req.leader_id,
+                created_by = currentUser.id,
+                totalCp
+            }));
 
-    return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
+        return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: "Lỗi khi khởi tạo nhiệm vụ: " + ex.Message, statusCode: 500);
+    }
 });
 
 app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext ctx) =>
@@ -448,53 +455,80 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
 
-    int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
-    int cpPoints = Math.Max(0, req.cp_points);
+    // Đảm bảo cột contribution_pct luôn tồn tại trong subtask_assignees
+    try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
 
-    string insertSubtaskSql = Database.IsPostgres
-        ? @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
-            VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING id;"
-        : @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
-            VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-            SELECT last_insert_rowid();";
-
-    long subtaskId = conn.ExecuteScalar<long>(insertSubtaskSql,
-        new
-        {
-            taskId,
-            title = req.title.Trim(),
-            description = req.description?.Trim(),
-            pos,
-            due_at = req.due_at?.Trim(),
-            createdBy = currentUser.id,
-            cpPoints
-        });
-
-    var assigneeIds = (req.assignee_ids != null && req.assignee_ids.Any())
-        ? req.assignee_ids.Distinct().ToList()
-        : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
-
-    int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
-    foreach (var uid in assigneeIds)
+    try
     {
-        conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
-            new { subtaskId, uid, defaultPct });
+        int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
+        int cpPoints = Math.Max(0, req.cp_points);
 
-        if (uid != currentUser.id)
+        string insertSubtaskSql = Database.IsPostgres
+            ? @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+                VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING id;"
+            : @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+                VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+                SELECT last_insert_rowid();";
+
+        long subtaskId = Convert.ToInt64(conn.ExecuteScalar(insertSubtaskSql,
+            new
+            {
+                taskId,
+                title = req.title.Trim(),
+                description = req.description?.Trim(),
+                pos,
+                due_at = req.due_at?.Trim(),
+                createdBy = currentUser.id,
+                cpPoints
+            }));
+
+        var assigneeIds = (req.assignee_ids != null && req.assignee_ids.Any())
+            ? req.assignee_ids.Distinct().ToList()
+            : (leaderId.HasValue ? new List<long> { leaderId.Value } : new List<long>());
+
+        if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
-            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+            foreach (var ac in req.assignee_contributions)
+            {
+                conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
+                    new { subtaskId, uid = ac.user_id, pct = ac.contribution_pct });
+
+                if (ac.user_id != currentUser.id)
+                {
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+                }
+            }
         }
-    }
+        else
+        {
+            int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
+            foreach (var uid in assigneeIds)
+            {
+                conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
+                    new { subtaskId, uid, defaultPct });
 
-    // Auto transition parent task from OPEN to IN_PROGRESS
-    if ((string)task.status == "OPEN")
+                if (uid != currentUser.id)
+                {
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+                }
+            }
+        }
+
+        // Auto transition parent task from OPEN to IN_PROGRESS
+        if ((string)task.status == "OPEN")
+        {
+            conn.Execute("UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = @taskId", new { taskId });
+        }
+
+        return Results.Ok(new { message = "Đã thêm mục checklist mới vào nhiệm vụ!", subtask_id = subtaskId });
+    }
+    catch (Exception ex)
     {
-        conn.Execute("UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = @taskId", new { taskId });
+        return Results.Problem(detail: "Lỗi khi thêm mục checklist: " + ex.Message, statusCode: 500);
     }
-
-    return Results.Ok(new { message = "Đã thêm mục checklist mới vào nhiệm vụ!", subtask_id = subtaskId });
 });
 
 app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpContext ctx) =>
@@ -518,43 +552,53 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     int cpPoints = Math.Max(0, req.cp_points);
 
-    conn.Execute(@"
-        UPDATE subtasks SET 
-            title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints,
-            status = CASE WHEN status = 'REJECTED' THEN 'PENDING' ELSE status END,
-            reject_reason = CASE WHEN status = 'REJECTED' THEN NULL ELSE reject_reason END,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id",
-        new
-        {
-            id,
-            title = req.title.Trim(),
-            description = req.description?.Trim(),
-            due_at = req.due_at?.Trim(),
-            cpPoints
-        });
+    // Đảm bảo cột contribution_pct luôn tồn tại trong subtask_assignees
+    try { conn.Execute("ALTER TABLE subtask_assignees ADD COLUMN contribution_pct INTEGER DEFAULT 100;"); } catch { }
 
-    if (req.assignee_contributions != null && req.assignee_contributions.Any())
+    try
     {
-        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
-        foreach (var ac in req.assignee_contributions)
-        {
-            conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
-                new { id, uid = ac.user_id, pct = ac.contribution_pct });
-        }
-    }
-    else if (req.assignee_ids != null)
-    {
-        conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
-        int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
-        foreach (var uid in req.assignee_ids)
-        {
-            conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
-                new { id, uid, defaultPct });
-        }
-    }
+        conn.Execute(@"
+            UPDATE subtasks SET 
+                title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints,
+                status = CASE WHEN status = 'REJECTED' THEN 'PENDING' ELSE status END,
+                reject_reason = CASE WHEN status = 'REJECTED' THEN NULL ELSE reject_reason END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = @id",
+            new
+            {
+                id,
+                title = req.title.Trim(),
+                description = req.description?.Trim(),
+                due_at = req.due_at?.Trim(),
+                cpPoints
+            });
 
-    return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
+        if (req.assignee_contributions != null && req.assignee_contributions.Any())
+        {
+            conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+            foreach (var ac in req.assignee_contributions)
+            {
+                conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
+                    new { id, uid = ac.user_id, pct = ac.contribution_pct });
+            }
+        }
+        else if (req.assignee_ids != null)
+        {
+            conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
+            int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
+            foreach (var uid in req.assignee_ids)
+            {
+                conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
+                    new { id, uid, defaultPct });
+            }
+        }
+
+        return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: "Lỗi khi cập nhật mục checklist: " + ex.Message, statusCode: 500);
+    }
 });
 
 app.MapPost("/api/subtasks/{id:long}/accept", (long id, HttpContext ctx) =>
