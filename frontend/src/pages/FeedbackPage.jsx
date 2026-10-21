@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { CATEGORIES } from "../constants/shifts";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -71,7 +71,7 @@ export function FeedbackPage() {
         is_anonymous: isAnonymous,
       });
 
-      showToastMsg("Đã đăng góp ý thành công lên bảng tin toàn công ty!");
+      showToastMsg("Đã đăng góp ý thành công lên bảng tin!");
       setShowModal(false);
       setTitle("");
       setContent("");
@@ -154,10 +154,10 @@ export function FeedbackPage() {
       }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
-            Hòm Thư & Bảng Góp Ý Toàn Công Ty
+            Hòm Thư & Bảng Góp Ý
           </h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-            Mọi thành viên công ty đều có thể chia sẻ ý kiến, đề xuất cải tiến hoặc gửi ẩn danh
+            Mọi thành viên đều có thể chia sẻ ý kiến, đề xuất cải tiến hoặc gửi ẩn danh
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export function FeedbackPage() {
           <div className="glass-card" style={{ gridColumn: "1 / -1", padding: "50px 20px", textAlign: "center", color: "var(--text-muted)" }}>
             <MessageSquare size={40} color="#cbd5e1" style={{ marginBottom: 12 }} />
             <p style={{ fontSize: 15, fontWeight: 600 }}>Chưa có ý kiến đóng góp nào trong mục này</p>
-            <p style={{ fontSize: 13 }}>Hãy là người đầu tiên gửi ý kiến xây dựng công ty tốt hơn!</p>
+            <p style={{ fontSize: 13 }}>Hãy là người đầu tiên gửi ý kiến đóng góp xây dựng tập thể tốt hơn!</p>
           </div>
         ) : (
           filteredFeedbacks.map((fb) => {
@@ -367,7 +367,7 @@ export function FeedbackPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: "26px" }}>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
-              Gửi Ý Kiến Đóng Góp Cho Công Ty
+              Gửi Ý Kiến Đóng Góp
             </h3>
             <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 18 }}>
               Mọi ý kiến của bạn đều được ghi nhận để cùng xây dựng môi trường làm việc tốt hơn.
@@ -463,7 +463,7 @@ export function FeedbackPage() {
               Phản Hồi Ý Kiến: "{replyingFeedback.title}"
             </h3>
             <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
-              Câu trả lời sẽ được hiển thị công khai ngay dưới góp ý để toàn công ty cùng theo dõi.
+              Câu trả lời sẽ được hiển thị công khai ngay dưới góp ý để mọi người cùng theo dõi.
             </p>
 
             <div className="form-group">

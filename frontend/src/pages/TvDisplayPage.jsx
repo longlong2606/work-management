@@ -302,7 +302,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
               </span>
             </div>
             <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-              Hệ thống Quản lý 9 Ca & Kiosk Trình Chiếu Trực Quan Toàn Công Ty
+              Hệ thống Quản lý 9 Ca & Kiosk Trình Chiếu Trực Quan
             </div>
           </div>
         </div>
