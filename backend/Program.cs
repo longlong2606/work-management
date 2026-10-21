@@ -1622,6 +1622,7 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
         : Enumerable.Range(1, 9).ToList();
 
     int affectedCount = 0;
+    int skippedDuplicates = 0;
 
     foreach (var date in targetDates.OrderBy(x => x))
     {
@@ -1654,32 +1655,40 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
             }
             else
             {
-                if (existingReg.attendance_status != "absent")
+                string attStatus = existingReg.attendance_status ?? "present";
+                if (attStatus == "pending_absence" || attStatus == "absent")
                 {
-                    conn.Execute(@"
-                        UPDATE shift_registrations 
-                        SET status = 'registered',
-                            attendance_status = 'pending_absence', 
-                            absence_reason = @reason, 
-                            absence_reported_at = CURRENT_TIMESTAMP,
-                            absence_approved_by = NULL,
-                            absence_approved_at = NULL,
-                            note = @note
-                        WHERE id = @id",
-                        new { 
-                            reason = req.reason.Trim(), 
-                            note = $"Đơn xin vắng ca nhiều ngày/tuần (Chờ duyệt). Lý do: {req.reason.Trim()}", 
-                            id = existingReg.id 
-                        }
-                    );
-                    affectedCount++;
+                    skippedDuplicates++;
+                    continue;
                 }
+
+                conn.Execute(@"
+                    UPDATE shift_registrations 
+                    SET status = 'registered',
+                        attendance_status = 'pending_absence', 
+                        absence_reason = @reason, 
+                        absence_reported_at = CURRENT_TIMESTAMP,
+                        absence_approved_by = NULL,
+                        absence_approved_at = NULL,
+                        note = @note
+                    WHERE id = @id",
+                    new { 
+                        reason = req.reason.Trim(), 
+                        note = $"Đơn xin vắng ca nhiều ngày/tuần (Chờ duyệt). Lý do: {req.reason.Trim()}", 
+                        id = existingReg.id 
+                    }
+                );
+                affectedCount++;
             }
         }
     }
 
     if (affectedCount == 0)
     {
+        if (skippedDuplicates > 0)
+        {
+            return Results.BadRequest(new { detail = $"Tất cả {skippedDuplicates} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Không thể gửi trùng lặp!" });
+        }
         return Results.BadRequest(new { detail = "Không có ca trực hợp lệ để nộp đơn báo vắng (vui lòng chọn ca làm việc hợp lệ)." });
     }
 
@@ -1705,11 +1714,18 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
         }
     );
 
+    var successMessage = $"Đã gửi đơn xin nghỉ thành công cho {affectedCount} ca làm việc!";
+    if (skippedDuplicates > 0)
+    {
+        successMessage += $" (Đã tự động bỏ qua {skippedDuplicates} ca đã nộp đơn trước đó để tránh trùng lặp)";
+    }
+
     return Results.Ok(new {
         success = true,
         affected_count = affectedCount,
+        skipped_duplicates = skippedDuplicates,
         dates_count = targetDates.Count,
-        message = $"Đã gửi đơn xin nghỉ thành công cho {affectedCount} ca làm việc!"
+        message = successMessage
     });
 });
 
@@ -1736,9 +1752,23 @@ app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext
     if (shift == null) return Results.NotFound(new { detail = "Không tìm thấy ca làm việc!" });
 
     var existingReg = conn.QueryFirstOrDefault(
-        "SELECT id FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+        "SELECT id, attendance_status FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
         new { uid = targetUserId, sid = req.shift_id, wdate = req.work_date }
     );
+
+    // Không cho phép báo vắng trùng lặp nếu ca này đã có đơn chờ duyệt hoặc đã được duyệt nghỉ
+    if (existingReg != null)
+    {
+        string attStatus = existingReg.attendance_status ?? "present";
+        if (attStatus == "pending_absence")
+        {
+            return Results.BadRequest(new { detail = "Bạn đã nộp đơn báo vắng cho ca trực này rồi và đang chờ Quản lý phê duyệt. Không thể gửi trùng lặp!" });
+        }
+        if (attStatus == "absent")
+        {
+            return Results.BadRequest(new { detail = "Ca trực này đã được Quản lý phê duyệt vắng mặt rồi, không cần gửi lại đơn!" });
+        }
+    }
 
     // Khi nhân viên báo vắng: Trạng thái là pending_absence (chờ Quản lý phê duyệt)
     if (existingReg == null)
@@ -1761,7 +1791,8 @@ app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext
     {
         conn.Execute(@"
             UPDATE shift_registrations 
-            SET attendance_status = 'pending_absence', 
+            SET status = 'registered',
+                attendance_status = 'pending_absence', 
                 absence_reason = @reason, 
                 absence_reported_at = CURRENT_TIMESTAMP,
                 absence_approved_by = NULL,

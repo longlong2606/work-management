@@ -336,6 +336,19 @@ export function SchedulePage() {
 
   // Open Report Absence Modal
   const openReportAbsence = (shift, day, targetUser = null) => {
+    const targetUid = targetUser?.id || user?.id;
+    const existing = schedule.find(
+      (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === targetUid
+    );
+    if (existing?.attendance_status === "pending_absence") {
+      showToast("Bạn đã nộp đơn báo vắng cho ca trực này rồi và đang chờ Quản lý phê duyệt. Không thể gửi trùng lặp!", "warning");
+      return;
+    }
+    if (existing?.attendance_status === "absent") {
+      showToast("Ca trực này đã được Quản lý phê duyệt vắng mặt rồi, không cần gửi lại đơn!", "warning");
+      return;
+    }
+
     setReportAbsenceModal({
       open: true,
       shiftId: shift.id,
@@ -1761,23 +1774,73 @@ export function SchedulePage() {
                                 className="schedule-cell-actions"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <button
-                                  onClick={() => openReportAbsence(shift, day)}
-                                  style={{
-                                    background: "#fee2e2",
-                                    border: "1px solid #fca5a5",
-                                    borderRadius: 4,
-                                    padding: "2px 6px",
-                                    fontSize: 9.5,
-                                    fontWeight: 700,
-                                    color: "#b91c1c",
-                                    cursor: "pointer",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title="Báo vắng ca này"
-                                >
-                                  Báo vắng
-                                </button>
+                                {(() => {
+                                  const myRegInSlot = schedule.find(
+                                    (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
+                                  );
+                                  const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
+                                  const isMyAbsent = myRegInSlot?.attendance_status === "absent";
+
+                                  if (isMyPending) {
+                                    return (
+                                      <button
+                                        onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
+                                        style={{
+                                          background: "#fef3c7",
+                                          border: "1px solid #fde68a",
+                                          borderRadius: 4,
+                                          padding: "2px 6px",
+                                          fontSize: 9.5,
+                                          fontWeight: 700,
+                                          color: "#92400e",
+                                          cursor: "pointer",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                        title="Đơn vắng đang chờ Quản lý duyệt. Nhấn để hủy đơn và có mặt lại."
+                                      >
+                                        🟡 Chờ duyệt
+                                      </button>
+                                    );
+                                  }
+                                  if (isMyAbsent) {
+                                    return (
+                                      <span
+                                        style={{
+                                          background: "#fee2e2",
+                                          border: "1px solid #fca5a5",
+                                          borderRadius: 4,
+                                          padding: "2px 5px",
+                                          fontSize: 9,
+                                          fontWeight: 700,
+                                          color: "#991b1b",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                        title="Đã được duyệt vắng mặt"
+                                      >
+                                        🔴 Đã nghỉ
+                                      </span>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      onClick={() => openReportAbsence(shift, day)}
+                                      style={{
+                                        background: "#fee2e2",
+                                        border: "1px solid #fca5a5",
+                                        borderRadius: 4,
+                                        padding: "2px 6px",
+                                        fontSize: 9.5,
+                                        fontWeight: 700,
+                                        color: "#b91c1c",
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                      title="Báo vắng ca này"
+                                    >
+                                      Báo vắng
+                                    </button>
+                                  );
+                                })()}
                                 {isAdmin && (
                                   <button
                                     onClick={() => openCreateEventModal(shift.id, day.dateStr)}
@@ -2071,21 +2134,62 @@ export function SchedulePage() {
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <button
-                        onClick={() => openReportAbsence(shift, dayObj)}
-                        style={{
-                          background: "#fee2e2",
-                          border: "1px solid #fca5a5",
-                          color: "#b91c1c",
-                          borderRadius: 6,
-                          padding: "6px 12px",
-                          fontWeight: 700,
-                          fontSize: 12,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Báo Vắng Ca Này
-                      </button>
+                      {(() => {
+                        const myRegInDayShift = schedule.find(
+                          (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
+                        );
+                        const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
+                        const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
+
+                        if (isMyPendingInDay) {
+                          return (
+                            <button
+                              onClick={() => handleCancelAbsence(shift.id, currentDate, user?.id)}
+                              style={{
+                                background: "#fef3c7",
+                                border: "1px solid #fde68a",
+                                color: "#92400e",
+                                borderRadius: 6,
+                                padding: "6px 12px",
+                                fontWeight: 700,
+                                fontSize: 12,
+                                cursor: "pointer",
+                              }}
+                              title="Đơn báo vắng đang chờ Quản lý duyệt. Nhấn để hủy đơn và có mặt lại."
+                            >
+                              🟡 Chờ Duyệt (Hủy Đơn)
+                            </button>
+                          );
+                        }
+                        if (isMyAbsentInDay) {
+                          return (
+                            <button
+                              onClick={() => handleCancelAbsence(shift.id, currentDate, user?.id)}
+                              className="btn btn-primary btn-sm"
+                              title="Đã duyệt vắng mặt. Nhấn để xác nhận có mặt lại."
+                            >
+                              Xác Nhận Có Mặt Lại
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => openReportAbsence(shift, dayObj)}
+                            style={{
+                              background: "#fee2e2",
+                              border: "1px solid #fca5a5",
+                              color: "#b91c1c",
+                              borderRadius: 6,
+                              padding: "6px 12px",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Báo Vắng Ca Này
+                          </button>
+                        );
+                      })()}
                       <button
                         onClick={() => openRosterModal(shift, dayObj)}
                         className="btn btn-primary btn-sm"
@@ -2145,6 +2249,7 @@ export function SchedulePage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {myShiftsInWeek.map((shift) => {
                 const isAbsent = shift.attendance_status === "absent";
+                const isPending = shift.attendance_status === "pending_absence";
                 return (
                   <div
                     key={shift.id}
@@ -2154,8 +2259,8 @@ export function SchedulePage() {
                       justifyContent: "space-between",
                       padding: 14,
                       borderRadius: 10,
-                      background: isAbsent ? "#fef2f2" : "#f8fafc",
-                      border: isAbsent ? "1.5px solid #ef4444" : "1px solid #e2e8f0",
+                      background: isAbsent ? "#fef2f2" : isPending ? "#fffbeb" : "#f8fafc",
+                      border: isAbsent ? "1.5px solid #ef4444" : isPending ? "1.5px solid #f59e0b" : "1px solid #e2e8f0",
                     }}
                   >
                     <div>
@@ -2163,7 +2268,7 @@ export function SchedulePage() {
                         style={{
                           fontWeight: 700,
                           fontSize: 14,
-                          color: isAbsent ? "#991b1b" : "#0f172a",
+                          color: isAbsent ? "#991b1b" : isPending ? "#b45309" : "#0f172a",
                           display: "flex",
                           alignItems: "center",
                           gap: 8,
@@ -2183,7 +2288,20 @@ export function SchedulePage() {
                               borderRadius: 4,
                             }}
                           >
-                            🔴 VẮNG MẶT
+                            🔴 VẮNG MẶT (ĐÃ DUYỆT)
+                          </span>
+                        ) : isPending ? (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              background: "#f59e0b",
+                              color: "#fff",
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            🟡 ĐƠN CHỜ QUẢN LÝ DUYỆT
                           </span>
                         ) : (
                           <span
@@ -2204,16 +2322,16 @@ export function SchedulePage() {
                         Ngày làm: <strong>{shift.work_date}</strong> • Ghi chú:{" "}
                         {shift.note || "Không có"}
                       </div>
-                      {isAbsent && shift.absence_reason && (
+                      {(isAbsent || isPending) && shift.absence_reason && (
                         <div
                           style={{
                             fontSize: 12,
-                            color: "#991b1b",
+                            color: isAbsent ? "#991b1b" : "#b45309",
                             fontStyle: "italic",
                             marginTop: 3,
                           }}
                         >
-                          Lý do báo vắng: "{shift.absence_reason}"
+                          Lý do xin vắng: "{shift.absence_reason}"
                         </div>
                       )}
                     </div>
@@ -2225,6 +2343,23 @@ export function SchedulePage() {
                           className="btn btn-primary btn-sm"
                         >
                           Xác Nhận Có Mặt Lại
+                        </button>
+                      ) : isPending ? (
+                        <button
+                          onClick={() => handleCancelAbsence(shift.shift_id, shift.work_date, user?.id)}
+                          style={{
+                            background: "#fef3c7",
+                            border: "1px solid #fde68a",
+                            color: "#92400e",
+                            borderRadius: 6,
+                            padding: "6px 12px",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            cursor: "pointer",
+                          }}
+                          title="Hủy đơn xin nghỉ này và xác nhận có mặt lại"
+                        >
+                          Hủy Đơn Vắng
                         </button>
                       ) : (
                         <button

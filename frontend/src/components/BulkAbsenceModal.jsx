@@ -116,7 +116,7 @@ export function BulkAbsenceModal({
     return [1, 2, 3, 4, 5, 6, 7, 8, 9];
   }, [shiftScope, customShiftIds]);
 
-  // Calculate matching scheduled shifts for preview
+  // Calculate matching scheduled shifts for preview (exclude already absent and pending_absence)
   const affectedShifts = useMemo(() => {
     const uid = Number(targetUserId) || currentUser?.id;
     return schedule.filter((s) => {
@@ -124,10 +124,26 @@ export function BulkAbsenceModal({
         s.user_id === uid &&
         finalDates.includes(s.work_date) &&
         finalShiftIds.includes(s.shift_id) &&
-        s.attendance_status !== "absent"
+        s.attendance_status !== "absent" &&
+        s.attendance_status !== "pending_absence"
       );
     });
   }, [schedule, targetUserId, currentUser, finalDates, finalShiftIds]);
+
+  // Detected duplicate shifts that already have an absence request or are marked absent
+  const duplicateShifts = useMemo(() => {
+    const uid = Number(targetUserId) || currentUser?.id;
+    return schedule.filter((s) => {
+      return (
+        s.user_id === uid &&
+        finalDates.includes(s.work_date) &&
+        finalShiftIds.includes(s.shift_id) &&
+        (s.attendance_status === "absent" || s.attendance_status === "pending_absence")
+      );
+    });
+  }, [schedule, targetUserId, currentUser, finalDates, finalShiftIds]);
+
+  const allSelectedDuplicates = duplicateShifts.length > 0 && affectedShifts.length === 0;
 
   if (!isOpen) return null;
 
@@ -151,6 +167,10 @@ export function BulkAbsenceModal({
     const targetUid = Number(targetUserId) || currentUser?.id;
     if (!targetUid) {
       setErrorMsg("Vui lòng chọn nhân sự nộp đơn!");
+      return;
+    }
+    if (allSelectedDuplicates) {
+      setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Không thể gửi trùng lặp!`);
       return;
     }
     if (!reason.trim()) {
@@ -694,8 +714,8 @@ export function BulkAbsenceModal({
               <div
                 style={{
                   padding: "14px 16px",
-                  background: affectedShifts.length > 0 ? "#fffbeb" : "#f8fafc",
-                  border: affectedShifts.length > 0 ? "1.5px solid #fde68a" : "1px solid #e2e8f0",
+                  background: allSelectedDuplicates ? "#fef2f2" : affectedShifts.length > 0 ? "#fffbeb" : "#f8fafc",
+                  border: allSelectedDuplicates ? "1.5px solid #fca5a5" : affectedShifts.length > 0 ? "1.5px solid #fde68a" : "1px solid #e2e8f0",
                   borderRadius: 12,
                   flex: 1,
                   display: "flex",
@@ -704,13 +724,16 @@ export function BulkAbsenceModal({
                 }}
               >
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
-                    <Clock size={16} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: allSelectedDuplicates ? "#b91c1c" : affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
+                    {allSelectedDuplicates ? <AlertTriangle size={16} /> : <Clock size={16} />}
                     <span>
-                      Tìm thấy {affectedShifts.length} ca trực phù hợp trong lịch
+                      {allSelectedDuplicates 
+                        ? `Tất cả ${duplicateShifts.length} ca đã nộp đơn hoặc duyệt nghỉ!`
+                        : `Tìm thấy ${affectedShifts.length} ca trực hợp lệ cần báo vắng`}
                     </span>
                   </div>
-                  {affectedShifts.length > 0 ? (
+
+                  {affectedShifts.length > 0 && (
                     <div style={{ fontSize: 11, color: "#78350f", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
                       Các ca này sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>:
                       <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -726,7 +749,47 @@ export function BulkAbsenceModal({
                         )}
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {duplicateShifts.length > 0 && (
+                    <div
+                      style={{
+                        background: "#fff7ed",
+                        border: "1px solid #fed7aa",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        marginTop: 8,
+                        fontSize: 11,
+                        color: "#9a3412",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+                        <AlertTriangle size={13} color="#ea580c" />
+                        <span>Đã tự động loại trừ {duplicateShifts.length} ca trùng lặp (không báo lại):</span>
+                      </div>
+                      <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 80, overflowY: "auto" }}>
+                        {duplicateShifts.map((s, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              background: s.attendance_status === "pending_absence" ? "#fef3c7" : "#fee2e2",
+                              color: s.attendance_status === "pending_absence" ? "#92400e" : "#991b1b",
+                              border: "1px solid",
+                              borderColor: s.attendance_status === "pending_absence" ? "#fde68a" : "#fca5a5",
+                              padding: "1px 5px",
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")}) - {s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {affectedShifts.length === 0 && duplicateShifts.length === 0 && (
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
                       ℹ️ Chưa tìm thấy ca phân công nào của nhân sự trong khoảng thời gian đã chọn.
                     </div>
@@ -753,11 +816,23 @@ export function BulkAbsenceModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="btn btn-danger btn-sm"
-              style={{ fontWeight: 700, padding: "8px 18px", display: "inline-flex", alignItems: "center", gap: 6 }}
+              disabled={loading || allSelectedDuplicates}
+              className={`btn btn-sm ${allSelectedDuplicates ? "btn-secondary" : "btn-danger"}`}
+              style={{
+                fontWeight: 700,
+                padding: "8px 18px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: (loading || allSelectedDuplicates) ? "not-allowed" : "pointer",
+                opacity: allSelectedDuplicates ? 0.7 : 1,
+              }}
             >
-              {loading ? "Đang gửi..." : `✓ Gửi Đơn Báo Vắng (${affectedShifts.length || finalDates.length * finalShiftIds.length} ca)`}
+              {loading
+                ? "Đang gửi..."
+                : allSelectedDuplicates
+                ? "⚠️ Tất cả ca đã báo vắng (Trùng lặp)"
+                : `✓ Gửi Đơn Báo Vắng (${affectedShifts.length || finalDates.length * finalShiftIds.length} ca)`}
             </button>
           </div>
         </form>
