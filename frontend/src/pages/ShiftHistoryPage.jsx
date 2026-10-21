@@ -32,7 +32,6 @@ export function ShiftHistoryPage() {
     setError(null);
     try {
       const data = await api.getShiftHistory({
-        action: actionFilter !== "ALL" ? actionFilter : undefined,
         work_date: dateFilter || undefined,
       });
       setHistoryList(data || []);
@@ -45,7 +44,7 @@ export function ShiftHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
-  }, [actionFilter, dateFilter]);
+  }, [dateFilter]);
 
   // Client-side filter by action group and search keyword
   const filteredHistory = useMemo(() => {
@@ -272,7 +271,7 @@ export function ShiftHistoryPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px" }}>
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px", animation: "fadeIn 0.2s ease-out" }}>
       {/* Header */}
       <div style={{
         display: "flex",
@@ -313,7 +312,7 @@ export function ShiftHistoryPage() {
           className="btn btn-secondary"
           style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}
         >
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={15} className={loading ? "spin" : ""} />
           Làm mới
         </button>
       </div>
@@ -438,7 +437,8 @@ export function ShiftHistoryPage() {
               border: "1px solid",
               borderColor: actionFilter === "ALL" ? "#2563eb" : "var(--border)",
               background: actionFilter === "ALL" ? "#eff6ff" : "#ffffff",
-              color: actionFilter === "ALL" ? "#2563eb" : "#475569"
+              color: actionFilter === "ALL" ? "#2563eb" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
             Tất cả ({totalCount})
@@ -454,7 +454,8 @@ export function ShiftHistoryPage() {
               border: "1px solid",
               borderColor: actionFilter === "REGISTER" ? "#16a34a" : "var(--border)",
               background: actionFilter === "REGISTER" ? "#f0fdf4" : "#ffffff",
-              color: actionFilter === "REGISTER" ? "#16a34a" : "#475569"
+              color: actionFilter === "REGISTER" ? "#16a34a" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
             + Đăng ký ({registerCount})
@@ -470,7 +471,8 @@ export function ShiftHistoryPage() {
               border: "1px solid",
               borderColor: actionFilter === "CANCEL" ? "#dc2626" : "var(--border)",
               background: actionFilter === "CANCEL" ? "#fef2f2" : "#ffffff",
-              color: actionFilter === "CANCEL" ? "#dc2626" : "#475569"
+              color: actionFilter === "CANCEL" ? "#dc2626" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
             - Hủy ca ({cancelCount})
@@ -486,7 +488,8 @@ export function ShiftHistoryPage() {
               border: "1px solid",
               borderColor: actionFilter === "CHANGE" ? "#7e22ce" : "var(--border)",
               background: actionFilter === "CHANGE" ? "#f3e8ff" : "#ffffff",
-              color: actionFilter === "CHANGE" ? "#7e22ce" : "#475569"
+              color: actionFilter === "CHANGE" ? "#7e22ce" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
             ⇄ Đổi ca ({changeCount})
@@ -502,7 +505,8 @@ export function ShiftHistoryPage() {
               border: "1px solid",
               borderColor: actionFilter === "ABSENCE" ? "#d97706" : "var(--border)",
               background: actionFilter === "ABSENCE" ? "#fef3c7" : "#ffffff",
-              color: actionFilter === "ABSENCE" ? "#d97706" : "#475569"
+              color: actionFilter === "ABSENCE" ? "#d97706" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
             🚫 Báo vắng ({absenceCount})
@@ -587,11 +591,13 @@ export function ShiftHistoryPage() {
         borderRadius: 14,
         border: "1px solid var(--border)",
         overflow: "hidden",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+        minHeight: 280,
       }}>
         {loading ? (
-          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>
-            Đang tải lịch sử đăng ký / hủy ca...
+          <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--text-muted)", fontSize: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <RefreshCw size={24} className="spin" color="#2563eb" />
+            <span>Đang tải nhật ký lịch sử ca...</span>
           </div>
         ) : filteredHistory.length === 0 ? (
           <div style={{ padding: "50px 20px", textAlign: "center" }}>
@@ -669,7 +675,7 @@ export function ShiftHistoryPage() {
                               {row.full_name}
                             </div>
                             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                              @{row.username} {row.department ? `• ${row.department}` : ""}
+                              @{row.username}
                             </div>
                           </div>
                         </div>

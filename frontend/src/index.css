@@ -1052,7 +1052,8 @@ div[style*="overflow-x: auto"] {
   }
 }
 
-.spin {
+.spin,
+.animate-spin {
   animation: spin 0.8s linear infinite !important;
 }
 
