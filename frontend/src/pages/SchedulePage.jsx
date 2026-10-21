@@ -1564,46 +1564,6 @@ export function SchedulePage() {
                             </button>
                           )}
                         </div>
-                        {(() => {
-                          const allDayEvents = events.filter(
-                            (e) => (!e.shift_id || e.shift_id === 0) && (!e.work_date || e.work_date === day.dateStr)
-                          );
-                          if (allDayEvents.length === 0) return null;
-                          return (
-                            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
-                              {allDayEvents.map((ev) => (
-                                <div
-                                  key={ev.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEventModal(null, day, [ev]);
-                                  }}
-                                  style={{
-                                    background: "linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%)",
-                                    border: "1px solid #c084fc",
-                                    borderRadius: 6,
-                                    padding: "3px 6px",
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: "#6b21a8",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 4,
-                                    cursor: "pointer",
-                                    boxShadow: "0 1px 3px rgba(126, 34, 206, 0.08)",
-                                  }}
-                                  title={`Sự kiện cả ngày: ${ev.title}${ev.description ? ` - ${ev.description}` : ""}`}
-                                >
-                                  <Sparkles size={11} color="#9333ea" />
-                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isExpanded ? 260 : 150 }}>
-                                    {ev.title}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
                       </th>
                     );
                   })}
