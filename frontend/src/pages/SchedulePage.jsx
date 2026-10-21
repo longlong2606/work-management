@@ -1920,65 +1920,97 @@ export function SchedulePage() {
                             {/* Events list: ONLY rendered when events actually exist! */}
                             {eventsInThisSlot.length > 0 && (
                               <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 2, borderTop: "1px dashed #e2e8f0", paddingTop: 4 }}>
-                                {eventsInThisSlot.map((ev) => {
-                                  const badge = getEventTypeBadge(ev.event_type);
-                                  return (
-                                    <div
-                                      key={ev.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openEventModal(shift, day, eventsInThisSlot);
-                                      }}
-                                      style={{
-                                        display: "flex",
-                                        flexDirection: isExpanded ? "column" : "row",
-                                        alignItems: isExpanded ? "flex-start" : "center",
-                                        gap: 3,
-                                        padding: isExpanded ? "4px 7px" : "2px 5px",
-                                        borderRadius: 4,
-                                        background: badge.bg,
-                                        border: `1px solid ${badge.border}`,
-                                        color: badge.color,
-                                        fontSize: 9.5,
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                      }}
-                                      title={`${ev.title}${ev.description ? ` - ${ev.description}` : ""}`}
-                                    >
-                                      <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
-                                        <span style={{ fontSize: 9 }}>{badge.icon}</span>
-                                        {(!ev.shift_id || ev.shift_id === 0) && (
-                                          <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#7e22ce", color: "#fff", flexShrink: 0 }}>
-                                            CẢ NGÀY
-                                          </span>
-                                        )}
-                                        <span
-                                          style={{
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            whiteSpace: isExpanded ? "normal" : "nowrap",
-                                            flex: 1,
-                                          }}
-                                        >
-                                          {ev.title}
-                                        </span>
-                                      </div>
-                                      {isExpanded && ev.description && (
-                                        <div
-                                          style={{
-                                            fontSize: 9,
-                                            color: "#475569",
-                                            paddingLeft: 14,
-                                            lineHeight: 1.2,
-                                            opacity: 0.9,
-                                          }}
-                                        >
-                                          {ev.description}
-                                        </div>
-                                      )}
+                                {!isExpanded && eventsInThisSlot.length > 1 ? (
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEventModal(shift, day, eventsInThisSlot);
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: 4,
+                                      padding: "2.5px 7px",
+                                      borderRadius: 5,
+                                      background: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
+                                      border: "1px solid #c084fc",
+                                      color: "#6b21a8",
+                                      fontSize: 9.5,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      boxShadow: "0 1px 2px rgba(126, 34, 206, 0.08)",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title={`Có ${eventsInThisSlot.length} sự kiện trong ca:\n` + eventsInThisSlot.map((e, idx) => `${idx + 1}. ${(!e.shift_id || e.shift_id === 0) ? "[CẢ NGÀY] " : ""}${e.title}${e.description ? ` (${e.description})` : ""}`).join("\n") + "\n\n👉 Bấm để xem chi tiết tất cả sự kiện"}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+                                      <Sparkles size={11} color="#9333ea" style={{ flexShrink: 0 }} />
+                                      <span style={{ whiteSpace: "nowrap" }}>{eventsInThisSlot.length} sự kiện</span>
                                     </div>
-                                  );
-                                })}
+                                    <span style={{ fontSize: 9.5, opacity: 0.75, fontWeight: 800, flexShrink: 0 }}>›</span>
+                                  </div>
+                                ) : (
+                                  eventsInThisSlot.map((ev) => {
+                                    const badge = getEventTypeBadge(ev.event_type);
+                                    return (
+                                      <div
+                                        key={ev.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEventModal(shift, day, eventsInThisSlot);
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          flexDirection: isExpanded ? "column" : "row",
+                                          alignItems: isExpanded ? "flex-start" : "center",
+                                          gap: 3,
+                                          padding: isExpanded ? "4px 7px" : "2px 5px",
+                                          borderRadius: 4,
+                                          background: badge.bg,
+                                          border: `1px solid ${badge.border}`,
+                                          color: badge.color,
+                                          fontSize: 9.5,
+                                          fontWeight: 600,
+                                          cursor: "pointer",
+                                        }}
+                                        title={`${ev.title}${ev.description ? ` - ${ev.description}` : ""}`}
+                                      >
+                                        <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
+                                          <span style={{ fontSize: 9 }}>{badge.icon}</span>
+                                          {(!ev.shift_id || ev.shift_id === 0) && (
+                                            <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#7e22ce", color: "#fff", flexShrink: 0 }}>
+                                              CẢ NGÀY
+                                            </span>
+                                          )}
+                                          <span
+                                            style={{
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: isExpanded ? "normal" : "nowrap",
+                                              flex: 1,
+                                            }}
+                                          >
+                                            {ev.title}
+                                          </span>
+                                        </div>
+                                        {isExpanded && ev.description && (
+                                          <div
+                                            style={{
+                                              fontSize: 9,
+                                              color: "#475569",
+                                              paddingLeft: 14,
+                                              lineHeight: 1.2,
+                                              opacity: 0.9,
+                                            }}
+                                          >
+                                            {ev.description}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                                )}
                               </div>
                             )}
                           </div>
