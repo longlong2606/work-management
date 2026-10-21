@@ -336,17 +336,19 @@ export function SchedulePage() {
 
   // Open Report Absence Modal
   const openReportAbsence = (shift, day, targetUser = null) => {
-    const targetUid = targetUser?.id || user?.id;
-    const existing = schedule.find(
-      (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === targetUid
-    );
-    if (existing?.attendance_status === "pending_absence") {
-      showToast("Bạn đã nộp đơn báo vắng cho ca trực này rồi và đang chờ Quản lý phê duyệt. Không thể gửi trùng lặp!", "warning");
-      return;
-    }
-    if (existing?.attendance_status === "absent") {
-      showToast("Ca trực này đã được Quản lý phê duyệt vắng mặt rồi, không cần gửi lại đơn!", "warning");
-      return;
+    const finalTarget = targetUser || (isAdmin ? (allMembers.find(m => m.id !== user?.id) || user) : user);
+    if (!isAdmin && finalTarget) {
+      const existing = schedule.find(
+        (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === finalTarget.id
+      );
+      if (existing?.attendance_status === "pending_absence") {
+        showToast("Bạn đã nộp đơn báo vắng cho ca trực này rồi và đang chờ Quản lý phê duyệt. Không thể gửi trùng lặp!", "warning");
+        return;
+      }
+      if (existing?.attendance_status === "absent") {
+        showToast("Ca trực này đã được Quản lý phê duyệt vắng mặt rồi, không cần gửi lại đơn!", "warning");
+        return;
+      }
     }
 
     setReportAbsenceModal({
@@ -355,7 +357,7 @@ export function SchedulePage() {
       workDate: day.dateStr,
       shiftName: shift.name,
       shiftLabel: shift.label,
-      targetUser: targetUser || user,
+      targetUser: finalTarget,
       reason: "",
       submitting: false,
     });
@@ -1682,9 +1684,9 @@ export function SchedulePage() {
                             onClick={() => openRosterModal(shift, day)}
                             title={`Bấm để xem danh sách ${totalMembers} thành viên & điểm danh`}
                           >
-                            {/* Member count chip & Quick hover actions */}
+                            {/* Dòng 1: Đội ngũ & Nút thao tác nhanh */}
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
                                 <div
                                   style={{
                                     display: "inline-flex",
@@ -1729,42 +1731,6 @@ export function SchedulePage() {
                                     }}
                                   >
                                     🟡 {pendingInSlot.length} chờ
-                                  </span>
-                                )}
-                                {conflictsInSlot.length > 0 && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      background: "#fef3c7",
-                                      color: "#b45309",
-                                      border: "1px solid #fde68a",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                    }}
-                                    title={conflictsInSlot
-                                      .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
-                                      .join("\n")}
-                                  >
-                                    🎓 {conflictsInSlot.length}
-                                  </span>
-                                )}
-                                {customizedInSlot.length > 0 && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      background: "#f0fdf4",
-                                      color: "#15803d",
-                                      border: "1px solid #86efac",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                    }}
-                                    title={customizedInSlot
-                                      .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
-                                      .join("\n")}
-                                  >
-                                    ⏱️ {customizedInSlot.length}
                                   </span>
                                 )}
                               </div>
@@ -1862,6 +1828,106 @@ export function SchedulePage() {
                                 )}
                               </div>
                             </div>
+
+                            {/* Dòng 2: Hiển thị đích danh người xin nghỉ để không ai bị nhầm lẫn */}
+                            {(absentInSlot.length > 0 || pendingInSlot.length > 0) && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
+                                {absentInSlot.map((a) => (
+                                  <div
+                                    key={a.id}
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: 700,
+                                      background: "#fee2e2",
+                                      color: "#991b1b",
+                                      border: "1px solid #fca5a5",
+                                      padding: "2px 5px",
+                                      borderRadius: 4,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    title={`Vắng mặt: ${a.full_name || a.username} (${a.absence_reason || "Đã duyệt nghỉ"})`}
+                                  >
+                                    <span>🔴</span>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      {a.full_name || a.username} (Vắng)
+                                    </span>
+                                  </div>
+                                ))}
+                                {pendingInSlot.map((p) => (
+                                  <div
+                                    key={p.id}
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: 700,
+                                      background: "#fef3c7",
+                                      color: "#92400e",
+                                      border: "1px solid #fde68a",
+                                      padding: "2px 5px",
+                                      borderRadius: 4,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    title={`Đang chờ duyệt: ${p.full_name || p.username} (${p.absence_reason || "Đang xin nghỉ"})`}
+                                  >
+                                    <span>🟡</span>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      {p.full_name || p.username} (Chờ duyệt)
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Dòng 3: Trùng TKB hoặc Chỉnh sửa giờ */}
+                            {(conflictsInSlot.length > 0 || customizedInSlot.length > 0) && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 2 }}>
+                                {conflictsInSlot.length > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      background: "#fffbeb",
+                                      color: "#b45309",
+                                      border: "1px solid #fde68a",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                    }}
+                                    title={conflictsInSlot
+                                      .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
+                                      .join("\n")}
+                                  >
+                                    🎓 {conflictsInSlot.length}
+                                  </span>
+                                )}
+                                {customizedInSlot.length > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      background: "#f0fdf4",
+                                      color: "#15803d",
+                                      border: "1px solid #86efac",
+                                      padding: "1px 5px",
+                                      borderRadius: 10,
+                                    }}
+                                    title={customizedInSlot
+                                      .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
+                                      .join("\n")}
+                                  >
+                                    ⏱️ {customizedInSlot.length}
+                                  </span>
+                                )}
+                              </div>
+                            )}
 
                             {/* Expanded details (absent list) */}
                             {isExpanded && absentInSlot.length > 0 && (
@@ -2081,6 +2147,12 @@ export function SchedulePage() {
                   s.work_date === currentDate &&
                   s.attendance_status === "absent"
               );
+              const pendingInShift = schedule.filter(
+                (s) =>
+                  s.shift_id === shift.id &&
+                  s.work_date === currentDate &&
+                  s.attendance_status === "pending_absence"
+              );
               const eventsInShift = events.filter(
                 (e) =>
                   e.shift_id === shift.id && (!e.work_date || e.work_date === currentDate)
@@ -2092,7 +2164,7 @@ export function SchedulePage() {
                   className="card"
                   style={{
                     padding: 16,
-                    borderLeft: absentInShift.length > 0 ? "4px solid #ef4444" : "4px solid #3b82f6",
+                    borderLeft: absentInShift.length > 0 ? "4px solid #ef4444" : pendingInShift.length > 0 ? "4px solid #f59e0b" : "4px solid #3b82f6",
                   }}
                 >
                   <div
@@ -2213,11 +2285,60 @@ export function SchedulePage() {
                           🟢 Đủ {totalMembers} người có mặt
                         </span>
                       )}
+                      {pendingInShift.length > 0 && (
+                        <span style={{ color: "#d97706", fontWeight: 700, marginLeft: 8 }}>
+                          • 🟡 {pendingInShift.length} chờ duyệt vắng
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>
                       📅 {eventsInShift.length} sự kiện trong ca
                     </div>
                   </div>
+
+                  {/* Hiển thị chi tiết danh tính người vắng trong ca */}
+                  {(absentInShift.length > 0 || pendingInShift.length > 0) && (
+                    <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 8, borderTop: "1px dashed #fecaca" }}>
+                      {absentInShift.map((a) => (
+                        <span
+                          key={a.id}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: "#fee2e2",
+                            color: "#991b1b",
+                            border: "1px solid #fca5a5",
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          🔴 {a.full_name || a.username} vắng: "{a.absence_reason || "Đã duyệt nghỉ"}"
+                        </span>
+                      ))}
+                      {pendingInShift.map((p) => (
+                        <span
+                          key={p.id}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: "#fef3c7",
+                            color: "#92400e",
+                            border: "1px solid #fde68a",
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          🟡 {p.full_name || p.username} xin vắng: "{p.absence_reason || "Đang xin nghỉ"}" (Chờ duyệt)
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2985,14 +3106,47 @@ export function SchedulePage() {
                   border: "1px solid #fecaca",
                 }}
               >
-                <div style={{ fontSize: 12, color: "#991b1b" }}>Nhân viên báo vắng:</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#7f1d1d", marginTop: 2 }}>
-                  {reportAbsenceModal.targetUser?.full_name || user?.full_name}
-                </div>
-                <div style={{ fontSize: 12, color: "#991b1b", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "#991b1b", fontWeight: 700 }}>Nhân viên xin nghỉ vắng:</div>
+                {isAdmin ? (
+                  <div style={{ marginTop: 4 }}>
+                    <select
+                      value={reportAbsenceModal.targetUser?.id || user?.id}
+                      onChange={(e) => {
+                        const selId = Number(e.target.value);
+                        const sel = allMembers.find((m) => m.id === selId) || user;
+                        setReportAbsenceModal((prev) => ({ ...prev, targetUser: sel }));
+                      }}
+                      className="form-control"
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 13,
+                        color: "#991b1b",
+                        background: "#ffffff",
+                        borderColor: "#fca5a5",
+                        borderRadius: 6,
+                        padding: "6px 10px",
+                        width: "100%",
+                      }}
+                    >
+                      {allMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name || m.username} (@{m.username}) {m.id === user?.id ? "— (Tôi)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#7f1d1d", marginTop: 2 }}>
+                    {reportAbsenceModal.targetUser?.full_name || user?.full_name}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: "#991b1b", marginTop: 6 }}>
                   Ca: <strong>{reportAbsenceModal.shiftName}</strong> (
                   {reportAbsenceModal.shiftLabel}) • Ngày:{" "}
                   <strong>{reportAbsenceModal.workDate}</strong>
+                </div>
+                <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 6, fontStyle: "italic" }}>
+                  💡 Đơn xin nghỉ chỉ áp dụng cho riêng nhân sự này. Các nhân sự khác trong ca vẫn làm việc bình thường.
                 </div>
               </div>
 

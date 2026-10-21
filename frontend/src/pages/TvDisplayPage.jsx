@@ -975,22 +975,28 @@ export function TvDisplayPage({ onNavigateToManagement }) {
 
                       {/* Huy hiệu vắng mặt nếu có */}
                       {shiftMembers.some((m) => m.attendance_status === "absent") && (
-                        <span
-                          style={{
-                            background: "#fee2e2",
-                            border: "1px solid #fca5a5",
-                            color: "#b91c1c",
-                            padding: "1px 6px",
-                            borderRadius: 6,
-                            fontSize: 10,
-                            fontWeight: 800,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 2
-                          }}
-                        >
-                          🔴 {shiftMembers.filter((m) => m.attendance_status === "absent").length} vắng
-                        </span>
+                        <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 3 }}>
+                          {shiftMembers.filter((m) => m.attendance_status === "absent").map((m) => (
+                            <span
+                              key={m.user_id || m.id}
+                              style={{
+                                background: "#fee2e2",
+                                border: "1px solid #fca5a5",
+                                color: "#b91c1c",
+                                padding: "1px 6px",
+                                borderRadius: 6,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 2
+                              }}
+                              title={`Vắng: ${m.full_name || m.username}`}
+                            >
+                              🔴 {m.full_name || m.username}
+                            </span>
+                          ))}
+                        </div>
                       )}
 
                       {/* Nút Xem chi tiết */}

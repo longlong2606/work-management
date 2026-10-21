@@ -366,6 +366,9 @@ export function BulkAbsenceModal({
                     {currentUser?.full_name || currentUser?.username} (@{currentUser?.username})
                   </div>
                 )}
+                <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 8, fontStyle: "italic" }}>
+                  💡 Đơn xin nghỉ vắng chỉ áp dụng riêng cho nhân sự được chọn ở trên. Các nhân viên khác trong ca vẫn làm việc bình thường.
+                </div>
               </div>
 
               {/* 2. PHẠM VI NGÀY NGHỈ */}
