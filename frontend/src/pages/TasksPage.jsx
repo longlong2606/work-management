@@ -2080,15 +2080,34 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
   const [taskType, setTaskType] = useState("RESEARCH");
   const [plannedDate, setPlannedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
-  const [leaderId, setLeaderId] = useState(allMembers[0]?.id || 1);
+  // Chỉ lọc thành viên có vai trò Trưởng nhóm (Leader)
+  const leaderMembers = useMemo(() => {
+    return (allMembers || []).filter((m) => m.role === "leader");
+  }, [allMembers]);
+
+  const [leaderId, setLeaderId] = useState(() => (allMembers || []).filter((m) => m.role === "leader")[0]?.id || "");
   const [totalCp, setTotalCp] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (leaderMembers.length > 0) {
+      if (!leaderId || !leaderMembers.some((m) => String(m.id) === String(leaderId))) {
+        setLeaderId(leaderMembers[0].id);
+      }
+    } else {
+      setLeaderId("");
+    }
+  }, [leaderMembers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       setError("Vui lòng nhập Tiêu đề nhiệm vụ!");
+      return;
+    }
+    if (!leaderId) {
+      setError("Vui lòng chọn Trưởng nhóm (Leader) chịu trách nhiệm cho nhiệm vụ này!");
       return;
     }
 
@@ -2299,7 +2318,7 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Giao nhiệm vụ cho thành viên <span style={{ color: "#ef4444" }}>*</span>
+                  Giao nhiệm vụ cho Trưởng nhóm (Leader) <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <select
                   value={leaderId}
@@ -2314,15 +2333,21 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                     background: "#ffffff"
                   }}
                 >
-                  {allMembers.map((m) => {
-                    const roleBadge = m.role === 'admin' ? '👑 Quản trị' : m.role === 'leader' ? '⭐ Trưởng nhóm' : '👤 Thành viên';
-                    return (
+                  {leaderMembers.length === 0 ? (
+                    <option value="">-- Chưa có tài khoản nào có vai trò Leader --</option>
+                  ) : (
+                    leaderMembers.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name} (@{m.username}) — [{roleBadge}]
+                        {m.full_name} (@{m.username}) — [⭐ Trưởng nhóm (Leader)]
                       </option>
-                    );
-                  })}
+                    ))
+                  )}
                 </select>
+                {leaderMembers.length === 0 && (
+                  <div style={{ fontSize: 11.5, color: "#e11d48", marginTop: 4 }}>
+                    ⚠️ Chưa có tài khoản nào được phân vai trò Trưởng nhóm (Leader). Quản trị viên vui lòng gán vai trò Leader trong Quản lý nhân viên.
+                  </div>
+                )}
               </div>
             </div>
           </div>

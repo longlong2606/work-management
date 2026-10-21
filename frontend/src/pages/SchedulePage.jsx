@@ -1652,8 +1652,13 @@ export function SchedulePage() {
                           s.actual_hours !== null &&
                           s.actual_hours !== undefined
                       );
-                      const hasAbsence = absentInSlot.length > 0;
-                      const hasPending = pendingInSlot.length > 0;
+                      const myRegInSlot = schedule.find(
+                        (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
+                      );
+                      const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
+                      const isMyAbsent = myRegInSlot?.attendance_status === "absent";
+                      const hasAbsence = isAdmin ? (absentInSlot.length > 0) : Boolean(isMyAbsent);
+                      const hasPending = isAdmin ? (pendingInSlot.length > 0) : Boolean(isMyPending);
                       const eventsInThisSlot = events.filter(
                         (e) =>
                           (!e.shift_id || e.shift_id === 0 || e.shift_id === shift.id) &&
@@ -1716,7 +1721,7 @@ export function SchedulePage() {
                                       boxShadow: "0 1px 2px rgba(239, 68, 68, 0.2)",
                                     }}
                                   >
-                                    🔴 {absentInSlot.length} vắng
+                                    {isAdmin ? `🔴 ${absentInSlot.length} vắng` : "🔴 Bạn vắng"}
                                   </span>
                                 )}
                                 {hasPending && (
@@ -1730,7 +1735,7 @@ export function SchedulePage() {
                                       borderRadius: 10,
                                     }}
                                   >
-                                    🟡 {pendingInSlot.length} chờ
+                                    {isAdmin ? `🟡 ${pendingInSlot.length} chờ` : "🟡 Chờ duyệt"}
                                   </span>
                                 )}
                               </div>
@@ -2101,13 +2106,21 @@ export function SchedulePage() {
                   e.shift_id === shift.id && (!e.work_date || e.work_date === currentDate)
               );
 
+              const myRegInDayShift = schedule.find(
+                (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
+              );
+              const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
+              const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
+              const dayHasAbsence = isAdmin ? (absentInShift.length > 0) : Boolean(isMyAbsentInDay);
+              const dayHasPending = isAdmin ? (pendingInShift.length > 0) : Boolean(isMyPendingInDay);
+
               return (
                 <div
                   key={shift.id}
                   className="card"
                   style={{
                     padding: 16,
-                    borderLeft: absentInShift.length > 0 ? "4px solid #ef4444" : pendingInShift.length > 0 ? "4px solid #f59e0b" : "4px solid #3b82f6",
+                    borderLeft: dayHasAbsence ? "4px solid #ef4444" : dayHasPending ? "4px solid #f59e0b" : "4px solid #3b82f6",
                   }}
                 >
                   <div
@@ -2219,19 +2232,37 @@ export function SchedulePage() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
                       👥 Đội ngũ: <strong>{totalMembers} người</strong> •{" "}
-                      {absentInShift.length > 0 ? (
-                        <span style={{ color: "#dc2626", fontWeight: 700 }}>
-                          🔴 {absentInShift.length} người vắng mặt
-                        </span>
+                      {isAdmin ? (
+                        <>
+                          {absentInShift.length > 0 ? (
+                            <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                              🔴 {absentInShift.length} người vắng mặt
+                            </span>
+                          ) : (
+                            <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                              🟢 Đủ {totalMembers} người có mặt
+                            </span>
+                          )}
+                          {pendingInShift.length > 0 && (
+                            <span style={{ color: "#d97706", fontWeight: 700, marginLeft: 8 }}>
+                              • 🟡 {pendingInShift.length} chờ duyệt vắng
+                            </span>
+                          )}
+                        </>
                       ) : (
-                        <span style={{ color: "#16a34a", fontWeight: 700 }}>
-                          🟢 Đủ {totalMembers} người có mặt
-                        </span>
-                      )}
-                      {pendingInShift.length > 0 && (
-                        <span style={{ color: "#d97706", fontWeight: 700, marginLeft: 8 }}>
-                          • 🟡 {pendingInShift.length} chờ duyệt vắng
-                        </span>
+                        isMyAbsentInDay ? (
+                          <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                            🔴 Bạn đã được duyệt nghỉ ca này
+                          </span>
+                        ) : isMyPendingInDay ? (
+                          <span style={{ color: "#d97706", fontWeight: 700 }}>
+                            🟡 Đơn xin vắng của bạn đang chờ duyệt
+                          </span>
+                        ) : (
+                          <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                            🟢 Bạn có mặt trong ca này
+                          </span>
+                        )
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>
@@ -2239,8 +2270,8 @@ export function SchedulePage() {
                     </div>
                   </div>
 
-                  {/* Hiển thị chi tiết danh tính người vắng trong ca */}
-                  {(absentInShift.length > 0 || pendingInShift.length > 0) && (
+                  {/* Hiển thị chi tiết danh tính người vắng trong ca (Chỉ cho Quản lý) */}
+                  {isAdmin && (absentInShift.length > 0 || pendingInShift.length > 0) && (
                     <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 8, borderTop: "1px dashed #fecaca" }}>
                       {absentInShift.map((a) => (
                         <span
@@ -3053,7 +3084,7 @@ export function SchedulePage() {
                 {isAdmin ? (
                   <div style={{ marginTop: 4 }}>
                     <select
-                      value={reportAbsenceModal.targetUser?.id || user?.id}
+                      value={reportAbsenceModal.targetUser?.id || ""}
                       onChange={(e) => {
                         const selId = Number(e.target.value);
                         const sel = allMembers.find((m) => m.id === selId) || user;
@@ -3073,7 +3104,7 @@ export function SchedulePage() {
                     >
                       {allMembers.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.full_name || m.username} (@{m.username}) {m.id === user?.id ? "— (Tôi)" : ""}
+                          {m.full_name || m.username} (@{m.username}) {m.id === user?.id ? "— (Quản trị viên)" : ""}
                         </option>
                       ))}
                     </select>

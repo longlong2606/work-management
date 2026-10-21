@@ -65,7 +65,12 @@ export function BulkAbsenceModal({
       setErrorMsg("");
       setLoading(false);
       if (currentUser?.id) {
-        setTargetUserId(currentUser.id);
+        if (isAdmin) {
+          const firstStaff = (memberOptions || allMembers || []).find((m) => m.id !== currentUser.id);
+          setTargetUserId(firstStaff?.id || currentUser.id);
+        } else {
+          setTargetUserId(currentUser.id);
+        }
       }
       if (weekDays && weekDays.length > 0) {
         setStartDate(weekDays[0].dateStr);
@@ -343,7 +348,7 @@ export function BulkAbsenceModal({
                   >
                     {memberOptions.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Tôi)" : ""}
+                        {m.full_name || m.username} (@{m.username}) {m.id === currentUser?.id ? "— (Quản trị viên)" : ""}
                       </option>
                     ))}
                   </select>
