@@ -287,7 +287,7 @@ export function TasksPage() {
   };
 
   const handleReopenSubtask = async (subtaskId) => {
-    if (!window.confirm("Bạn có muốn cho phép thành viên làm lại mục việc này và xóa điểm phạt?")) return;
+    if (!window.confirm("Bạn có muốn cho làm lại mục việc này? Điểm trừ (phạt) sẽ được giữ nguyên và hệ thống sẽ tự động tạo một mục việc mới y chang để thành viên tiếp tục làm lại.")) return;
     try {
       const res = await api.reviewSubtask(subtaskId, false, "Cho phép làm lại mục việc", 1.0, false, 0);
       showToast(res.message || "Đã chuyển mục việc về trạng thái Đang làm.");
@@ -1784,7 +1784,7 @@ export function TasksPage() {
                                         fontWeight: 600,
                                         cursor: "pointer",
                                       }}
-                                      title="Cho phép thành viên làm lại và gỡ bỏ điểm phạt"
+                                      title="Tạo mục việc mới để thành viên làm lại (vẫn giữ nguyên điểm trừ của mục việc này)"
                                     >
                                       <RotateCcw size={13} />
                                       <span>Cho Làm Lại</span>

@@ -762,7 +762,7 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.title, s.status, s.task_id, s.cp_points, t.leader_id 
+        SELECT s.id, s.title, s.description, s.due_at, s.status, s.task_id, s.cp_points, t.leader_id 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
@@ -896,46 +896,105 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
         return Results.Ok(new { message = "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!" });
     }
-    // TRƯỜNG HỢP 3: Yêu cầu sửa lại (hoặc cho làm lại từ trạng thái FAILED) -> chuyển về PROCESSING
+    // TRƯỜNG HỢP 3: Yêu cầu sửa lại (từ REVIEW) HOẶC Cho làm lại (từ FAILED)
     else
     {
-        if (string.IsNullOrWhiteSpace(req.comment))
-            return Results.BadRequest(new { detail = "Vui lòng nhập nhận xét/lý do yêu cầu làm lại!" });
+        bool wasFailed = (string)subtask.status == "FAILED";
 
-        conn.Execute(@"
-            UPDATE subtasks SET 
-                status = 'PROCESSING', review_comment = @comment, updated_at = CURRENT_TIMESTAMP
-            WHERE id = @id",
-            new
-            {
-                id,
-                comment = req.comment.Trim()
-            });
-
-        // Xóa bất kỳ giao dịch CP nào (cả điểm cộng lẫn điểm trừ) khi mở lại để làm
-        conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
-
-        // Gửi thông báo yêu cầu hoàn thiện lại cho các thành viên phụ trách
-        var reworkAssignees = conn.Query<long>("SELECT user_id FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
-        foreach (var uId in reworkAssignees)
+        if (wasFailed)
         {
-            if (uId != currentUser.id)
-            {
-                conn.Execute(@"
-                    INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
-                    VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
-                    new
-                    {
-                        uId,
-                        senderId = currentUser.id,
-                        title = "Yêu cầu làm lại mục việc",
-                        msg = $"Mục việc \"{subtask.title}\" được yêu cầu hoàn thiện lại. Nhận xét: {req.comment.Trim()}",
-                        taskId = (long)subtask.task_id
-                    });
-            }
-        }
+            // GIỮ NGUYÊN MỤC VIỆC CŨ Ở TRẠNG THÁI FAILED VÀ GIỮ NGUYÊN ĐIỂM TRỪ TRONG CP_TRANSACTIONS!
+            // Tạo một subtask mới y chang để thành viên tiếp tục làm lại:
+            long taskId = Convert.ToInt64(subtask.task_id);
+            int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
+            int cpPoints = Convert.ToInt32(subtask.cp_points ?? 0);
+            string title = (string)subtask.title;
+            string? description = (string?)subtask.description;
+            string? dueAt = subtask.due_at != null ? Convert.ToString(subtask.due_at) : null;
 
-        return Results.Ok(new { message = "Đã chuyển mục việc về trạng thái Đang làm để thành viên tiếp tục hoàn thiện!" });
+            string insertSql = Database.IsPostgres
+                ? @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+                    VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @dueAt, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    RETURNING id;"
+                : @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+                    VALUES (@taskId, @title, @description, @pos, 'PROCESSING', @dueAt, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+                    SELECT last_insert_rowid();";
+
+            long newSubtaskId = Convert.ToInt64(conn.ExecuteScalar(insertSql, new
+            {
+                taskId,
+                title,
+                description,
+                pos,
+                dueAt,
+                createdBy = currentUser.id,
+                cpPoints
+            }));
+
+            // Sao chép toàn bộ phân công thành viên (assignees) từ mục việc cũ sang mục việc mới
+            var oldAssignees = conn.Query<dynamic>("SELECT user_id, contribution_pct FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
+            foreach (var a in oldAssignees)
+            {
+                long uId = Convert.ToInt64(a.user_id);
+                int pct = Convert.ToInt32(a.contribution_pct ?? 100);
+                conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@newSubtaskId, @uId, @pct)",
+                    new { newSubtaskId, uId, pct });
+
+                if (uId != currentUser.id)
+                {
+                    conn.Execute(@"
+                        INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                        VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                        new
+                        {
+                            uId,
+                            senderId = currentUser.id,
+                            title = "Được cấp làm lại mục việc mới",
+                            msg = $"Trưởng nhóm đã cho làm lại mục việc \"{title}\" ({cpPoints} CP). Mục việc mới đã được tạo để bạn tiếp tục thực hiện và nộp duyệt.",
+                            taskId
+                        });
+                }
+            }
+
+            return Results.Ok(new { message = "Đã giữ nguyên điểm phạt và tạo mục việc mới y chang để thành viên tiếp tục làm lại!", new_subtask_id = newSubtaskId });
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(req.comment))
+                return Results.BadRequest(new { detail = "Vui lòng nhập nhận xét/lý do yêu cầu làm lại!" });
+
+            conn.Execute(@"
+                UPDATE subtasks SET 
+                    status = 'PROCESSING', review_comment = @comment, updated_at = CURRENT_TIMESTAMP
+                WHERE id = @id",
+                new
+                {
+                    id,
+                    comment = req.comment.Trim()
+                });
+
+            // Gửi thông báo yêu cầu hoàn thiện lại cho các thành viên phụ trách
+            var reworkAssignees = conn.Query<long>("SELECT user_id FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
+            foreach (var uId in reworkAssignees)
+            {
+                if (uId != currentUser.id)
+                {
+                    conn.Execute(@"
+                        INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                        VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                        new
+                        {
+                            uId,
+                            senderId = currentUser.id,
+                            title = "Yêu cầu làm lại mục việc",
+                            msg = $"Mục việc \"{subtask.title}\" được yêu cầu hoàn thiện lại. Nhận xét: {req.comment.Trim()}",
+                            taskId = (long)subtask.task_id
+                        });
+                }
+            }
+
+            return Results.Ok(new { message = "Đã chuyển mục việc về trạng thái Đang làm để thành viên tiếp tục hoàn thiện!" });
+        }
     }
 });
 
