@@ -54,6 +54,7 @@ export function SchedulePage() {
   const { user, canManageSchedule } = useAuth();
   const { fetchUnreadCount } = useNotifications();
   const isAdmin = user?.role === "admin" || Boolean(canManageSchedule);
+  const isStrictAdmin = user?.role === "admin";
 
   const [viewMode, setViewMode] = useState("week"); // 'week' | 'day' | 'my'
   const [currentDate, setCurrentDate] = useState(() => {
@@ -2568,49 +2569,49 @@ export function SchedulePage() {
                           )}
 
                           {/* 1b. If Admin and user is PRESENT -> button to Mark Absent / Missed Shift */}
+                          {isStrictAdmin && isPresent && (
+                            <button
+                              onClick={() => handleAdminMarkAbsent(m)}
+                              style={{
+                                background: "#fff1f2",
+                                border: "1px solid #fecaca",
+                                color: "#b91c1c",
+                                borderRadius: 6,
+                                padding: "5px 10px",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              title="Đánh dấu nhân viên này không đi làm / bỏ ca trực (sẽ trừ KPI)"
+                            >
+                              ❌ Đánh dấu vắng
+                            </button>
+                          )}
                           {isAdmin && isPresent && (
-                            <>
-                              <button
-                                onClick={() => handleAdminMarkAbsent(m)}
-                                style={{
-                                  background: "#fff1f2",
-                                  border: "1px solid #fecaca",
-                                  color: "#b91c1c",
-                                  borderRadius: 6,
-                                  padding: "5px 10px",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                }}
-                                title="Đánh dấu nhân viên này không đi làm / bỏ ca trực (sẽ trừ KPI)"
-                              >
-                                ❌ Đánh dấu vắng
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openEditHours(m)}
-                                style={{
-                                  background: "#eff6ff",
-                                  border: "1px solid #bfdbfe",
-                                  color: "#1d4ed8",
-                                  borderRadius: 6,
-                                  padding: "5px 10px",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                }}
-                                title="Chỉnh sửa số giờ làm thực tế nếu nhân viên đi muộn, về sớm hoặc làm thiếu giờ"
-                              >
-                                ⏱️ Chỉnh giờ làm
-                              </button>
-                            </>
+                            <button
+                              type="button"
+                              onClick={() => openEditHours(m)}
+                              style={{
+                                background: "#eff6ff",
+                                border: "1px solid #bfdbfe",
+                                color: "#1d4ed8",
+                                borderRadius: 6,
+                                padding: "5px 10px",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              title="Chỉnh sửa số giờ làm thực tế nếu nhân viên đi muộn, về sớm hoặc làm thiếu giờ"
+                            >
+                              ⏱️ Chỉnh giờ làm
+                            </button>
                           )}
 
                           {/* 2. If Staff has PENDING request */}
                           {isPending && (
                             <>
-                              {/* Manager: Approve or Reject buttons */}
-                              {isAdmin && (
+                              {/* Manager: Approve or Reject buttons - CHỈ ADMIN MỚI ĐƯỢC DUYỆT VẮNG */}
+                              {isStrictAdmin ? (
                                 <div style={{ display: "flex", gap: 6 }}>
                                   <button
                                     onClick={() =>
@@ -2660,10 +2661,14 @@ export function SchedulePage() {
                                     ✕ Từ Chối
                                   </button>
                                 </div>
+                              ) : (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  ⏳ Chờ Quản trị viên (Admin) duyệt vắng
+                                </span>
                               )}
 
                               {/* Staff themselves: Cancel their request */}
-                              {isMe && !isAdmin && (
+                              {isMe && !isStrictAdmin && (
                                 <button
                                   onClick={() =>
                                     handleCancelAbsence(
@@ -4151,7 +4156,7 @@ export function SchedulePage() {
                 {/* TOOLBAR PHÊ DUYỆT TẤT CẢ / CHỌN HÀNG LOẠT */}
                 {(() => {
                   const todayStr = new Date().toISOString().split("T")[0];
-                  const validRequests = pendingRequests.filter(r => !r.is_expired && (!r.work_date || r.work_date >= todayStr));
+                  const validRequests = pendingRequests.filter(r => !r.is_expired && (!r.work_date || r.work_date >= todayStr) && (isStrictAdmin || r.attendance_status !== "pending_absence"));
                   const isAllSelected = validRequests.length > 0 && selectedPendingIds.length === validRequests.length;
 
                   return (
@@ -4337,7 +4342,7 @@ export function SchedulePage() {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {!isExpired && (
+                          {!isExpired && (isStrictAdmin || !isAbsence) && (
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -4433,48 +4438,54 @@ export function SchedulePage() {
                         }}
                       >
                         {isAbsence ? (
-                          <>
-                            <button
-                              onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, false, req.full_name, isExpired ? "Từ chối do quá hạn ngày ca làm" : "")}
-                              className="btn btn-danger btn-sm"
-                              style={{ display: "flex", alignItems: "center", gap: 4 }}
-                            >
-                              <X size={14} /> {isExpired ? "Chuyển Sang Từ Chối (Quá Hạn)" : "Từ Chối"}
-                            </button>
-                            {isExpired ? (
+                          isStrictAdmin ? (
+                            <>
                               <button
-                                disabled
-                                className="btn btn-secondary btn-sm"
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  opacity: 0.5,
-                                  cursor: "not-allowed",
-                                  background: "#cbd5e1",
-                                  color: "#64748b",
-                                  border: "none",
-                                }}
-                                title="Không thể phê duyệt ca làm trong quá khứ"
+                                onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, false, req.full_name, isExpired ? "Từ chối do quá hạn ngày ca làm" : "")}
+                                className="btn btn-danger btn-sm"
+                                style={{ display: "flex", alignItems: "center", gap: 4 }}
                               >
-                                <Lock size={14} /> Đã Khóa Duyệt
+                                <X size={14} /> {isExpired ? "Chuyển Sang Từ Chối (Quá Hạn)" : "Từ Chối"}
                               </button>
-                            ) : (
-                              <button
-                                onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, true, req.full_name)}
-                                className="btn btn-primary btn-sm"
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  background: "#10b981",
-                                  borderColor: "#10b981",
-                                }}
-                              >
-                                <Check size={14} /> Phê Duyệt Cho Vắng
-                              </button>
-                            )}
-                          </>
+                              {isExpired ? (
+                                <button
+                                  disabled
+                                  className="btn btn-secondary btn-sm"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    opacity: 0.5,
+                                    cursor: "not-allowed",
+                                    background: "#cbd5e1",
+                                    color: "#64748b",
+                                    border: "none",
+                                  }}
+                                  title="Không thể phê duyệt ca làm trong quá khứ"
+                                >
+                                  <Lock size={14} /> Đã Khóa Duyệt
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, true, req.full_name)}
+                                  className="btn btn-primary btn-sm"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    background: "#10b981",
+                                    borderColor: "#10b981",
+                                  }}
+                                >
+                                  <Check size={14} /> Phê Duyệt Cho Vắng
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "4px 10px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              ⏳ Đang chờ Quản trị viên (Admin) xét duyệt
+                            </span>
+                          )
                         ) : (
                           <>
                             <button

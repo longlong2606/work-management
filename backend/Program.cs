@@ -1717,17 +1717,16 @@ app.MapPost("/api/shifts/approve-absence", (ApproveAbsenceRequest req, HttpConte
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (currentUser.role != "admin" && !currentUser.can_manage_schedule)
+    if (currentUser.role != "admin")
     {
-        return Results.Json(new { detail = "Chỉ Quản lý mới có quyền phê duyệt hoặc từ chối đơn báo vắng!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền phê duyệt hoặc từ chối đơn báo vắng!" }, statusCode: 403);
     }
 
     using var conn = Database.GetConnection();
     var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = req.user_id });
     if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-    if ((string)targetUser.role == "admin")
-        return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
-var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
+
+    var shift = conn.QueryFirstOrDefault("SELECT * FROM shift_templates WHERE id = @id", new { id = req.shift_id });
     if (shift == null) return Results.NotFound(new { detail = "Không tìm thấy ca làm việc!" });
 
     var reg = conn.QueryFirstOrDefault(
@@ -1975,6 +1974,11 @@ app.MapPost("/api/shifts/attendance/toggle", (ToggleAttendanceRequest req, HttpC
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
+    if (req.attendance_status == "absent" && currentUser.role != "admin")
+    {
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
+    }
+
     using var conn = Database.GetConnection();
     var reg = conn.QueryFirstOrDefault(
         "SELECT id, attendance_status FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
@@ -2011,6 +2015,11 @@ app.MapPut("/api/shifts/registrations/{id:long}/attendance", (long id, UpdateAtt
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
+
+    if (req.attendance_status == "absent" && currentUser.role != "admin")
+    {
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
+    }
 
     using var conn = Database.GetConnection();
     var reg = conn.QueryFirstOrDefault("SELECT * FROM shift_registrations WHERE id = @id", new { id });
@@ -2422,6 +2431,11 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
 
         if (attStatus == "pending_absence")
         {
+            if (currentUser.role != "admin")
+            {
+                // Chỉ Quản trị viên (Admin) mới có quyền duyệt đơn báo vắng!
+                continue;
+            }
             conn.Execute(@"
                 UPDATE shift_registrations
                 SET attendance_status = 'absent',
