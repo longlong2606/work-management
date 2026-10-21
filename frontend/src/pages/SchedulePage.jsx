@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, LayoutGrid, CalendarRange, UserCheck,
   UserPlus, ArrowLeftRight, Hourglass, Check, X, ShieldAlert, Calendar, ArrowRight,
   Users, Plus, ChevronDown, ChevronUp, Sparkles, Tag, Eye, Info, UserX,
-  Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare, CheckCheck
+  Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare, CheckCheck, RotateCcw
 } from "lucide-react";
 
 // Format a Date object as YYYY-MM-DD using local time (prevents UTC date-shift bugs)
@@ -251,6 +251,7 @@ export function SchedulePage() {
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showBulkAbsenceModal, setShowBulkAbsenceModal] = useState(false);
+  const [bulkAbsenceMode, setBulkAbsenceMode] = useState("absence");
   const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
   const [classConflicts, setClassConflicts] = useState([]);
   const LAB_KPI_TARGET = 20.0;
@@ -1167,7 +1168,10 @@ export function SchedulePage() {
           </button>
 
           <button
-            onClick={() => setShowBulkAbsenceModal(true)}
+            onClick={() => {
+              setBulkAbsenceMode("absence");
+              setShowBulkAbsenceModal(true);
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1187,6 +1191,32 @@ export function SchedulePage() {
           >
             <CalendarX2 size={16} style={{ flexShrink: 0 }} />
             <span>Báo Vắng Tuần / Nhiều Ca</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setBulkAbsenceMode("restore");
+              setShowBulkAbsenceModal(true);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#f0fdf4",
+              border: "1.5px solid #bbf7d0",
+              color: "#166534",
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(22, 101, 52, 0.08)",
+              transition: "all 0.2s ease"
+            }}
+            title="Khôi phục có mặt hàng loạt cho cả tuần hoặc nhiều ca đã báo vắng"
+          >
+            <RotateCcw size={16} style={{ flexShrink: 0 }} />
+            <span>Khôi Phục Có Mặt Tuần / Ca</span>
           </button>
 
           {isAdmin && (
@@ -2097,13 +2127,36 @@ export function SchedulePage() {
                 Xem danh sách thành viên trong từng ca trực (Thứ 2 đến Thứ 7, Chủ nhật nghỉ). Ai vắng mặt sẽ hiện màu đỏ kèm lý do.
               </span>
             </div>
-            <button
-              onClick={() => setViewMode("week")}
-              className="btn btn-secondary btn-sm"
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <ArrowLeftRight size={14} /> Quay về Lịch 1 Tuần
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {currentDate >= todayStr && (
+                <button
+                  onClick={() => {
+                    setBulkAbsenceMode("restore");
+                    setShowBulkAbsenceModal(true);
+                  }}
+                  className="btn btn-sm"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#f0fdf4",
+                    border: "1px solid #86efac",
+                    color: "#166534",
+                    fontWeight: 700,
+                  }}
+                  title="Khôi phục có mặt cho các ca trong ngày hoặc tuần"
+                >
+                  <RotateCcw size={14} /> Khôi Phục Có Mặt
+                </button>
+              )}
+              <button
+                onClick={() => setViewMode("week")}
+                className="btn btn-secondary btn-sm"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <ArrowLeftRight size={14} /> Quay về Lịch 1 Tuần
+              </button>
+            </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -4935,7 +4988,7 @@ export function SchedulePage() {
         showToast={showToast}
       />
 
-      {/* BULK ABSENCE MODAL */}
+      {/* BULK ABSENCE & RESTORE MODAL */}
       <BulkAbsenceModal
         isOpen={showBulkAbsenceModal}
         onClose={() => setShowBulkAbsenceModal(false)}
@@ -4943,6 +4996,7 @@ export function SchedulePage() {
         allMembers={allMembers}
         weekDays={weekDays}
         schedule={schedule}
+        initialMode={bulkAbsenceMode}
         onSuccess={(msg) => {
           showToast(msg);
           fetchSchedule();

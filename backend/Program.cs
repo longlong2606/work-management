@@ -2359,6 +2359,82 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
     return Results.Ok(new { success = true, message = "Đã xác nhận có mặt trở lại ca trực!" });
 });
 
+app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var targetUserId = (canManage && req.user_id.HasValue) 
+        ? req.user_id.Value 
+        : currentUser.id;
+
+    using var conn = Database.GetConnection();
+    var targetUser = conn.QueryFirstOrDefault("SELECT * FROM users WHERE id = @id", new { id = targetUserId });
+    if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
+
+    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+
+    // Gather dates
+    var targetDates = new HashSet<string>();
+    if (req.dates != null && req.dates.Count > 0)
+    {
+        foreach (var d in req.dates)
+        {
+            if (!string.IsNullOrWhiteSpace(d)) targetDates.Add(d.Trim());
+        }
+    }
+    else if (!string.IsNullOrWhiteSpace(req.start_date) && !string.IsNullOrWhiteSpace(req.end_date))
+    {
+        if (DateTime.TryParse(req.start_date, out var start) && DateTime.TryParse(req.end_date, out var end))
+        {
+            for (var d = start; d <= end; d = d.AddDays(1))
+            {
+                targetDates.Add(d.ToString("yyyy-MM-dd"));
+            }
+        }
+    }
+
+    if (targetDates.Count == 0)
+    {
+        return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày cần khôi phục có mặt!" });
+    }
+
+    // Only allow restoring for today or future dates for regular members
+    var validDates = canManage 
+        ? targetDates.ToList() 
+        : targetDates.Where(d => string.Compare(d, todayStr, StringComparison.Ordinal) >= 0).ToList();
+
+    if (validDates.Count == 0)
+    {
+        return Results.BadRequest(new { detail = "Không thể khôi phục có mặt cho các ngày trong quá khứ đối với nhân viên!" });
+    }
+
+    // Target shift IDs (1-9)
+    var targetShifts = (req.shift_ids != null && req.shift_ids.Count > 0)
+        ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
+        : new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+    var affectedCount = conn.Execute(@"
+        UPDATE shift_registrations 
+        SET attendance_status = 'present', 
+            absence_reason = NULL,
+            note = 'Đã khôi phục có mặt'
+        WHERE user_id = @uid 
+          AND shift_id IN @shifts 
+          AND work_date IN @dates 
+          AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+        new { uid = targetUserId, shifts = targetShifts, dates = validDates }
+    );
+
+    return Results.Ok(new 
+    { 
+        success = true, 
+        message = $"Đã khôi phục có mặt thành công cho {affectedCount} ca trực của {targetUser.full_name}!",
+        affected_count = affectedCount
+    });
+});
+
 app.MapGet("/api/shifts/events", (string? work_date, int? shift_id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);

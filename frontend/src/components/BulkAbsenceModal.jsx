@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  X, CalendarX2, Clock, AlertTriangle, User
+  X, CalendarX2, Clock, AlertTriangle, User, RotateCcw, CheckCircle2
 } from "lucide-react";
 import { SHIFTS } from "../constants/shifts";
 import { api } from "../services/api";
@@ -17,9 +17,18 @@ export function BulkAbsenceModal({
   allMembers = [],
   weekDays = [],
   schedule = [],
-  onSuccess
+  onSuccess,
+  initialMode = "absence"
 }) {
   const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
+
+  // Action Mode: 'absence' (Báo vắng) | 'restore' (Khôi phục có mặt)
+  const [actionMode, setActionMode] = useState(initialMode || "absence");
+  const isRestore = actionMode === "restore";
+  const themeColor = isRestore ? "#059669" : "#dc2626";
+  const themeBgLight = isRestore ? "#f0fdf4" : "#fef2f2";
+  const themeActiveBorder = isRestore ? "#059669" : "#dc2626";
+  const themeText = isRestore ? "#047857" : "#b91c1c";
 
   const memberOptions = useMemo(() => {
     if (!allMembers || allMembers.length === 0) {
@@ -64,6 +73,7 @@ export function BulkAbsenceModal({
     if (isOpen) {
       setErrorMsg("");
       setLoading(false);
+      setActionMode(initialMode || "absence");
       if (currentUser?.id) {
         if (isAdmin) {
           const firstStaff = (memberOptions || allMembers || []).find((m) => m.id !== currentUser.id);
@@ -81,7 +91,7 @@ export function BulkAbsenceModal({
         setSelectedDates(futureDays.map((d) => d.dateStr));
       }
     }
-  }, [isOpen, weekDays, currentUser, todayStr]);
+  }, [isOpen, weekDays, currentUser, todayStr, initialMode]);
 
   // Determine final dates to apply (only current and future dates)
   const finalDates = useMemo(() => {
@@ -174,15 +184,7 @@ export function BulkAbsenceModal({
     e.preventDefault();
     const targetUid = Number(targetUserId) || currentUser?.id;
     if (!targetUid) {
-      setErrorMsg("Vui lòng chọn nhân sự nộp đơn!");
-      return;
-    }
-    if (allSelectedDuplicates) {
-      setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Không thể gửi trùng lặp!`);
-      return;
-    }
-    if (!reason.trim()) {
-      setErrorMsg("Vui lòng nhập lý do xin vắng ca!");
+      setErrorMsg("Vui lòng chọn nhân sự!");
       return;
     }
     if (finalDates.length === 0) {
@@ -193,6 +195,41 @@ export function BulkAbsenceModal({
     }
     if (finalShiftIds.length === 0) {
       setErrorMsg("Vui lòng chọn ít nhất một ca làm việc!");
+      return;
+    }
+
+    if (isRestore) {
+      if (duplicateShifts.length === 0) {
+        setErrorMsg("Không tìm thấy ca trực nào đang báo vắng hoặc chờ duyệt trong khoảng thời gian đã chọn!");
+        return;
+      }
+      setLoading(true);
+      setErrorMsg("");
+      try {
+        const res = await api.cancelAbsenceBulk({
+          user_id: targetUid,
+          dates: finalDates,
+          shift_ids: finalShiftIds,
+        });
+        if (onSuccess) {
+          onSuccess(res.message || `Đã khôi phục có mặt thành công cho ${res.affected_count || duplicateShifts.length} ca trực!`);
+        }
+        onClose();
+      } catch (err) {
+        setErrorMsg(err.message || "Lỗi khi khôi phục có mặt hàng loạt!");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Absence mode
+    if (allSelectedDuplicates) {
+      setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Bạn có thể nhấn tab 'Khôi phục có mặt' ở trên để hủy nghỉ.`);
+      return;
+    }
+    if (!reason.trim()) {
+      setErrorMsg("Vui lòng nhập lý do xin vắng ca!");
       return;
     }
 
@@ -252,11 +289,14 @@ export function BulkAbsenceModal({
         <div
           style={{
             padding: "18px 24px",
-            background: "linear-gradient(135deg, #b91c1c, #dc2626)",
+            background: isRestore
+              ? "linear-gradient(135deg, #059669, #10b981)"
+              : "linear-gradient(135deg, #b91c1c, #dc2626)",
             color: "#ffffff",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            transition: "all 0.3s ease",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -271,14 +311,20 @@ export function BulkAbsenceModal({
                 justifyContent: "center",
               }}
             >
-              <CalendarX2 size={22} color="#ffffff" />
+              {isRestore ? (
+                <RotateCcw size={22} color="#ffffff" />
+              ) : (
+                <CalendarX2 size={22} color="#ffffff" />
+              )}
             </div>
             <div>
               <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
-                Đơn Báo Vắng Tuần & Nhiều Ca Trực
+                {isRestore ? "Khôi Phục Có Mặt Hàng Loạt" : "Đơn Báo Vắng Tuần & Nhiều Ca Trực"}
               </h3>
-              <div style={{ fontSize: 12, color: "#fecaca", marginTop: 2 }}>
-                Xin nghỉ trọn vẹn cả tuần, nghỉ vài ngày hoặc nhiều ca cùng lúc
+              <div style={{ fontSize: 12, color: isRestore ? "#a7f3d0" : "#fecaca", marginTop: 2 }}>
+                {isRestore
+                  ? "Hủy đơn xin nghỉ / xác nhận có mặt lại cho cả tuần, theo khoảng ngày hoặc nhiều ca"
+                  : "Xin nghỉ trọn vẹn cả tuần, nghỉ vài ngày hoặc nhiều ca cùng lúc"}
               </div>
             </div>
           </div>
@@ -300,6 +346,65 @@ export function BulkAbsenceModal({
             }}
           >
             <X size={18} />
+          </button>
+        </div>
+
+        {/* ================= TAB SWITCHER ================= */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            padding: "10px 24px",
+            background: "#f8fafc",
+            borderBottom: "1px solid #e2e8f0",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActionMode("absence")}
+            style={{
+              flex: 1,
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid",
+              borderColor: !isRestore ? "#dc2626" : "#cbd5e1",
+              background: !isRestore ? "#fef2f2" : "#ffffff",
+              color: !isRestore ? "#b91c1c" : "#64748b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <CalendarX2 size={16} /> 📝 Báo Vắng Ca / Tuần
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActionMode("restore")}
+            style={{
+              flex: 1,
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid",
+              borderColor: isRestore ? "#059669" : "#cbd5e1",
+              background: isRestore ? "#f0fdf4" : "#ffffff",
+              color: isRestore ? "#047857" : "#64748b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <RotateCcw size={16} /> 🔄 Khôi Phục Có Mặt Hàng Loạt
           </button>
         </div>
 
@@ -392,7 +497,7 @@ export function BulkAbsenceModal({
                 }}
               >
                 <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", display: "block", textTransform: "uppercase" }}>
-                  📅 2. Thời gian xin nghỉ:
+                  📅 2. {isRestore ? "Thời gian khôi phục có mặt:" : "Thời gian xin nghỉ:"}
                 </label>
                 <div style={{ display: "flex", gap: 5 }}>
                   <button
@@ -405,9 +510,9 @@ export function BulkAbsenceModal({
                       fontWeight: 700,
                       cursor: "pointer",
                       border: "1px solid",
-                      borderColor: scopeMode === "whole_week" ? "#dc2626" : "#cbd5e1",
-                      background: scopeMode === "whole_week" ? "#fef2f2" : "#ffffff",
-                      color: scopeMode === "whole_week" ? "#b91c1c" : "#475569",
+                      borderColor: scopeMode === "whole_week" ? themeActiveBorder : "#cbd5e1",
+                      background: scopeMode === "whole_week" ? themeBgLight : "#ffffff",
+                      color: scopeMode === "whole_week" ? themeText : "#475569",
                       flex: 1,
                       textAlign: "center",
                     }}
@@ -425,9 +530,9 @@ export function BulkAbsenceModal({
                       fontWeight: 700,
                       cursor: "pointer",
                       border: "1px solid",
-                      borderColor: scopeMode === "date_range" ? "#dc2626" : "#cbd5e1",
-                      background: scopeMode === "date_range" ? "#fef2f2" : "#ffffff",
-                      color: scopeMode === "date_range" ? "#b91c1c" : "#475569",
+                      borderColor: scopeMode === "date_range" ? themeActiveBorder : "#cbd5e1",
+                      background: scopeMode === "date_range" ? themeBgLight : "#ffffff",
+                      color: scopeMode === "date_range" ? themeText : "#475569",
                       flex: 1,
                       textAlign: "center",
                     }}
@@ -445,9 +550,9 @@ export function BulkAbsenceModal({
                       fontWeight: 700,
                       cursor: "pointer",
                       border: "1px solid",
-                      borderColor: scopeMode === "custom_days" ? "#dc2626" : "#cbd5e1",
-                      background: scopeMode === "custom_days" ? "#fef2f2" : "#ffffff",
-                      color: scopeMode === "custom_days" ? "#b91c1c" : "#475569",
+                      borderColor: scopeMode === "custom_days" ? themeActiveBorder : "#cbd5e1",
+                      background: scopeMode === "custom_days" ? themeBgLight : "#ffffff",
+                      color: scopeMode === "custom_days" ? themeText : "#475569",
                       flex: 1,
                       textAlign: "center",
                     }}
@@ -507,9 +612,9 @@ export function BulkAbsenceModal({
                           style={{
                             padding: "6px 2px",
                             borderRadius: 6,
-                            border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
-                            background: isChecked ? "#fef2f2" : "#ffffff",
-                            color: isChecked ? "#b91c1c" : isPast ? "#94a3b8" : "#334155",
+                            border: isChecked ? `1.5px solid ${themeActiveBorder}` : "1px solid #cbd5e1",
+                            background: isChecked ? themeBgLight : "#ffffff",
+                            color: isChecked ? themeText : isPast ? "#94a3b8" : "#334155",
                             fontWeight: isChecked ? 800 : 600,
                             cursor: isPast ? "not-allowed" : "pointer",
                             opacity: isPast ? 0.5 : 1,
@@ -526,7 +631,7 @@ export function BulkAbsenceModal({
                 )}
               </div>
 
-              {/* 3. LÝ DO XIN VẮNG */}
+              {/* 3. LÝ DO XIN VẮNG / GHI CHÚ KHÔI PHỤC */}
               <div
                 style={{
                   background: "#f8fafc",
@@ -536,12 +641,16 @@ export function BulkAbsenceModal({
                 }}
               >
                 <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", marginBottom: 6, display: "block", textTransform: "uppercase" }}>
-                  📝 3. Lý do xin nghỉ (*):
+                  {isRestore ? "💬 3. Ghi chú khôi phục (Tùy chọn):" : "📝 3. Lý do xin nghỉ (*):"}
                 </label>
                 <textarea
-                  required
+                  required={!isRestore}
                   rows={2}
-                  placeholder="Ví dụ: Bận lịch thi học kỳ, việc gia đình đột xuất, ốm sốt..."
+                  placeholder={
+                    isRestore
+                      ? "Ví dụ: Lịch bận đã hủy, có thể đi làm lại bình thường..."
+                      : "Ví dụ: Bận lịch thi học kỳ, việc gia đình đột xuất, ốm sốt..."
+                  }
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   style={{
@@ -557,11 +666,18 @@ export function BulkAbsenceModal({
                 />
                 {/* Quick reason pills */}
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
-                  {[
-                    "Bị ốm / Sốt cần nghỉ ngơi",
-                    "Về quê có việc gia đình đột xuất",
-                    "Bận lịch thi / Học quân sự",
-                  ].map((r) => (
+                  {(isRestore
+                    ? [
+                        "Lịch bận đã hủy / Có mặt lại",
+                        "Đã hoàn thành việc riêng sớm",
+                        "Nhầm lẫn khi gửi đơn báo vắng",
+                      ]
+                    : [
+                        "Bị ốm / Sốt cần nghỉ ngơi",
+                        "Về quê có việc gia đình đột xuất",
+                        "Bận lịch thi / Học quân sự",
+                      ]
+                  ).map((r) => (
                     <button
                       type="button"
                       key={r}
@@ -598,7 +714,7 @@ export function BulkAbsenceModal({
                 }}
               >
                 <label style={{ fontWeight: 700, fontSize: 12, color: "#475569", display: "block", textTransform: "uppercase" }}>
-                  ⚡ 4. Ca làm việc xin nghỉ:
+                  ⚡ 4. {isRestore ? "Ca làm việc khôi phục:" : "Ca làm việc xin nghỉ:"}
                 </label>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   <button
@@ -611,9 +727,9 @@ export function BulkAbsenceModal({
                       fontWeight: 700,
                       cursor: "pointer",
                       border: "1px solid",
-                      borderColor: shiftScope === "all" ? "#dc2626" : "#cbd5e1",
-                      background: shiftScope === "all" ? "#fef2f2" : "#ffffff",
-                      color: shiftScope === "all" ? "#b91c1c" : "#475569",
+                      borderColor: shiftScope === "all" ? themeActiveBorder : "#cbd5e1",
+                      background: shiftScope === "all" ? themeBgLight : "#ffffff",
+                      color: shiftScope === "all" ? themeText : "#475569",
                     }}
                   >
                     🌟 Tất cả 9 ca
@@ -700,9 +816,9 @@ export function BulkAbsenceModal({
                           style={{
                             padding: "5px 6px",
                             borderRadius: 6,
-                            border: isChecked ? "1.5px solid #dc2626" : "1px solid #cbd5e1",
-                            background: isChecked ? "#fef2f2" : "#ffffff",
-                            color: isChecked ? "#b91c1c" : "#334155",
+                            border: isChecked ? `1.5px solid ${themeActiveBorder}` : "1px solid #cbd5e1",
+                            background: isChecked ? themeBgLight : "#ffffff",
+                            color: isChecked ? themeText : "#334155",
                             fontWeight: isChecked ? 700 : 500,
                             cursor: "pointer",
                             fontSize: 10.5,
@@ -725,8 +841,24 @@ export function BulkAbsenceModal({
               <div
                 style={{
                   padding: "14px 16px",
-                  background: allSelectedDuplicates ? "#fef2f2" : affectedShifts.length > 0 ? "#fffbeb" : "#f8fafc",
-                  border: allSelectedDuplicates ? "1.5px solid #fca5a5" : affectedShifts.length > 0 ? "1.5px solid #fde68a" : "1px solid #e2e8f0",
+                  background: isRestore
+                    ? duplicateShifts.length > 0
+                      ? "#f0fdf4"
+                      : "#f8fafc"
+                    : allSelectedDuplicates
+                    ? "#fef2f2"
+                    : affectedShifts.length > 0
+                    ? "#fffbeb"
+                    : "#f8fafc",
+                  border: isRestore
+                    ? duplicateShifts.length > 0
+                      ? "1.5px solid #86efac"
+                      : "1px solid #e2e8f0"
+                    : allSelectedDuplicates
+                    ? "1.5px solid #fca5a5"
+                    : affectedShifts.length > 0
+                    ? "1.5px solid #fde68a"
+                    : "1px solid #e2e8f0",
                   borderRadius: 12,
                   flex: 1,
                   display: "flex",
@@ -734,81 +866,147 @@ export function BulkAbsenceModal({
                   justifyContent: "space-between",
                 }}
               >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: allSelectedDuplicates ? "#b91c1c" : affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
-                    {allSelectedDuplicates ? <AlertTriangle size={16} /> : <Clock size={16} />}
-                    <span>
-                      {allSelectedDuplicates 
-                        ? `Tất cả ${duplicateShifts.length} ca đã nộp đơn hoặc duyệt nghỉ!`
-                        : `Tìm thấy ${affectedShifts.length} ca trực hợp lệ cần báo vắng`}
-                    </span>
-                  </div>
-
-                  {affectedShifts.length > 0 && (
-                    <div style={{ fontSize: 11, color: "#78350f", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
-                      Các ca này sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>:
-                      <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {affectedShifts.slice(0, 10).map((s, idx) => (
-                          <span key={idx} style={{ background: "#ffffff", padding: "2px 6px", borderRadius: 4, border: "1px solid #fde68a", fontSize: 10.5, fontWeight: 600 }}>
-                            Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")})
-                          </span>
-                        ))}
-                        {affectedShifts.length > 10 && (
-                          <span style={{ fontSize: 10.5, color: "#92400e", fontWeight: 700, padding: "2px 4px" }}>
-                            +{affectedShifts.length - 10} ca khác
-                          </span>
-                        )}
-                      </div>
+                {isRestore ? (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: duplicateShifts.length > 0 ? "#15803d" : "#475569" }}>
+                      <RotateCcw size={16} />
+                      <span>
+                        {duplicateShifts.length > 0
+                          ? `Tìm thấy ${duplicateShifts.length} ca trực đang vắng mặt / chờ duyệt cần khôi phục:`
+                          : `Không tìm thấy ca trực nào đang báo vắng trong khoảng thời gian đã chọn`}
+                      </span>
                     </div>
-                  )}
 
-                  {duplicateShifts.length > 0 && (
-                    <div
-                      style={{
-                        background: "#fff7ed",
-                        border: "1px solid #fed7aa",
-                        borderRadius: 8,
-                        padding: "8px 10px",
-                        marginTop: 8,
-                        fontSize: 11,
-                        color: "#9a3412",
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
-                        <AlertTriangle size={13} color="#ea580c" />
-                        <span>Đã tự động loại trừ {duplicateShifts.length} ca trùng lặp (không báo lại):</span>
+                    {duplicateShifts.length > 0 && (
+                      <div style={{ fontSize: 11, color: "#166534", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
+                        Các ca này sẽ được chuyển về <strong>🟢 Có mặt bình thường</strong>:
+                        <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {duplicateShifts.map((s, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: "#ffffff",
+                                padding: "2px 7px",
+                                borderRadius: 4,
+                                border: "1px solid #86efac",
+                                fontSize: 10.5,
+                                fontWeight: 600,
+                                color: "#166534",
+                              }}
+                            >
+                              Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")}) - {s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 80, overflowY: "auto" }}>
-                        {duplicateShifts.map((s, idx) => (
-                          <span
-                            key={idx}
+                    )}
+
+                    {duplicateShifts.length === 0 && (
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                        ℹ️ Nhân sự đã có mặt đầy đủ trong các ca thuộc phạm vi thời gian này.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: allSelectedDuplicates ? "#b91c1c" : affectedShifts.length > 0 ? "#b45309" : "#475569" }}>
+                      {allSelectedDuplicates ? <AlertTriangle size={16} /> : <Clock size={16} />}
+                      <span>
+                        {allSelectedDuplicates 
+                          ? `Tất cả ${duplicateShifts.length} ca đã nộp đơn hoặc duyệt nghỉ!`
+                          : `Tìm thấy ${affectedShifts.length} ca trực hợp lệ cần báo vắng`}
+                      </span>
+                    </div>
+
+                    {affectedShifts.length > 0 && (
+                      <div style={{ fontSize: 11, color: "#78350f", marginTop: 8, lineHeight: 1.5, maxHeight: 110, overflowY: "auto" }}>
+                        Các ca này sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>:
+                        <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {affectedShifts.slice(0, 10).map((s, idx) => (
+                            <span key={idx} style={{ background: "#ffffff", padding: "2px 6px", borderRadius: 4, border: "1px solid #fde68a", fontSize: 10.5, fontWeight: 600 }}>
+                              Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")})
+                            </span>
+                          ))}
+                          {affectedShifts.length > 10 && (
+                            <span style={{ fontSize: 10.5, color: "#92400e", fontWeight: 700, padding: "2px 4px" }}>
+                              +{affectedShifts.length - 10} ca khác
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {duplicateShifts.length > 0 && (
+                      <div
+                        style={{
+                          background: "#fff7ed",
+                          border: "1px solid #fed7aa",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          marginTop: 8,
+                          fontSize: 11,
+                          color: "#9a3412",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <AlertTriangle size={13} color="#ea580c" />
+                            <span>Đã tự động loại trừ {duplicateShifts.length} ca trùng lặp (đã báo vắng):</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActionMode("restore")}
                             style={{
-                              background: s.attendance_status === "pending_absence" ? "#fef3c7" : "#fee2e2",
-                              color: s.attendance_status === "pending_absence" ? "#92400e" : "#991b1b",
-                              border: "1px solid",
-                              borderColor: s.attendance_status === "pending_absence" ? "#fde68a" : "#fca5a5",
-                              padding: "1px 5px",
-                              borderRadius: 4,
-                              fontSize: 10,
-                              fontWeight: 600,
+                              background: "#ffffff",
+                              border: "1px solid #16a34a",
+                              color: "#15803d",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
                             }}
                           >
-                            Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")}) - {s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"}
-                          </span>
-                        ))}
+                            <RotateCcw size={11} /> Khôi phục có mặt ({duplicateShifts.length} ca)
+                          </button>
+                        </div>
+                        <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 80, overflowY: "auto" }}>
+                          {duplicateShifts.map((s, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: s.attendance_status === "pending_absence" ? "#fef3c7" : "#fee2e2",
+                                color: s.attendance_status === "pending_absence" ? "#92400e" : "#991b1b",
+                                border: "1px solid",
+                                borderColor: s.attendance_status === "pending_absence" ? "#fde68a" : "#fca5a5",
+                                padding: "1px 5px",
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 600,
+                              }}
+                            >
+                              Ca {s.shift_id} ({s.work_date.slice(5).replace("-", "/")}) - {s.attendance_status === "pending_absence" ? "Chờ duyệt" : "Đã nghỉ"}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {affectedShifts.length === 0 && duplicateShifts.length === 0 && (
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
-                      ℹ️ Chưa tìm thấy ca phân công nào của nhân sự trong khoảng thời gian đã chọn.
-                    </div>
-                  )}
-                </div>
+                    {affectedShifts.length === 0 && duplicateShifts.length === 0 && (
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                        ℹ️ Chưa tìm thấy ca phân công nào của nhân sự trong khoảng thời gian đã chọn.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ marginTop: 10, fontSize: 11, color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
-                  💡 Quản lý sẽ nhận được thông báo để phê duyệt hoặc từ chối đơn này.
+                  {isRestore
+                    ? "💡 Sau khi xác nhận khôi phục, nhân sự sẽ được ghi nhận có mặt bình thường và bảo toàn đầy đủ giờ KPI của tuần."
+                    : "💡 Quản lý sẽ nhận được thông báo để phê duyệt hoặc từ chối đơn này."}
                 </div>
               </div>
             </div>
@@ -825,26 +1023,54 @@ export function BulkAbsenceModal({
             >
               Hủy bỏ
             </button>
-            <button
-              type="submit"
-              disabled={loading || allSelectedDuplicates}
-              className={`btn btn-sm ${allSelectedDuplicates ? "btn-secondary" : "btn-danger"}`}
-              style={{
-                fontWeight: 700,
-                padding: "8px 18px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                cursor: (loading || allSelectedDuplicates) ? "not-allowed" : "pointer",
-                opacity: allSelectedDuplicates ? 0.7 : 1,
-              }}
-            >
-              {loading
-                ? "Đang gửi..."
-                : allSelectedDuplicates
-                ? "⚠️ Tất cả ca đã báo vắng (Trùng lặp)"
-                : `✓ Gửi Đơn Báo Vắng (${affectedShifts.length || finalDates.length * finalShiftIds.length} ca)`}
-            </button>
+            {isRestore ? (
+              <button
+                type="submit"
+                disabled={loading || duplicateShifts.length === 0}
+                className="btn btn-sm"
+                style={{
+                  fontWeight: 700,
+                  padding: "8px 18px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: duplicateShifts.length === 0 ? "#cbd5e1" : "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: (loading || duplicateShifts.length === 0) ? "not-allowed" : "pointer",
+                  opacity: duplicateShifts.length === 0 ? 0.7 : 1,
+                }}
+              >
+                <RotateCcw size={15} />
+                {loading
+                  ? "Đang khôi phục..."
+                  : duplicateShifts.length === 0
+                  ? "Không có ca nào cần khôi phục"
+                  : `✓ Xác Nhận Khôi Phục Có Mặt (${duplicateShifts.length} ca)`}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading || allSelectedDuplicates}
+                className={`btn btn-sm ${allSelectedDuplicates ? "btn-secondary" : "btn-danger"}`}
+                style={{
+                  fontWeight: 700,
+                  padding: "8px 18px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: (loading || allSelectedDuplicates) ? "not-allowed" : "pointer",
+                  opacity: allSelectedDuplicates ? 0.7 : 1,
+                }}
+              >
+                {loading
+                  ? "Đang gửi..."
+                  : allSelectedDuplicates
+                  ? "⚠️ Tất cả ca đã báo vắng (Trùng lặp)"
+                  : `✓ Gửi Đơn Báo Vắng (${affectedShifts.length || finalDates.length * finalShiftIds.length} ca)`}
+              </button>
+            )}
           </div>
         </form>
       </div>

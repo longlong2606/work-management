@@ -115,6 +115,13 @@ public record BulkReportAbsenceRequest(
 );
 public record ReportAbsenceRequest(int shift_id, string work_date, string reason, long? user_id = null);
 public record CancelAbsenceRequest(int shift_id, string work_date, long? user_id = null);
+public record BulkCancelAbsenceRequest(
+    long? user_id = null, 
+    string? start_date = null, 
+    string? end_date = null, 
+    List<string>? dates = null, 
+    List<int>? shift_ids = null
+);
 
 public record ApproveAbsenceRequest(int shift_id, string work_date, long user_id, bool approved, string? note = null);
 public record BulkApproveShiftRequests(List<long>? registration_ids = null);

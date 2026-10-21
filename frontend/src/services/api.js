@@ -360,6 +360,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  cancelAbsenceBulk: (data) =>
+    request("/shifts/cancel-absence-bulk", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   approveAbsence: (data) =>
     request("/shifts/approve-absence", {
       method: "POST",
