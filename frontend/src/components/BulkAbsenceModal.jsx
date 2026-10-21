@@ -73,17 +73,20 @@ export function BulkAbsenceModal({
         }
       }
       if (weekDays && weekDays.length > 0) {
-        setStartDate(weekDays[0].dateStr);
-        setEndDate(weekDays[weekDays.length - 1].dateStr);
-        setSelectedDates(weekDays.map((d) => d.dateStr));
+        const futureDays = weekDays.filter((d) => d.dateStr >= todayStr);
+        const start = futureDays[0]?.dateStr || todayStr;
+        const end = futureDays[futureDays.length - 1]?.dateStr || start;
+        setStartDate(start);
+        setEndDate(end);
+        setSelectedDates(futureDays.map((d) => d.dateStr));
       }
     }
-  }, [isOpen, weekDays, currentUser]);
+  }, [isOpen, weekDays, currentUser, todayStr]);
 
-  // Determine final dates to apply
+  // Determine final dates to apply (only current and future dates)
   const finalDates = useMemo(() => {
     if (scopeMode === "whole_week") {
-      return weekDays.map((d) => d.dateStr).filter((d) => isAdmin || d >= todayStr);
+      return weekDays.map((d) => d.dateStr).filter((d) => d >= todayStr);
     }
     if (scopeMode === "date_range") {
       const dates = [];
@@ -98,7 +101,7 @@ export function BulkAbsenceModal({
             const m = String(cur.getMonth() + 1).padStart(2, "0");
             const d = String(cur.getDate()).padStart(2, "0");
             const ds = `${y}-${m}-${d}`;
-            if (isAdmin || ds >= todayStr) dates.push(ds);
+            if (ds >= todayStr) dates.push(ds);
             cur.setDate(cur.getDate() + 1);
           }
         }
@@ -106,10 +109,10 @@ export function BulkAbsenceModal({
       return dates;
     }
     if (scopeMode === "custom_days") {
-      return selectedDates.filter((d) => isAdmin || d >= todayStr);
+      return selectedDates.filter((d) => d >= todayStr);
     }
     return [];
-  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr, isAdmin]);
+  }, [scopeMode, weekDays, startDate, endDate, selectedDates, todayStr]);
 
   // Determine final shift IDs
   const finalShiftIds = useMemo(() => {
@@ -469,7 +472,7 @@ export function BulkAbsenceModal({
                       </label>
                       <input
                         type="date"
-                        min={isAdmin ? undefined : todayStr}
+                        min={todayStr}
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                         style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
@@ -481,7 +484,7 @@ export function BulkAbsenceModal({
                       </label>
                       <input
                         type="date"
-                        min={isAdmin ? undefined : (startDate || todayStr)}
+                        min={startDate || todayStr}
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 600, fontSize: 12, boxSizing: "border-box" }}
@@ -494,7 +497,7 @@ export function BulkAbsenceModal({
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
                     {weekDays.map((d) => {
                       const isChecked = selectedDates.includes(d.dateStr);
-                      const isPast = !isAdmin && d.dateStr < todayStr;
+                      const isPast = d.dateStr < todayStr;
                       return (
                         <button
                           type="button"

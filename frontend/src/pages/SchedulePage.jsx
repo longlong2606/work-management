@@ -82,6 +82,7 @@ export function SchedulePage() {
   const { fetchUnreadCount } = useNotifications();
   const isAdmin = user?.role === "admin" || Boolean(canManageSchedule);
   const isStrictAdmin = user?.role === "admin";
+  const todayStr = formatLocalDate(new Date());
 
   const [viewMode, setViewMode] = useState("week"); // 'week' | 'day' | 'my'
   const [currentDate, setCurrentDate] = useState(() => {
@@ -372,6 +373,10 @@ export function SchedulePage() {
 
   // Open Report Absence Modal
   const openReportAbsence = (shift, day, targetUser = null) => {
+    if (day?.dateStr && day.dateStr < todayStr) {
+      showToast("Không thể nộp đơn báo vắng cho ca trực trong quá khứ! Nếu nhân viên bỏ ca, Quản lý vui lòng dùng chức năng 'Đánh dấu vắng' trong bảng điểm danh.", "warning");
+      return;
+    }
     const finalTarget = targetUser || user;
     if (finalTarget) {
       const existing = schedule.find(
@@ -504,6 +509,10 @@ export function SchedulePage() {
     e.preventDefault();
     if (!reportAbsenceModal.reason.trim()) {
       showToast("Vui lòng nhập lý do báo vắng!", "danger");
+      return;
+    }
+    if (reportAbsenceModal.workDate && reportAbsenceModal.workDate < todayStr) {
+      showToast("Không thể nộp đơn báo vắng cho ca trực trong quá khứ! Vui lòng chỉ báo vắng cho ca hôm nay hoặc tương lai.", "warning");
       return;
     }
     setReportAbsenceModal((prev) => ({ ...prev, submitting: true }));
@@ -1806,6 +1815,9 @@ export function SchedulePage() {
                                       </span>
                                     );
                                   }
+                                  if (day.dateStr < todayStr) {
+                                    return null;
+                                  }
                                   return (
                                     <button
                                       onClick={() => openReportAbsence(shift, day)}
@@ -2204,6 +2216,23 @@ export function SchedulePage() {
                           );
                         }
                         if (isMyAbsentInDay) {
+                          if (currentDate < todayStr) {
+                            return (
+                              <span
+                                style={{
+                                  background: "#fee2e2",
+                                  border: "1px solid #fca5a5",
+                                  color: "#991b1b",
+                                  borderRadius: 6,
+                                  padding: "6px 12px",
+                                  fontWeight: 700,
+                                  fontSize: 12,
+                                }}
+                              >
+                                🔴 Đã nghỉ
+                              </span>
+                            );
+                          }
                           return (
                             <button
                               onClick={() => handleCancelAbsence(shift.id, currentDate, user?.id)}
@@ -2213,6 +2242,9 @@ export function SchedulePage() {
                               Xác Nhận Có Mặt Lại
                             </button>
                           );
+                        }
+                        if (currentDate < todayStr) {
+                          return null;
                         }
                         return (
                           <button
@@ -2447,12 +2479,16 @@ export function SchedulePage() {
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {isAbsent ? (
-                        <button
-                          onClick={() => handleCancelAbsence(shift.shift_id, shift.work_date, user?.id)}
-                          className="btn btn-primary btn-sm"
-                        >
-                          Xác Nhận Có Mặt Lại
-                        </button>
+                        shift.work_date >= todayStr ? (
+                          <button
+                            onClick={() => handleCancelAbsence(shift.shift_id, shift.work_date, user?.id)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            Xác Nhận Có Mặt Lại
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#991b1b" }}>Đã nghỉ</span>
+                        )
                       ) : isPending ? (
                         <button
                           onClick={() => handleCancelAbsence(shift.shift_id, shift.work_date, user?.id)}
@@ -2470,7 +2506,7 @@ export function SchedulePage() {
                         >
                           Hủy Đơn Vắng
                         </button>
-                      ) : (
+                      ) : shift.work_date >= todayStr ? (
                         <button
                           onClick={() =>
                             openReportAbsence(
@@ -2491,7 +2527,7 @@ export function SchedulePage() {
                         >
                           Báo Vắng Ca
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -2765,7 +2801,7 @@ export function SchedulePage() {
                         {/* Action buttons based on Role */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {/* 1. If Staff is current logged-in user and PRESENT -> button to report absence */}
-                          {isMe && isPresent && (
+                          {isMe && isPresent && rosterModal.day?.dateStr >= todayStr && (
                             <button
                               onClick={() =>
                                 openReportAbsence(rosterModal.shift, rosterModal.day, m)

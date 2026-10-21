@@ -1977,6 +1977,12 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
         return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày xin nghỉ!" });
     }
 
+    var validDates = targetDates.Where(d => string.Compare(d, todayStr, StringComparison.Ordinal) >= 0).ToList();
+    if (validDates.Count == 0)
+    {
+        return Results.BadRequest(new { detail = "Không thể nộp đơn báo vắng cho các ngày trong quá khứ! Vui lòng chỉ chọn ngày hôm nay hoặc tương lai. Nếu nhân viên bỏ ca trong quá khứ, Quản lý vui lòng dùng chức năng Đánh dấu vắng trong bảng điểm danh." });
+    }
+
     // Target shift IDs (1-9)
     var targetShifts = (req.shift_ids != null && req.shift_ids.Count > 0)
         ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
@@ -1985,10 +1991,8 @@ app.MapPost("/api/shifts/report-absence-bulk", (BulkReportAbsenceRequest req, Ht
     int affectedCount = 0;
     int skippedDuplicates = 0;
 
-    foreach (var date in targetDates.OrderBy(x => x))
+    foreach (var date in validDates.OrderBy(x => x))
     {
-        // Don't allow reporting absence for past dates for regular members
-        if (!canManage && string.Compare(date, todayStr, StringComparison.Ordinal) < 0) continue;
 
         foreach (var sid in targetShifts)
         {
@@ -2098,6 +2102,12 @@ app.MapPost("/api/shifts/report-absence", (ReportAbsenceRequest req, HttpContext
     if (string.IsNullOrWhiteSpace(req.reason))
     {
         return Results.BadRequest(new { detail = "Vui lòng nhập lý do báo vắng!" });
+    }
+
+    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+    if (string.Compare(req.work_date, todayStr, StringComparison.Ordinal) < 0)
+    {
+        return Results.BadRequest(new { detail = "Không thể nộp đơn báo vắng cho ca trực trong quá khứ! Vui lòng chỉ báo vắng cho ca hôm nay hoặc tương lai. Nếu nhân viên bỏ ca trong quá khứ, Quản lý vui lòng dùng chức năng Đánh dấu vắng trong bảng điểm danh." });
     }
 
     var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
