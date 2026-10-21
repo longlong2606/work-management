@@ -2264,6 +2264,10 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
       setError("Vui lòng chọn Trưởng nhóm (Leader) chịu trách nhiệm cho nhiệm vụ này!");
       return;
     }
+    if (!deadline || !deadline.trim()) {
+      setError("Vui lòng chọn Hạn chót (ngày và giờ) hoàn thành nhiệm vụ!");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -2545,10 +2549,11 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
 
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Hạn chót hoàn thành (Deadline)
+                  Hạn chót hoàn thành (Deadline) <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <input
                   type="datetime-local"
+                  required
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
                   style={{
@@ -2692,6 +2697,10 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
     }
     if (selectedAssignees.length === 0) {
       setError("Vui lòng chọn ít nhất 1 thành viên được giao mục việc!");
+      return;
+    }
+    if (!dueAt || !dueAt.trim()) {
+      setError("Vui lòng chọn Hạn chót (ngày và giờ) cho mục việc!");
       return;
     }
 
@@ -2993,13 +3002,37 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Hạn chót:
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                  Hạn chót: <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                {taskDeadline && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dt = taskDeadline.replace(" ", "T").slice(0, 16);
+                      setDueAt(dt);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: 0,
+                      textDecoration: "underline"
+                    }}
+                    title="Điền tự động theo hạn chót nhiệm vụ lớn"
+                  >
+                    + Lấy theo hạn nhiệm vụ
+                  </button>
+                )}
+              </div>
               <input
                 type="datetime-local"
+                required
                 value={dueAt}
-                max={taskDeadline ? taskDeadline.replace(" ", "T") : undefined}
                 onChange={(e) => setDueAt(e.target.value)}
                 style={{
                   width: "100%",
@@ -3227,6 +3260,10 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
     }
     if (selectedAssignees.length === 0) {
       setError("Vui lòng chọn ít nhất 1 thành viên được giao mục việc!");
+      return;
+    }
+    if (!dueAt || !dueAt.trim()) {
+      setError("Vui lòng chọn Hạn chót (ngày và giờ) cho mục việc!");
       return;
     }
 
@@ -3530,13 +3567,37 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 5 }}>
-                Hạn chót:
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                  Hạn chót: <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                {taskDeadline && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dt = taskDeadline.replace(" ", "T").slice(0, 16);
+                      setDueAt(dt);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: 0,
+                      textDecoration: "underline"
+                    }}
+                    title="Điền tự động theo hạn chót nhiệm vụ lớn"
+                  >
+                    + Lấy theo hạn nhiệm vụ
+                  </button>
+                )}
+              </div>
               <input
                 type="datetime-local"
+                required
                 value={dueAt}
-                max={taskDeadline ? taskDeadline.replace(" ", "T") : undefined}
                 onChange={(e) => setDueAt(e.target.value)}
                 style={{
                   width: "100%",

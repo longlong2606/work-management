@@ -462,6 +462,9 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
 
+    if (string.IsNullOrWhiteSpace(req.due_at))
+        return Results.BadRequest(new { detail = "Hạn chót mục việc (ngày và giờ) không được để trống!" });
+
     try
     {
         int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
@@ -562,6 +565,9 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề không được để trống!" });
+
+    if (string.IsNullOrWhiteSpace(req.due_at))
+        return Results.BadRequest(new { detail = "Hạn chót mục việc (ngày và giờ) không được để trống!" });
 
     int cpPoints = Math.Max(0, req.cp_points);
 
