@@ -7,9 +7,17 @@ import {
   AlertCircle, ShieldCheck, ArrowUpRight, Flame, Monitor
 } from "lucide-react";
 
+function formatLocalDate(d) {
+  const date = d instanceof Date ? d : new Date(d);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function TvDisplayPage({ onNavigateToManagement }) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [currentDateKey, setCurrentDateKey] = useState(() => new Date().toISOString().slice(0, 10));
+  const [currentDateKey, setCurrentDateKey] = useState(() => formatLocalDate(new Date()));
   const [scheduleData, setScheduleData] = useState({
     isLive: false,
     shifts: [],
@@ -45,7 +53,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
       const now = new Date();
       setCurrentTime(now);
 
-      const todayStr = now.toISOString().slice(0, 10);
+      const todayStr = formatLocalDate(now);
       // Khi bước qua nửa đêm (00:00:00)
       if (todayStr !== currentDateKey) {
         console.log(`[TV Display] 🌙 Đã qua 00:00, chuyển sang ngày mới: ${todayStr}`);
@@ -57,7 +65,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
 
     // Tự động Polling làm mới dữ liệu ngầm mỗi 5 giây (Realtime sync)
     const pollTimer = setInterval(() => {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = formatLocalDate(new Date());
       loadData(todayStr);
     }, 5000);
 

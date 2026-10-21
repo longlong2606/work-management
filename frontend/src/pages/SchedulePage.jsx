@@ -14,16 +14,44 @@ import {
   Lock, AlertTriangle, FileSpreadsheet, Upload, Download, Trophy, CheckSquare, CheckCheck
 } from "lucide-react";
 
+// Format a Date object as YYYY-MM-DD using local time (prevents UTC date-shift bugs)
+function formatLocalDate(d) {
+  const date = d instanceof Date ? d : new Date(d);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Parse YYYY-MM-DD as local date safely set to noon to avoid any timezone/DST shift
+function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const parts = String(dateStr).split("T")[0].split("-");
+  if (parts.length === 3) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+  }
+  return new Date(dateStr);
+}
+
 function getMonday(d) {
-  const date = new Date(d);
-  const day = date.getDay()
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
-  return monday.toISOString().split("T")[0];
+  const date = parseLocalDate(d);
+  const day = date.getDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+  // In ISO weeks (Monday to Saturday):
+  // Sunday (0) -> -6 days
+  // Monday (1) -> 0 days
+  // Tuesday (2) -> -1 day
+  // Wednesday (3) -> -2 days
+  // Thursday (4) -> -3 days
+  // Friday (5) -> -4 days
+  // Saturday (6) -> -5 days
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate() + diff, 12, 0, 0);
+  return formatLocalDate(monday);
 }
 
 function getDaysOfWeek(mondayStr) {
-  const monday = new Date(mondayStr);
+  const monday = parseLocalDate(mondayStr);
   const days = [];
   const dayNames = [
     "Thứ 2",
@@ -33,12 +61,11 @@ function getDaysOfWeek(mondayStr) {
     "Thứ 6",
     "Thứ 7"
   ];
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = formatLocalDate(new Date());
 
   for (let i = 0; i < 6; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i, 12, 0, 0);
+    const dateStr = formatLocalDate(d);
     const displayDate = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     days.push({
       dayName: dayNames[i],
@@ -62,7 +89,7 @@ export function SchedulePage() {
     if (d.getDay() === 0) {
       d.setDate(d.getDate() + 1);
     }
-    return d.toISOString().split("T")[0];
+    return formatLocalDate(d);
   });
   const [mondayDate, setMondayDate] = useState(() => getMonday(new Date()));
   const [weekDays, setWeekDays] = useState(() => getDaysOfWeek(getMonday(new Date())));
@@ -70,10 +97,10 @@ export function SchedulePage() {
   // Tự động bỏ qua Chủ nhật (phòng trường hợp chọn hoặc tính toán rơi vào Chủ nhật)
   useEffect(() => {
     if (currentDate) {
-      const d = new Date(currentDate);
+      const d = parseLocalDate(currentDate);
       if (d.getDay() === 0) {
         d.setDate(d.getDate() + 1);
-        const fixed = d.toISOString().split("T")[0];
+        const fixed = formatLocalDate(d);
         setCurrentDate(fixed);
         setActiveDay(fixed);
         const newMon = getMonday(d);
@@ -96,7 +123,7 @@ export function SchedulePage() {
   const [isFullWidth, setIsFullWidth] = useState(false);
   const tableScrollRef = React.useRef(null);
   const [activeDay, setActiveDay] = useState(() => {
-    return new Date().toISOString().split("T")[0];
+    return formatLocalDate(new Date());
   });
 
   const scrollToDay = (dateStr) => {
@@ -114,7 +141,7 @@ export function SchedulePage() {
   };
 
   useEffect(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = formatLocalDate(new Date());
     const isTodayInWeek = weekDays.some((d) => d.dateStr === todayStr);
     if (isTodayInWeek && tableScrollRef.current && viewMode === "week") {
       const timer = setTimeout(() => {
@@ -129,7 +156,7 @@ export function SchedulePage() {
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [mondayDate, viewMode]);
+  }, [mondayDate, viewMode, weekDays]);
 
   // Roster Modal: Shows all members for a clicked shift
   const [rosterModal, setRosterModal] = useState({
@@ -540,7 +567,7 @@ export function SchedulePage() {
 
   // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo nhiều ca)
   const openCreateEventModal = (shiftId = 0, workDate = "") => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = formatLocalDate(new Date());
     const initialDate = workDate || todayStr;
     const initialShifts = (shiftId !== undefined && shiftId !== null && Number(shiftId) > 0)
       ? [Number(shiftId)]
@@ -732,7 +759,7 @@ export function SchedulePage() {
 
   // Handle Admin Approve
   const handleAdminApprove = async (regId, staffName, workDate) => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = formatLocalDate(new Date());
     if (workDate && workDate < todayStr) {
       showToast(`Ca làm việc ngày ${workDate} đã qua ngày. Yêu cầu này đã bị khóa duyệt, chỉ có thể chuyển sang từ chối!`, "danger");
       return;
@@ -753,7 +780,7 @@ export function SchedulePage() {
 
   // Handle Approve All or Selected Pending Requests
   const handleApproveAll = async (targetIds = null) => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = formatLocalDate(new Date());
     const validRequests = pendingRequests.filter(
       (r) => !r.is_expired && (!r.work_date || r.work_date >= todayStr)
     );
@@ -806,7 +833,7 @@ export function SchedulePage() {
 
   // Open Reject Modal
   const openRejectModal = (req) => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = formatLocalDate(new Date());
     const isPast = req.work_date && req.work_date < todayStr;
     setRejectModal({
       open: true,
@@ -870,13 +897,13 @@ export function SchedulePage() {
   };
 
   const handleWeekChange = (weeks) => {
-    const d = new Date(mondayDate);
+    const d = parseLocalDate(mondayDate);
     d.setDate(d.getDate() + weeks * 7);
-    setMondayDate(d.toISOString().split("T")[0]);
+    setMondayDate(formatLocalDate(d));
   };
 
   const handleDayChange = (days) => {
-    const d = new Date(currentDate);
+    const d = parseLocalDate(currentDate);
     d.setDate(d.getDate() + days);
     // Bỏ qua Chủ nhật (getDay() === 0):
     // Tiến tới từ Thứ 7 -> tự động nhảy sang Thứ 2 của tuần tiếp theo (+1 thêm 1 ngày nữa)
@@ -884,7 +911,7 @@ export function SchedulePage() {
     if (d.getDay() === 0) {
       d.setDate(d.getDate() + (days > 0 ? 1 : -1));
     }
-    const newDateStr = d.toISOString().split("T")[0];
+    const newDateStr = formatLocalDate(d);
     setCurrentDate(newDateStr);
     setActiveDay(newDateStr);
     const newMonday = getMonday(d);
@@ -1061,7 +1088,7 @@ export function SchedulePage() {
 
           {isAdmin && (
             <button
-              onClick={() => openCreateEventModal(0, new Date().toISOString().split("T")[0])}
+              onClick={() => openCreateEventModal(0, formatLocalDate(new Date()))}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1339,11 +1366,11 @@ export function SchedulePage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   if (!val) return;
-                  const chosen = new Date(val);
+                  const chosen = parseLocalDate(val);
                   if (chosen.getDay() === 0) {
                     // Chủ nhật không có lịch trực -> tự động nhảy sang Thứ Hai
                     chosen.setDate(chosen.getDate() + 1);
-                    const fixed = chosen.toISOString().split("T")[0];
+                    const fixed = formatLocalDate(chosen);
                     setCurrentDate(fixed);
                     setActiveDay(fixed);
                     const newMon = getMonday(chosen);
@@ -1378,7 +1405,7 @@ export function SchedulePage() {
                   if (d.getDay() === 0) {
                     d.setDate(d.getDate() + 1);
                   }
-                  const today = d.toISOString().split("T")[0];
+                  const today = formatLocalDate(d);
                   setCurrentDate(today);
                   setActiveDay(today);
                   const newMon = getMonday(d);
@@ -4348,7 +4375,7 @@ export function SchedulePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {/* TOOLBAR PHÊ DUYỆT TẤT CẢ / CHỌN HÀNG LOẠT */}
                 {(() => {
-                  const todayStr = new Date().toISOString().split("T")[0];
+                  const todayStr = formatLocalDate(new Date());
                   const validRequests = pendingRequests.filter(r => !r.is_expired && (!r.work_date || r.work_date >= todayStr) && (isStrictAdmin || r.attendance_status !== "pending_absence"));
                   const isAllSelected = validRequests.length > 0 && selectedPendingIds.length === validRequests.length;
 
@@ -4464,7 +4491,7 @@ export function SchedulePage() {
                   );
                 })()}
                 {(() => {
-                  const todayStr = new Date().toISOString().split("T")[0];
+                  const todayStr = formatLocalDate(new Date());
                   const expiredCount = pendingRequests.filter(r => r.is_expired || (r.work_date && r.work_date < todayStr)).length;
                   if (expiredCount === 0) return null;
                   return (
@@ -4508,7 +4535,7 @@ export function SchedulePage() {
                 })()}
 
                 {pendingRequests.map((req) => {
-                  const todayStr = new Date().toISOString().split("T")[0];
+                  const todayStr = formatLocalDate(new Date());
                   const isExpired = Boolean(req.is_expired || (req.work_date && req.work_date < todayStr));
                   const isCancel = req.status === "pending_cancel";
                   const isAbsence = req.attendance_status === "pending_absence";
