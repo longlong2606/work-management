@@ -227,6 +227,11 @@ public record PostponeTaskRequest(
     string reason
 );
 
+public record ResumeTaskRequest(
+    string? planned_date = null,
+    string? deadline = null
+);
+
 public record AssigneeContribution(long user_id, int contribution_pct);
 
 public record CreateSubtaskRequest(

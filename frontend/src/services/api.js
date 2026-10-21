@@ -394,6 +394,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ reason }),
     }),
+  resumeTask: (id, data = {}) =>
+    request(`/tasks/${id}/resume`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   finishTask: (id) =>
     request(`/tasks/${id}/finish`, {
       method: "POST",

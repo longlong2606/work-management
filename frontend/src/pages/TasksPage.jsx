@@ -19,6 +19,7 @@ import {
   Check,
   RotateCcw,
   PauseCircle,
+  PlayCircle,
   Edit3
 } from "lucide-react";
 
@@ -196,7 +197,30 @@ export function TasksPage() {
   };
 
   // Actions
+  const handleResumeTask = async (taskId) => {
+    if (!window.confirm("Bạn có muốn dừng tạm hoãn để khôi phục nhiệm vụ và cập nhật lại kế hoạch/hạn chót mới?")) return;
+    try {
+      const res = await api.resumeTask(taskId);
+      showToast(res.message || "Đã dừng tạm hoãn nhiệm vụ!");
+      const detailRes = await api.getTaskDetail(taskId);
+      setTaskDetail(detailRes);
+      if (detailRes?.task) {
+        setSelectedTask(detailRes.task);
+        // Tự động mở modal chỉnh sửa để người dùng cập nhật lại lịch mới
+        setEditingTask(detailRes.task);
+      }
+      fetchTasks();
+      fetchTaskStats();
+    } catch (err) {
+      showToast(err.message || "Lỗi khi dừng tạm hoãn nhiệm vụ.", "danger");
+    }
+  };
+
   const handleFinishTask = async (taskId) => {
+    if (taskDetail?.task?.status === "POSTPONED") {
+      showToast("Nhiệm vụ đang bị tạm hoãn, không thể hoàn thành! Vui lòng dừng tạm hoãn và cập nhật lịch trước khi nghiệm thu.", "danger");
+      return;
+    }
     if (!window.confirm("Bạn có chắc chắn muốn nghiệm thu và kết thúc toàn bộ nhiệm vụ này?")) return;
     try {
       const res = await api.finishTask(taskId);
@@ -873,6 +897,32 @@ export function TasksPage() {
                       </button>
                     )}
 
+                    {canEditTask(task) && task.status === "POSTPONED" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResumeTask(task.id);
+                        }}
+                        style={{
+                          background: "#ecfdf5",
+                          border: "1px solid #a7f3d0",
+                          color: "#059669",
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                        title="Dừng tạm hoãn và khôi phục hoạt động cho nhiệm vụ"
+                      >
+                        <PlayCircle size={12} />
+                        <span>Dừng tạm hoãn</span>
+                      </button>
+                    )}
+
                     {(hasAdminRights || task.leader_id === user?.id) && task.status !== "FINISHED" && (
                       <button
                         onClick={(e) => {
@@ -1146,19 +1196,48 @@ export function TasksPage() {
                     </div>
 
                     {/* POSTPONED REASON BANNER */}
-                    {taskDetail.task.status === "POSTPONED" && taskDetail.task.postponed_reason && (
+                    {taskDetail.task.status === "POSTPONED" && (
                       <div
                         style={{
-                          padding: "10px 14px",
-                          background: "#fef2f2",
-                          border: "1px solid #fecdd3",
-                          borderRadius: 8,
-                          fontSize: 12,
-                          color: "#991b1b",
+                          padding: "12px 14px",
+                          background: "#fffbeb",
+                          border: "1px solid #fde68a",
+                          borderRadius: 10,
+                          fontSize: 12.5,
+                          color: "#92400e",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
                         }}
                       >
-                        <strong style={{ display: "block", marginBottom: 4 }}>⚠️ Lý do tạm hoãn:</strong>
-                        {taskDetail.task.postponed_reason}
+                        <div>
+                          <strong style={{ display: "block", marginBottom: 2 }}>⚠️ Nhiệm vụ đang tạm hoãn:</strong>
+                          <span>{taskDetail.task.postponed_reason || "Chưa có lý do chi tiết"}</span>
+                        </div>
+                        {canEditTask(taskDetail.task) && (
+                          <div>
+                            <button
+                              onClick={() => handleResumeTask(taskDetail.task.id)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                background: "#059669",
+                                color: "#ffffff",
+                                border: "none",
+                                padding: "6px 12px",
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                boxShadow: "0 1px 3px rgba(5,150,105,0.2)",
+                              }}
+                            >
+                              <PlayCircle size={14} />
+                              <span>Dừng tạm hoãn & Đặt lại lịch mới</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1269,7 +1348,51 @@ export function TasksPage() {
                           </button>
                         )}
 
-                        {taskDetail.task.status !== "FINISHED" ? (
+                        {taskDetail.task.status === "FINISHED" ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "#ecfdf5",
+                              border: "1px solid #a7f3d0",
+                              color: "#047857",
+                              padding: "8px 14px",
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 700,
+                            }}
+                          >
+                            <CheckCircle2 size={16} color="#059669" />
+                            <span>Nhiệm vụ đã hoàn thành xuất sắc (Chế độ chỉ xem)</span>
+                          </div>
+                        ) : taskDetail.task.status === "POSTPONED" ? (
+                          canEditTask(taskDetail.task) && (
+                            <button
+                              onClick={() => handleResumeTask(taskDetail.task.id)}
+                              style={{
+                                flex: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                                background: "#059669",
+                                color: "#ffffff",
+                                border: "none",
+                                padding: "9px 12px",
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 12,
+                                cursor: "pointer",
+                                boxShadow: "0 2px 6px rgba(5, 150, 105, 0.25)",
+                              }}
+                              title="Dừng tạm hoãn và mở hộp thoại chỉnh sửa lại lịch mới cho nhiệm vụ"
+                            >
+                              <PlayCircle size={15} />
+                              <span>Dừng Tạm Hoãn & Chỉnh Sửa Lịch Mới</span>
+                            </button>
+                          )
+                        ) : (
                           <button
                             onClick={() => handleFinishTask(taskDetail.task.id)}
                             style={{
@@ -1292,24 +1415,6 @@ export function TasksPage() {
                             <Award size={15} />
                             <span>Hoàn Thành</span>
                           </button>
-                        ) : (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              background: "#ecfdf5",
-                              border: "1px solid #a7f3d0",
-                              color: "#047857",
-                              padding: "8px 14px",
-                              borderRadius: 8,
-                              fontSize: 12,
-                              fontWeight: 700,
-                            }}
-                          >
-                            <CheckCircle2 size={16} color="#059669" />
-                            <span>Nhiệm vụ đã hoàn thành xuất sắc (Chế độ chỉ xem)</span>
-                          </div>
                         )}
 
                         {isAdmin && taskDetail.task.status !== "FINISHED" && (

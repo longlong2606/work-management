@@ -365,18 +365,59 @@ app.MapPost("/api/tasks/{id:long}/postpone", (long id, PostponeTaskRequest req, 
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
+    if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+
+    long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
+    bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
+    if (currentUser.role != "admin" && !isTaskLeader && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+
+    if ((string)task.status == "FINISHED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể tạm hoãn!" });
 
     if (string.IsNullOrWhiteSpace(req.reason))
         return Results.BadRequest(new { detail = "Vui lòng nhập lý do tạm hoãn nhiệm vụ!" });
 
-    using var conn = Database.GetConnection();
-    var rows = conn.Execute(@"
+    conn.Execute(@"
         UPDATE tasks SET status = 'POSTPONED', postponed_reason = @reason, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id", new { id, reason = req.reason.Trim() });
 
-    if (rows == 0) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
     return Results.Ok(new { message = "Đã chuyển trạng thái nhiệm vụ sang Tạm hoãn!" });
+});
+
+app.MapPost("/api/tasks/{id:long}/resume", (long id, ResumeTaskRequest? req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
+    if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+
+    long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
+    bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
+    if (currentUser.role != "admin" && !isTaskLeader && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+
+    if ((string)task.status != "POSTPONED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ không ở trạng thái Tạm hoãn!" });
+
+    conn.Execute(@"
+        UPDATE tasks SET 
+            status = CASE WHEN (SELECT COUNT(1) FROM subtasks WHERE task_id = @id) > 0 THEN 'IN_PROGRESS' ELSE 'OPEN' END,
+            postponed_reason = NULL,
+            planned_date = COALESCE(@plannedDate, planned_date),
+            deadline = COALESCE(@deadline, deadline),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id", new
+    {
+        id,
+        plannedDate = string.IsNullOrWhiteSpace(req?.planned_date) ? null : req.planned_date.Trim(),
+        deadline = string.IsNullOrWhiteSpace(req?.deadline) ? null : req.deadline.Trim()
+    });
+
+    return Results.Ok(new { message = "Đã dừng tạm hoãn và khôi phục hoạt động cho nhiệm vụ!" });
 });
 
 app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
@@ -387,6 +428,9 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
     using var conn = Database.GetConnection();
     var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @id", new { id });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
+
+    if ((string)task.status == "POSTPONED")
+        return Results.BadRequest(new { detail = "Nhiệm vụ đang ở trạng thái Tạm hoãn, không thể nghiệm thu hoàn thành! Vui lòng dừng tạm hoãn trước khi hoàn thành." });
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
