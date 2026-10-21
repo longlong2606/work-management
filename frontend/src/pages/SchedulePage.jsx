@@ -1829,63 +1829,6 @@ export function SchedulePage() {
                               </div>
                             </div>
 
-                            {/* Dòng 2: Hiển thị đích danh người xin nghỉ để không ai bị nhầm lẫn */}
-                            {(absentInSlot.length > 0 || pendingInSlot.length > 0) && (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
-                                {absentInSlot.map((a) => (
-                                  <div
-                                    key={a.id}
-                                    style={{
-                                      fontSize: 9.5,
-                                      fontWeight: 700,
-                                      background: "#fee2e2",
-                                      color: "#991b1b",
-                                      border: "1px solid #fca5a5",
-                                      padding: "2px 5px",
-                                      borderRadius: 4,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 3,
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                    title={`Vắng mặt: ${a.full_name || a.username} (${a.absence_reason || "Đã duyệt nghỉ"})`}
-                                  >
-                                    <span>🔴</span>
-                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                                      {a.full_name || a.username} (Vắng)
-                                    </span>
-                                  </div>
-                                ))}
-                                {pendingInSlot.map((p) => (
-                                  <div
-                                    key={p.id}
-                                    style={{
-                                      fontSize: 9.5,
-                                      fontWeight: 700,
-                                      background: "#fef3c7",
-                                      color: "#92400e",
-                                      border: "1px solid #fde68a",
-                                      padding: "2px 5px",
-                                      borderRadius: 4,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 3,
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                    title={`Đang chờ duyệt: ${p.full_name || p.username} (${p.absence_reason || "Đang xin nghỉ"})`}
-                                  >
-                                    <span>🟡</span>
-                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                                      {p.full_name || p.username} (Chờ duyệt)
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
 
                             {/* Dòng 3: Trùng TKB hoặc Chỉnh sửa giờ */}
                             {(conflictsInSlot.length > 0 || customizedInSlot.length > 0) && (
