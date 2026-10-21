@@ -233,10 +233,15 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
 
     int totalCp = Math.Max(0, req.total_cp);
     using var conn = Database.GetConnection();
-    var taskId = conn.ExecuteScalar<long>(@"
-        INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
-        VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-        SELECT last_insert_rowid();",
+    string insertTaskSql = Database.IsPostgres
+        ? @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
+            VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id;"
+        : @"INSERT INTO tasks (title, description, task_type, planned_date, deadline, location, customer_info, leader_id, created_by, total_cp, status, created_at, updated_at)
+            VALUES (@title, @description, @task_type, @planned_date, @deadline, @location, @customer_info, @leader_id, @created_by, @totalCp, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+            SELECT last_insert_rowid();";
+
+    var taskId = conn.ExecuteScalar<long>(insertTaskSql,
         new
         {
             title = req.title.Trim(),
@@ -412,10 +417,15 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     int pos = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(position), 0) + 1 FROM subtasks WHERE task_id = @taskId", new { taskId });
     int cpPoints = Math.Max(0, req.cp_points);
 
-    long subtaskId = conn.ExecuteScalar<long>(@"
-        INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
-        VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-        SELECT last_insert_rowid();",
+    string insertSubtaskSql = Database.IsPostgres
+        ? @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+            VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id;"
+        : @"INSERT INTO subtasks (task_id, title, description, position, status, due_at, created_by, cp_points, quality_multiplier, created_at, updated_at)
+            VALUES (@taskId, @title, @description, @pos, 'PENDING', @due_at, @createdBy, @cpPoints, 1.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+            SELECT last_insert_rowid();";
+
+    long subtaskId = conn.ExecuteScalar<long>(insertSubtaskSql,
         new
         {
             taskId,
@@ -434,7 +444,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     int defaultPct = assigneeIds.Count > 1 ? (100 / assigneeIds.Count) : 100;
     foreach (var uid in assigneeIds)
     {
-        conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct)",
+        conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
             new { subtaskId, uid, defaultPct });
 
         if (uid != currentUser.id)
@@ -494,7 +504,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
         foreach (var ac in req.assignee_contributions)
         {
-            conn.Execute("INSERT OR REPLACE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct)",
+            conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                 new { id, uid = ac.user_id, pct = ac.contribution_pct });
         }
     }
@@ -504,7 +514,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         int defaultPct = req.assignee_ids.Count > 1 ? (100 / req.assignee_ids.Count) : 100;
         foreach (var uid in req.assignee_ids)
         {
-            conn.Execute("INSERT OR IGNORE INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct)",
+            conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                 new { id, uid, defaultPct });
         }
     }
@@ -3555,17 +3565,17 @@ app.MapPost("/api/settings/smtp", (SmtpSettingsRequest req, HttpContext ctx) =>
     if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
-    conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_host', @v)", new { v = req.host });
-    conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_port', @v)", new { v = req.port.ToString() });
-    conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_user', @v)", new { v = req.user });
-    conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_from_name', @v)", new { v = req.from_name ?? "" });
+    conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_host', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.host });
+    conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_port', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.port.ToString() });
+    conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_user', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.user });
+    conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_from_name', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.from_name ?? "" });
     if (!string.IsNullOrEmpty(req.password))
     {
-        conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('smtp_password', @v)", new { v = req.password.Trim() });
+        conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_password', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.password.Trim() });
     }
     if (req.app_url != null)
     {
-        conn.Execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('app_url', @v)", new { v = req.app_url.Trim() });
+        conn.Execute("INSERT INTO system_settings (key, value) VALUES ('app_url', @v) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", new { v = req.app_url.Trim() });
     }
 
     return Results.Ok(new { message = "Đã lưu cấu hình SMTP và đường dẫn hệ thống thành công!" });
