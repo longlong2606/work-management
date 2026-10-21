@@ -356,13 +356,13 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ không tồn tại!" });
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
-    bool canCreateSubtask = currentUser.role == "admin" 
-        || currentUser.role == "leader" 
-        || (leaderId.HasValue && leaderId.Value == currentUser.id)
+    bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
+    bool canFinishTask = currentUser.role == "admin" 
+        || isTaskLeader 
         || currentUser.can_manage_tasks;
 
-    if (!canCreateSubtask)
-        return Results.Json(new { detail = "Bạn không có quyền giao subtask cho nhiệm vụ này!" }, statusCode: 403);
+    if (!canFinishTask)
+        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này hoặc Quản trị viên mới có quyền nghiệm thu hoàn thành toàn bộ nhiệm vụ!" }, statusCode: 403);
 
     var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
         SELECT 
@@ -707,18 +707,18 @@ app.MapPost("/api/subtasks/{id:long}/submit", (long id, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.status, s.task_id, t.leader_id 
+        SELECT s.id, s.title, s.status, s.task_id, t.leader_id 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
     bool isAssigned = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @id AND user_id = @uid", new { id, uid = currentUser.id }) > 0;
-    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id);
+    bool isAdmin = currentUser.role == "admin";
 
-    if (!isAssigned && !isLeaderOrAdmin)
-        return Results.StatusCode(403);
+    // Khi người nào làm xong thì nộp lên -> Chỉ thành viên được phân công làm mục việc này (hoặc Admin) mới có quyền nộp duyệt!
+    if (!isAssigned && !isAdmin)
+        return Results.Json(new { detail = "Chỉ thành viên được phân công thực hiện mục việc này mới có quyền nộp duyệt!" }, statusCode: 403);
 
     if ((string)subtask.status != "PROCESSING")
         return Results.BadRequest(new { detail = $"Chỉ có thể nộp duyệt khi trạng thái đang là Đang thực hiện. Hiện tại: {subtask.status}" });
@@ -728,7 +728,24 @@ app.MapPost("/api/subtasks/{id:long}/submit", (long id, HttpContext ctx) =>
             status = 'REVIEW', submitted_for_review_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = @id", new { id });
 
-    return Results.Ok(new { message = "Đã nộp duyệt mục checklist! Vui lòng chờ Trưởng nhóm nghiệm thu." });
+    // Gửi thông báo trực tiếp đến Người phụ trách nhiệm vụ (Trưởng nhóm)
+    long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    if (subtaskLeaderId.HasValue && subtaskLeaderId.Value != currentUser.id)
+    {
+        conn.Execute(@"
+            INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+            VALUES (@targetId, @senderId, @title, @msg, 'task', @taskId)",
+            new
+            {
+                targetId = subtaskLeaderId.Value,
+                senderId = currentUser.id,
+                title = "Mục việc mới cần nghiệm thu",
+                msg = $"{currentUser.full_name} (@{currentUser.username}) đã hoàn thành và nộp duyệt mục việc \"{subtask.title}\". Vui lòng kiểm tra và nghiệm thu.",
+                taskId = (long)subtask.task_id
+            });
+    }
+
+    return Results.Ok(new { message = "Đã nộp duyệt mục checklist! Vui lòng chờ Người phụ trách nghiệm thu." });
 });
 
 app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req, HttpContext ctx) =>
@@ -738,21 +755,19 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.status, s.task_id, s.cp_points, t.leader_id 
+        SELECT s.id, s.title, s.status, s.task_id, s.cp_points, t.leader_id 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
-    bool canReview = currentUser.role == "admin" 
-        || currentUser.role == "leader" 
-        || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id)
-        || currentUser.can_manage_cp
-        || currentUser.can_manage_tasks;
+    bool isTaskLeader = subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id;
+    bool isAdmin = currentUser.role == "admin";
 
-    if (!canReview)
-        return Results.Json(new { detail = "Bạn không có quyền duyệt hoặc tính điểm cho subtask này!" }, statusCode: 403);
+    // Người phụ trách cho việc đó mới là người duyệt và nghiệm thu!
+    if (!isTaskLeader && !isAdmin)
+        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này (Trưởng nhóm) hoặc Quản trị viên mới có quyền duyệt và nghiệm thu!" }, statusCode: 403);
 
     // TRƯỜNG HỢP 1: Phạt trừ điểm CP do không hoàn thành / vi phạm
     if (req.is_penalty)
@@ -793,6 +808,20 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                 INSERT INTO cp_transactions (user_id, subtask_id, cp_earned, contribution_pct, cp_points_base, quality_multiplier, awarded_at)
                 VALUES (@uId, @id, @cpDeducted, @pct, @penalty, 1.0, CURRENT_TIMESTAMP)",
                 new { uId, id, cpDeducted, pct, penalty });
+            if (uId != currentUser.id)
+            {
+                conn.Execute(@"
+                    INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                    VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                    new
+                    {
+                        uId,
+                        senderId = currentUser.id,
+                        title = "Mục việc bị đánh giá Không Đạt",
+                        msg = $"Mục việc \"{subtask.title}\" bị đánh giá không đạt và trừ CP. Lý do: {req.comment.Trim()}",
+                        taskId = (long)subtask.task_id
+                    });
+            }
         }
 
         return Results.Ok(new { message = $"Đã đánh giá KHÔNG ĐẠT và phạt trừ {penalty} điểm CP của thành viên phụ trách!" });
@@ -840,6 +869,21 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
                     INSERT INTO cp_transactions (user_id, subtask_id, cp_earned, contribution_pct, cp_points_base, quality_multiplier, awarded_at)
                     VALUES (@uId, @id, @cpEarned, @pct, @cpPoints, @qMultiplier, CURRENT_TIMESTAMP)",
                     new { uId, id, cpEarned, pct, cpPoints, qMultiplier });
+
+                if (uId != currentUser.id)
+                {
+                    conn.Execute(@"
+                        INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                        VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                        new
+                        {
+                            uId,
+                            senderId = currentUser.id,
+                            title = "Mục việc đã được nghiệm thu Đạt",
+                            msg = $"Mục việc \"{subtask.title}\" đã được Người phụ trách nghiệm thu ĐẠT chuẩn và ghi nhận +{cpEarned} CP!",
+                            taskId = (long)subtask.task_id
+                        });
+                }
             }
         }
 
@@ -863,6 +907,26 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
 
         // Xóa bất kỳ giao dịch CP nào (cả điểm cộng lẫn điểm trừ) khi mở lại để làm
         conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id", new { id });
+
+        // Gửi thông báo yêu cầu hoàn thiện lại cho các thành viên phụ trách
+        var reworkAssignees = conn.Query<long>("SELECT user_id FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToList();
+        foreach (var uId in reworkAssignees)
+        {
+            if (uId != currentUser.id)
+            {
+                conn.Execute(@"
+                    INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                    VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                    new
+                    {
+                        uId,
+                        senderId = currentUser.id,
+                        title = "Yêu cầu làm lại mục việc",
+                        msg = $"Mục việc \"{subtask.title}\" được yêu cầu hoàn thiện lại. Nhận xét: {req.comment.Trim()}",
+                        taskId = (long)subtask.task_id
+                    });
+            }
+        }
 
         return Results.Ok(new { message = "Đã chuyển mục việc về trạng thái Đang làm để thành viên tiếp tục hoàn thiện!" });
     }

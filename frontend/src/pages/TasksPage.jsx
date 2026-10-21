@@ -988,8 +988,10 @@ export function TasksPage() {
               const totalSub = subtasks.length;
               const finishedSub = subtasks.filter((s) => s.status === "FINISHED").length;
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
-              const isTaskAssignee = Number(taskDetail.task.leader_id) === Number(user?.id);
-              const canManageTaskSubtasks = isAdmin || isLeader || isTaskAssignee || Boolean(user?.can_manage_tasks);
+              const isTaskLeader = Number(taskDetail.task.leader_id) === Number(user?.id);
+              // Người phụ trách nhiệm vụ (Leader phụ trách hoặc Admin):
+              const isPersonInCharge = isAdmin || isTaskLeader;
+              const canManageTaskSubtasks = isPersonInCharge || Boolean(user?.can_manage_tasks);
               const taskTotalCp = Number(taskDetail.task.total_cp) || 0;
               const allocatedCp = subtasks.reduce((sum, s) => sum + (Number(s.cp_points) || 0), 0);
               const remainingCp = taskTotalCp - allocatedCp;
@@ -1494,6 +1496,40 @@ export function TasksPage() {
                                       </div>
                                     )}
 
+                                    {/* THÔNG BÁO CHO THÀNH VIÊN KHI ĐÃ NỘP DUYỆT (CHỜ NGHIỆM THU) */}
+                                    {sub.status === "REVIEW" && isAssignedToMe && !isPersonInCharge && (
+                                      <div
+                                        style={{
+                                          margin: "6px 0 8px 0",
+                                          padding: "6px 12px",
+                                          borderRadius: 8,
+                                          background: "#fffbeb",
+                                          border: "1px solid #fef08a",
+                                          fontSize: 12,
+                                          color: "#92400e",
+                                        }}
+                                      >
+                                        🕒 <strong>Đã nộp duyệt:</strong> Mục việc đang chờ Người phụ trách kiểm tra và nghiệm thu kết quả.
+                                      </div>
+                                    )}
+
+                                    {/* THÔNG BÁO CHO NGƯỜI PHỤ TRÁCH KHI CÓ MỤC VIỆC CẦN NGHIỆM THU */}
+                                    {sub.status === "REVIEW" && isPersonInCharge && (
+                                      <div
+                                        style={{
+                                          margin: "6px 0 8px 0",
+                                          padding: "6px 12px",
+                                          borderRadius: 8,
+                                          background: "#f0fdf4",
+                                          border: "1px solid #bbf7d0",
+                                          fontSize: 12,
+                                          color: "#166534",
+                                        }}
+                                      >
+                                        🔔 <strong>Mục việc cần nghiệm thu:</strong> Thành viên đã hoàn thành và nộp duyệt. Vui lòng kiểm tra và bấm <strong>Nghiệm Thu (Trưởng Nhóm)</strong> bên dưới.
+                                      </div>
+                                    )}
+
                                     {/* LÝ DO TỪ CHỐI */}
                                     {sub.reject_reason && (
                                       <div
@@ -1602,7 +1638,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* If PENDING and not assigned to current user, leader/admin can edit or reassign */}
-                                  {sub.status === "PENDING" && !isAssignedToMe && canManageTaskSubtasks && (
+                                  {sub.status === "PENDING" && !isAssignedToMe && isPersonInCharge && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
@@ -1626,7 +1662,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* If REJECTED, leader/admin can reassign/edit */}
-                                  {sub.status === "REJECTED" && canManageTaskSubtasks && (
+                                  {sub.status === "REJECTED" && isPersonInCharge && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
@@ -1650,7 +1686,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* 1. Member submits when in PROCESSING */}
-                                  {sub.status === "PROCESSING" && (isAssignedToMe || canManageTaskSubtasks) && (
+                                  {sub.status === "PROCESSING" && (isAssignedToMe || isAdmin) && (
                                     <button
                                       onClick={() => handleSubmitSubtask(sub.id)}
                                       style={{
@@ -1674,7 +1710,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* 2. Direct penalty button if member abandons or fails in PROCESSING */}
-                                  {sub.status === "PROCESSING" && canManageTaskSubtasks && (
+                                  {sub.status === "PROCESSING" && isPersonInCharge && (
                                     <button
                                       onClick={() => {
                                         setReviewModalSubtask({ id: sub.id, title: sub.title, cp_points: sub.cp_points, mode: 'penalty_direct' });
@@ -1703,7 +1739,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* 3. Leader reviews when in REVIEW */}
-                                  {sub.status === "REVIEW" && canManageTaskSubtasks && (
+                                  {sub.status === "REVIEW" && isPersonInCharge && (
                                     <button
                                       onClick={() => {
                                         setReviewModalSubtask({ id: sub.id, title: sub.title, cp_points: sub.cp_points, mode: 'review' });
@@ -1732,7 +1768,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* 4. Reopen if FAILED */}
-                                  {sub.status === "FAILED" && canManageTaskSubtasks && (
+                                  {sub.status === "FAILED" && isPersonInCharge && (
                                     <button
                                       onClick={() => handleReopenSubtask(sub.id)}
                                       style={{
@@ -1756,7 +1792,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Edit subtask button */}
-                                  {canManageTaskSubtasks && sub.status !== "FINISHED" && (
+                                  {isPersonInCharge && sub.status !== "FINISHED" && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
@@ -1776,7 +1812,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Delete subtask */}
-                                  {canManageTaskSubtasks && (
+                                  {isPersonInCharge && (
                                     <button
                                       onClick={() => handleDeleteSubtask(sub.id)}
                                       style={{
