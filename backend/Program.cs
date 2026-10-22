@@ -1824,59 +1824,47 @@ void EnsureWeeklySchedule(System.Data.Common.DbConnection conn, string startDate
     int startDiff = ((int)startDate.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
     var currentMonday = startDate.Date.AddDays(-startDiff);
 
-    DateTime baselineMonday = DateTime.Parse("2026-10-19");
-    DateTime baselineSaturday = baselineMonday.AddDays(5);
-
-    var baselineRows = conn.Query(@"
-        SELECT user_id, shift_id, work_date 
-        FROM shift_registrations 
-        WHERE work_date >= @bStart AND work_date <= @bEnd",
-        new { bStart = baselineMonday.ToString("yyyy-MM-dd"), bEnd = baselineSaturday.ToString("yyyy-MM-dd") }
-    ).ToList();
-
-    if (baselineRows.Count == 0)
+    var activeUsers = conn.Query<long>("SELECT id FROM users WHERE status = 'active' OR status IS NULL").ToList();
+    if (activeUsers.Count == 0)
     {
         return;
     }
 
-    var templateItems = baselineRows.Select(r =>
-    {
-        long uid = Convert.ToInt64(r.user_id);
-        int sid = Convert.ToInt32(r.shift_id);
-        string wdate = Convert.ToString(r.work_date);
-        var dt = DateTime.Parse(wdate);
-        int offset = ((int)dt.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-        return new { uid, sid, offset };
-    }).GroupBy(x => new { x.uid, x.sid, x.offset }).Select(g => g.First()).ToList();
+    int requiredSlotsPerWeek = activeUsers.Count * 54;
 
     while (currentMonday <= endDate.Date)
     {
-        if (currentMonday != baselineMonday)
+        var weekEnd = currentMonday.AddDays(6);
+        string wStartStr = currentMonday.ToString("yyyy-MM-dd");
+        string wEndStr = weekEnd.ToString("yyyy-MM-dd");
+
+        var totalCount = conn.ExecuteScalar<int>(@"
+            SELECT COUNT(1) FROM shift_registrations 
+            WHERE work_date >= @wStart AND work_date <= @wEnd",
+            new { wStart = wStartStr, wEnd = wEndStr }
+        );
+
+        if (totalCount < requiredSlotsPerWeek)
         {
-            var weekEnd = currentMonday.AddDays(6);
-            string wStartStr = currentMonday.ToString("yyyy-MM-dd");
-            string wEndStr = weekEnd.ToString("yyyy-MM-dd");
-
-            var presentCount = conn.ExecuteScalar<int>(@"
-                SELECT COUNT(1) FROM shift_registrations 
-                WHERE work_date >= @wStart AND work_date <= @wEnd 
-                  AND (attendance_status IS NULL OR attendance_status = 'present')",
-                new { wStart = wStartStr, wEnd = wEndStr }
-            );
-
-            if (presentCount == 0)
+            using var tx = conn.BeginTransaction();
+            for (int d = 0; d < 6; d++)
             {
-                foreach (var item in templateItems)
+                var targetWorkDate = currentMonday.AddDays(d).ToString("yyyy-MM-dd");
+                for (int sid = 1; sid <= 9; sid++)
                 {
-                    var targetWorkDate = currentMonday.AddDays(item.offset).ToString("yyyy-MM-dd");
-                    conn.Execute(@"
-                        INSERT INTO shift_registrations (user_id, shift_id, work_date, status, note, attendance_status)
-                        VALUES (@uid, @sid, @wdate, 'registered', 'Lịch trực định kỳ', 'present')
-                        ON CONFLICT (user_id, shift_id, work_date) DO NOTHING",
-                        new { uid = item.uid, sid = item.sid, wdate = targetWorkDate }
-                    );
+                    foreach (var uid in activeUsers)
+                    {
+                        conn.Execute(@"
+                            INSERT INTO shift_registrations (user_id, shift_id, work_date, status, note, attendance_status)
+                            VALUES (@uid, @sid, @wdate, 'registered', 'Lịch trực định kỳ', 'present')
+                            ON CONFLICT (user_id, shift_id, work_date) DO NOTHING",
+                            new { uid, sid, wdate = targetWorkDate },
+                            transaction: tx
+                        );
+                    }
                 }
             }
+            tx.Commit();
         }
 
         currentMonday = currentMonday.AddDays(7);

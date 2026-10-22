@@ -255,7 +255,7 @@ export function SchedulePage() {
   const [bulkAbsenceDate, setBulkAbsenceDate] = useState(null);
   const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
   const [classConflicts, setClassConflicts] = useState([]);
-  const LAB_KPI_TARGET = 20.0;
+  const LAB_KPI_TARGET = 81.0;
   const [announcement, setAnnouncement] = useState(
     "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ."
   );
@@ -1153,10 +1153,10 @@ export function SchedulePage() {
               cursor: "pointer",
               boxShadow: "0 2px 4px rgba(21, 128, 61, 0.1)",
             }}
-            title="Xem bảng xếp hạng và tiến độ chỉ tiêu 20 giờ/tuần của từng nhân sự"
+            title="Xem bảng xếp hạng và tiến độ chỉ tiêu 81 giờ/tuần (54 ca) của từng nhân sự"
           >
             <Trophy size={16} style={{ flexShrink: 0 }} />
-            <span>Bảng KPI 20h</span>
+            <span>Bảng KPI 81h</span>
           </button>
 
           <button
@@ -1271,8 +1271,17 @@ export function SchedulePage() {
             Ca trực của bạn tuần này
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", marginTop: 4 }}>
-            {myShiftsInWeek.length}{" "}
-            <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)} giờ)</span>
+            {myKpiStats.absentCount > 0 ? (
+              <>
+                {myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length}{" "}
+                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/81.0 giờ)</span>
+              </>
+            ) : (
+              <>
+                {myShiftsInWeek.length}{" "}
+                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)} giờ)</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -1292,29 +1301,29 @@ export function SchedulePage() {
             padding: 14,
             borderLeft: "4px solid #059669",
             cursor: "pointer",
-            background: myKpiStats.validKpiHours >= 20 ? "#f0fdf4" : "#ffffff",
+            background: myKpiStats.validKpiHours >= 81 ? "#f0fdf4" : "#ffffff",
             transition: "all 0.15s"
           }}
-          title="Click để xem chi tiết Bảng xếp hạng KPI 20h của toàn bộ nhân sự"
+          title="Click để xem chi tiết Bảng xếp hạng KPI 81h của toàn bộ nhân sự"
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
-              🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
+              🎯 Tiến Độ KPI Tuần (Chuẩn 81h / 54 Ca)
             </div>
-            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 20 ? "#dcfce7" : (myKpiStats.absentCount > 0 ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 20 ? "#15803d" : (myKpiStats.absentCount > 0 ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
-              {myKpiStats.validKpiHours >= 20 ? "Đạt chuẩn" : `${myKpiStats.kpiPercent}%`}
+            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 81 ? "#dcfce7" : (myKpiStats.absentCount > 0 ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 81 ? "#15803d" : (myKpiStats.absentCount > 0 ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+              {myKpiStats.validKpiHours >= 81 ? "Đạt chuẩn 100%" : `${myKpiStats.kpiPercent}%`}
             </span>
           </div>
 
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 20 ? "#059669" : (myKpiStats.absentCount > 0 ? "#dc2626" : "#0f172a") }}>
-              {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
+            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 81 ? "#059669" : (myKpiStats.absentCount > 0 ? "#dc2626" : "#0f172a") }}>
+              {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 81.0 giờ</span>
             </div>
             <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
               {myKpiStats.absentCount > 0 ? (
-                <span style={{ color: "#dc2626" }}>Đã trừ {myKpiStats.absentHours.toFixed(1)}h vắng</span>
+                <span style={{ color: "#dc2626" }}>Đã trừ {myKpiStats.absentHours.toFixed(1)}h vắng ({myKpiStats.absentCount} ca)</span>
               ) : (
-                <span>Lịch xếp: {myKpiStats.totalAssignedHours.toFixed(1)}h</span>
+                <span>Lịch xếp: 81.0h (54 ca)</span>
               )}
             </div>
           </div>
@@ -1324,7 +1333,7 @@ export function SchedulePage() {
               style={{
                 height: "100%",
                 width: `${myKpiStats.kpiPercent}%`,
-                background: myKpiStats.validKpiHours >= 20 ? "#10b981" : (myKpiStats.absentCount > 0 ? "#ef4444" : "#f59e0b"),
+                background: myKpiStats.validKpiHours >= 81 ? "#10b981" : (myKpiStats.absentCount > 0 ? "#ef4444" : "#f59e0b"),
                 transition: "width 0.3s ease",
               }}
             />
@@ -5053,7 +5062,7 @@ export function SchedulePage() {
         allMembers={allMembers}
         schedule={schedule}
         weekDays={weekDays}
-        kpiTarget={20.0}
+        kpiTarget={81.0}
       />
 
 
