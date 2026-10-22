@@ -1787,30 +1787,6 @@ export function TasksPage() {
                                     </>
                                   )}
 
-                                  {/* If PENDING and not assigned to current user, leader/admin can edit or reassign */}
-                                  {sub.status === "PENDING" && !isAssignedToMe && isPersonInCharge && (
-                                    <button
-                                      onClick={() => setEditingSubtask(sub)}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                        background: "#f8fafc",
-                                        color: "#475569",
-                                        border: "1px solid #cbd5e1",
-                                        padding: "5px 12px",
-                                        borderRadius: 999,
-                                        fontSize: 11.5,
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                      }}
-                                      title="Chỉnh sửa hoặc phân công lại người khác"
-                                    >
-                                      <Edit3 size={12} />
-                                      <span>Đổi người / Sửa</span>
-                                    </button>
-                                  )}
-
                                   {/* If REJECTED, leader/admin can reassign/edit */}
                                   {sub.status === "REJECTED" && isPersonInCharge && (
                                     <button
