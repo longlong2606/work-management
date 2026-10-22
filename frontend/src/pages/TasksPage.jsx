@@ -168,16 +168,14 @@ export function TasksPage() {
 
   const getTypeBadge = (type) => {
     switch (type) {
-      case "LAB_MAINTENANCE":
-        return { label: "Bảo trì Lab", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0" };
-      case "EVENT":
-        return { label: "Sự kiện / Workshop", bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe" };
       case "INDUSTRY":
         return { label: "Dự án Doanh nghiệp", bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" };
       case "RESEARCH":
         return { label: "Nghiên cứu AI / Lab", bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" };
+      case "MANAGEMENT":
+        return { label: "Quản lý / Vận hành", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0" };
       default:
-        return { label: "Khác", bg: "#f8fafc", color: "#475569", border: "#e2e8f0" };
+        return { label: "Quản lý / Vận hành", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0" };
     }
   };
 
@@ -603,11 +601,9 @@ export function TasksPage() {
             }}
           >
             <option value="all">Mọi loại nhiệm vụ</option>
-            <option value="LAB_MAINTENANCE">Bảo trì Lab</option>
-            <option value="EVENT">Sự kiện / Workshop</option>
-            <option value="INDUSTRY">Dự án Doanh nghiệp</option>
-            <option value="RESEARCH">Nghiên cứu AI / Lab</option>
-            <option value="OTHER">Khác</option>
+            <option value="RESEARCH">Nghiên cứu AI / Lab (Research)</option>
+            <option value="INDUSTRY">Dự án Doanh nghiệp (Industry)</option>
+            <option value="MANAGEMENT">Quản lý / Vận hành (Management)</option>
           </select>
         </div>
       </div>
@@ -2631,9 +2627,9 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                     background: "#ffffff"
                   }}
                 >
-                  <option value="RESEARCH">🔬 Nghiên cứu (Research)</option>
+                  <option value="RESEARCH">🔬 Nghiên cứu AI / Lab (Research)</option>
                   <option value="INDUSTRY">🏢 Dự án doanh nghiệp (Industry)</option>
-                  <option value="OTHER">📁 Khác (Other)</option>
+                  <option value="MANAGEMENT">⚙️ Quản lý / Vận hành (Management)</option>
                 </select>
               </div>
 
@@ -4273,9 +4269,7 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
                 >
                   <option value="RESEARCH">🔬 Nghiên cứu AI / Lab (Research)</option>
                   <option value="INDUSTRY">🏢 Dự án doanh nghiệp (Industry)</option>
-                  <option value="LAB_MAINTENANCE">🛠️ Bảo trì Lab (Lab Maintenance)</option>
-                  <option value="EVENT">🎉 Sự kiện / Workshop (Event)</option>
-                  <option value="OTHER">📁 Khác (Other)</option>
+                  <option value="MANAGEMENT">⚙️ Quản lý / Vận hành (Management)</option>
                 </select>
               </div>
 

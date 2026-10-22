@@ -183,7 +183,7 @@ public static class Database
                 id {pk},
                 title TEXT NOT NULL,
                 description TEXT,
-                task_type TEXT NOT NULL DEFAULT 'LAB_MAINTENANCE',
+                task_type TEXT NOT NULL DEFAULT 'RESEARCH',
                 planned_date TEXT NOT NULL,
                 deadline TEXT NOT NULL,
                 location TEXT,
@@ -358,7 +358,7 @@ public static class Database
             EnsureColumn(conn, "roles", "can_evaluate", "INTEGER DEFAULT 0");
             EnsureColumn(conn, "roles", "can_manage_cp", "INTEGER DEFAULT 0");
 
-            EnsureColumn(conn, "tasks", "task_type", "TEXT DEFAULT 'LAB_MAINTENANCE'");
+            EnsureColumn(conn, "tasks", "task_type", "TEXT DEFAULT 'RESEARCH'");
             EnsureColumn(conn, "tasks", "planned_date", "TEXT DEFAULT ''");
             EnsureColumn(conn, "tasks", "deadline", "TEXT DEFAULT ''");
             EnsureColumn(conn, "tasks", "location", "TEXT");

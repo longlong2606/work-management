@@ -183,7 +183,7 @@ public record TaskDetailDto(
     long id,
     string title,
     string? description,
-    string task_type, // RESEARCH, INDUSTRY, LAB_MAINTENANCE, EVENT, OTHER
+    string task_type, // RESEARCH, INDUSTRY, MANAGEMENT
     string planned_date,
     string deadline,
     string? location,

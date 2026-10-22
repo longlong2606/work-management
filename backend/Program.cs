@@ -284,7 +284,7 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
             {
                 title = req.title.Trim(),
                 description = req.description?.Trim(),
-                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
                 planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
                 deadline = req.deadline.Trim(),
                 location = req.location?.Trim(),
@@ -344,7 +344,7 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
                 id,
                 title = req.title.Trim(),
                 description = req.description?.Trim(),
-                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "LAB_MAINTENANCE" : req.task_type.Trim(),
+                task_type = string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
                 planned_date = string.IsNullOrWhiteSpace(req.planned_date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : req.planned_date.Trim(),
                 deadline = string.IsNullOrWhiteSpace(req.deadline) ? DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd HH:mm") : req.deadline.Trim(),
                 location = req.location?.Trim(),
