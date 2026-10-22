@@ -2047,45 +2047,24 @@ export function SchedulePage() {
                             </div>
 
 
-                            {/* Dòng 3: Trùng TKB hoặc Chỉnh sửa giờ */}
-                            {(conflictsInSlot.length > 0 || customizedInSlot.length > 0) && (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 2 }}>
-                                {conflictsInSlot.length > 0 && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      background: "#fffbeb",
-                                      color: "#b45309",
-                                      border: "1px solid #fde68a",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                    }}
-                                    title={conflictsInSlot
-                                      .map((c) => `${c.user_name || c.full_name}: Trùng ${c.course_code || c.class_name || c.subject_name} (${c.class_time || `${c.start_time}-${c.end_time}`})`)
-                                      .join("\n")}
-                                  >
-                                    🎓 {conflictsInSlot.length}
-                                  </span>
-                                )}
-                                {customizedInSlot.length > 0 && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      background: "#f0fdf4",
-                                      color: "#15803d",
-                                      border: "1px solid #86efac",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                    }}
-                                    title={customizedInSlot
-                                      .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
-                                      .join("\n")}
-                                  >
-                                    ⏱️ {customizedInSlot.length}
-                                  </span>
-                                )}
+                            {customizedInSlot.length > 0 && (
+                              <div style={{ marginTop: 2 }}>
+                                <span
+                                  style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    background: "#f0fdf4",
+                                    color: "#15803d",
+                                    border: "1px solid #86efac",
+                                    padding: "1px 5px",
+                                    borderRadius: 10,
+                                  }}
+                                  title={customizedInSlot
+                                    .map((c) => `${c.full_name}: ${c.actual_hours}h${c.time_note ? ` (${c.time_note})` : ''}`)
+                                    .join("\n")}
+                                >
+                                  ⏱️ {customizedInSlot.length}
+                                </span>
                               </div>
                             )}
 
@@ -2117,35 +2096,7 @@ export function SchedulePage() {
                               </div>
                             )}
 
-                            {/* Expanded details (class conflicts) */}
-                            {isExpanded && conflictsInSlot.length > 0 && (
-                              <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3, borderTop: "1px dashed #fde68a", paddingTop: 4 }}>
-                                {conflictsInSlot.map((c, cIdx) => (
-                                  <div
-                                    key={`cf-${c.user_id}-${cIdx}`}
-                                    style={{
-                                      fontSize: 10,
-                                      color: "#92400e",
-                                      background: "#fffbeb",
-                                      padding: "2px 6px",
-                                      borderRadius: 4,
-                                      fontWeight: 600,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      gap: 4,
-                                      border: "1px solid #fde68a",
-                                    }}
-                                    title={`Lớp: ${c.class_name || c.course_name || c.subject_name} (${c.class_time || `${c.start_time} - ${c.end_time}`})`}
-                                  >
-                                    <span>🎓 {c.user_name || c.full_name}</span>
-                                    <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.9 }}>
-                                      {c.course_code || "Lớp"}: {c.class_time || `${c.start_time}-${c.end_time}`}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                            {/* Expanded details: only absences, no TKB yellow list */}
 
                             {/* Events list: ONLY rendered when events actually exist! */}
                             {eventsInThisSlot.length > 0 && (
