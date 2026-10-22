@@ -410,7 +410,7 @@ export function SchedulePage() {
     // Admin đánh dấu nhân sự vắng mặt / bỏ ca trực tiếp
     // Mở modal chỉnh giờ làm thực tế
   const openEditHours = (member) => {
-    const stdHours = rosterModal.shift?.id === 8 ? 0.5 : 1.5;
+    const stdHours = 1.5;
     const curHours = (member.actual_hours !== null && member.actual_hours !== undefined)
       ? member.actual_hours
       : stdHours;
@@ -953,24 +953,22 @@ export function SchedulePage() {
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
 
-  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần
+  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng)
   const myActualAssignedHours = useMemo(() => {
     return myShiftsInWeek.reduce((sum, s) => {
-      const std = s.shift_id === 8 ? 0.5 : 1.5;
-      const dur = s.actual_hours != null ? Number(s.actual_hours) : std;
+      const dur = s.actual_hours != null ? Number(s.actual_hours) : 1.5;
       return sum + dur;
     }, 0);
   }, [myShiftsInWeek]);
 
-  // KPI analysis for current user: Tính chuẩn theo lịch ca trực thực tế được phân công trong tuần
+  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h
   const myKpiStats = useMemo(() => {
     let absentHours = 0;
     let absentCount = 0;
     let explicitAssignedHours = 0;
 
     myShiftsInWeek.forEach((s) => {
-      const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
-      const dur = s.actual_hours != null ? Number(s.actual_hours) : standardDuration;
+      const dur = s.actual_hours != null ? Number(s.actual_hours) : 1.5;
       explicitAssignedHours += dur;
       if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
         absentHours += dur;
@@ -3547,7 +3545,7 @@ export function SchedulePage() {
                 <div style={{ marginTop: 3 }}><strong>Ca làm việc:</strong> {editingHoursModal.shift?.name} ({editingHoursModal.shift?.label})</div>
                 <div style={{ marginTop: 3 }}><strong>Ngày trực:</strong> {editingHoursModal.day?.dateStr}</div>
                 <div style={{ marginTop: 3, color: "#2563eb" }}>
-                  <strong>Thời lượng chuẩn của ca:</strong> {editingHoursModal.shift?.id === 8 ? "0.5 giờ (30 phút)" : "1.5 giờ (90 phút)"}
+                  <strong>Thời lượng chuẩn của ca:</strong> 1.5 giờ (90 phút)
                 </div>
               </div>
 
@@ -3559,7 +3557,7 @@ export function SchedulePage() {
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
                     type="button"
-                    onClick={() => setEditingHoursModal((prev) => ({ ...prev, actual_hours: prev.shift?.id === 8 ? 0.5 : 1.5, time_note: "" }))}
+                    onClick={() => setEditingHoursModal((prev) => ({ ...prev, actual_hours: 1.5, time_note: "" }))}
                     style={{
                       padding: "4px 10px",
                       borderRadius: 6,
@@ -3567,12 +3565,12 @@ export function SchedulePage() {
                       fontWeight: 700,
                       cursor: "pointer",
                       border: "1px solid",
-                      borderColor: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#16a34a" : "#cbd5e1",
-                      background: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#dcfce7" : "#ffffff",
-                      color: Number(editingHoursModal.actual_hours) === (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) ? "#15803d" : "#334155",
+                      borderColor: Number(editingHoursModal.actual_hours) === 1.5 ? "#16a34a" : "#cbd5e1",
+                      background: Number(editingHoursModal.actual_hours) === 1.5 ? "#dcfce7" : "#ffffff",
+                      color: Number(editingHoursModal.actual_hours) === 1.5 ? "#15803d" : "#334155",
                     }}
                   >
-                    Đủ ca ({editingHoursModal.shift?.id === 8 ? "0.5h" : "1.5h"})
+                    Đủ ca (1.5h)
                   </button>
 
                   <button

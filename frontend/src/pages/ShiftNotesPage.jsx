@@ -68,7 +68,7 @@ export function ShiftNotesPage() {
     if (s) {
       setAdjustedTime(`${s.startTime} - ${s.startTime.split(":")[0]}:50 hoặc thỏa thuận`);
       if (noteType !== "emergency") {
-        setActualHours(shiftId === 8 ? 0.5 : 1.5);
+        setActualHours(1.5);
       }
     }
   };
@@ -80,7 +80,7 @@ export function ShiftNotesPage() {
       setActualHours(0);
       setAdjustedTime("Xin nghỉ toàn bộ ca làm");
     } else {
-      setActualHours(selectedShiftId === 8 ? 0.5 : 1.5);
+      setActualHours(1.5);
       if (adjustedTime === "Xin nghỉ toàn bộ ca làm") {
         const s = SHIFTS.find((item) => item.id === selectedShiftId);
         setAdjustedTime(s ? `${s.startTime} - ${s.startTime.split(":")[0]}:50 hoặc thỏa thuận` : "08:00 - 09:00");
@@ -101,7 +101,7 @@ export function ShiftNotesPage() {
     } else if (note.note_type === "emergency") {
       setAdminActualHours(0);
     } else {
-      setAdminActualHours(note.shift_id === 8 ? 0.5 : 1.5);
+      setAdminActualHours(1.5);
     }
     setSyncToSchedule(true);
   };
