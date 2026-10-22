@@ -333,7 +333,7 @@ export function TasksPage() {
   };
 
   const handleReopenSubtask = async (subtaskId) => {
-    if (!window.confirm("Bạn có muốn cho làm lại mục việc này? Điểm trừ (phạt) sẽ được giữ nguyên và hệ thống sẽ tự động tạo một mục việc mới y chang để thành viên tiếp tục làm lại.")) return;
+    if (!window.confirm("Bạn có muốn cho làm lại mục việc này? Điểm trừ (phạt) vẫn được bảo lưu và mục việc sẽ được chuyển về trạng thái Đang làm để thành viên tiếp tục thực hiện.")) return;
     try {
       const res = await api.reviewSubtask(subtaskId, false, "Cho phép làm lại mục việc", 1.0, false, 0);
       showToast(res.message || "Đã chuyển mục việc về trạng thái Đang làm.");
@@ -344,7 +344,7 @@ export function TasksPage() {
   };
 
   const handleDeleteSubtask = async (subtaskId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa mục checklist này?")) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa mục checklist này? Điểm phạt trừ (nếu có) vẫn được bảo lưu an toàn.")) return;
     try {
       const res = await api.deleteSubtask(subtaskId);
       showToast(res.message || "Đã xóa mục checklist.");
@@ -1906,7 +1906,7 @@ export function TasksPage() {
                                         fontWeight: 600,
                                         cursor: "pointer",
                                       }}
-                                      title="Tạo mục việc mới để thành viên làm lại (vẫn giữ nguyên điểm trừ của mục việc này)"
+                                      title="Cho phép thành viên làm lại mục việc này (vẫn bảo lưu điểm trừ phạt trước đó)"
                                     >
                                       <RotateCcw size={13} />
                                       <span>Cho Làm Lại</span>
