@@ -963,7 +963,7 @@ export function SchedulePage() {
       const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
       const dur = s.actual_hours != null ? Number(s.actual_hours) : standardDuration;
       totalAssignedHours += dur;
-      if (s.attendance_status === "absent") {
+      if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
         absentHours += dur;
         absentCount += 1;
       }
@@ -1804,6 +1804,9 @@ export function SchedulePage() {
                                   const myRegInSlot = schedule.find(
                                     (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
                                   );
+                                  if (!myRegInSlot) {
+                                    return null;
+                                  }
                                   const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
                                   const isMyAbsent = myRegInSlot?.attendance_status === "absent";
 
@@ -2269,6 +2272,9 @@ export function SchedulePage() {
                         const myRegInDayShift = schedule.find(
                           (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
                         );
+                        if (!myRegInDayShift) {
+                          return null;
+                        }
                         const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
                         const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
 
@@ -2878,7 +2884,7 @@ export function SchedulePage() {
                         {/* Action buttons based on Role */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {/* 1. If Staff is current logged-in user and PRESENT -> button to report absence */}
-                          {isMe && isPresent && rosterModal.day?.dateStr >= todayStr && (
+                          {isMe && isPresent && m.registration_id && rosterModal.day?.dateStr >= todayStr && (
                             <button
                               onClick={() =>
                                 openReportAbsence(rosterModal.shift, rosterModal.day, m)

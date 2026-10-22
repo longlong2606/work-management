@@ -256,8 +256,12 @@ export function BulkAbsenceModal({
       return;
     }
 
-    if (allSelectedDuplicates) {
-      setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Bạn có thể nhấn tab 'Khôi phục có mặt' ở trên để hủy nghỉ.`);
+    if (affectedShifts.length === 0) {
+      if (allSelectedDuplicates) {
+        setErrorMsg(`Tất cả ${duplicateShifts.length} ca làm việc được chọn đều đã nộp đơn báo vắng (đang chờ duyệt) hoặc đã được phê duyệt nghỉ. Bạn có thể nhấn tab 'Khôi phục có mặt' ở trên để hủy nghỉ.`);
+      } else {
+        setErrorMsg("Nhân sự không có ca trực nào được phân công trong phạm vi đã chọn để nộp đơn báo vắng!");
+      }
       return;
     }
     if (!reason.trim()) {
@@ -269,11 +273,14 @@ export function BulkAbsenceModal({
     setErrorMsg("");
 
     try {
+      const actualShiftIds = [...new Set(affectedShifts.map((s) => s.shift_id))];
+      const actualDates = [...new Set(affectedShifts.map((s) => s.work_date))];
+
       const res = await api.reportAbsenceBulk({
         user_id: targetUid,
         reason: reason.trim(),
-        dates: finalDates,
-        shift_ids: finalShiftIds,
+        dates: actualDates,
+        shift_ids: actualShiftIds,
       });
 
       if (onSuccess) {

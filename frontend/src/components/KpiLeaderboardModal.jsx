@@ -58,7 +58,8 @@ export function KpiLeaderboardModal({
             dayDeductedHours += duration;
           } else if (isPending) {
             finalStatus = "pending_absence";
-            dayAttended += 1;
+            dayAbsent += 1;
+            dayDeductedHours += duration;
           } else {
             finalStatus = "present";
             dayAttended += 1;
@@ -99,7 +100,7 @@ export function KpiLeaderboardModal({
         const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
         const dur = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : standardDuration;
         totalAssignedHours += dur;
-        if (s.attendance_status === "absent") {
+        if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
           absentHours += dur;
           absentCount += 1;
         } else {
