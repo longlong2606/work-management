@@ -953,7 +953,16 @@ export function SchedulePage() {
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
 
-  // KPI analysis for current user: Mọi tuần đều mặc định có quỹ KPI chuẩn 20.0h, chỉ trừ khi có ca BÁO VẮNG
+  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần
+  const myActualAssignedHours = useMemo(() => {
+    return myShiftsInWeek.reduce((sum, s) => {
+      const std = s.shift_id === 8 ? 0.5 : 1.5;
+      const dur = s.actual_hours != null ? Number(s.actual_hours) : std;
+      return sum + dur;
+    }, 0);
+  }, [myShiftsInWeek]);
+
+  // KPI analysis for current user: Tính chuẩn theo lịch ca trực thực tế được phân công trong tuần
   const myKpiStats = useMemo(() => {
     let absentHours = 0;
     let absentCount = 0;
@@ -969,8 +978,7 @@ export function SchedulePage() {
       }
     });
 
-    // Mọi tuần đều mặc định có quỹ KPI chuẩn 20.0h (hoặc tính theo lịch thực tế nếu nhiều hơn)
-    const totalAssignedHours = Math.max(LAB_KPI_TARGET, explicitAssignedHours);
+    const totalAssignedHours = explicitAssignedHours;
     const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
     const kpiPercent = Math.min(100, Math.round((validKpiHours / LAB_KPI_TARGET) * 100));
 
@@ -983,7 +991,13 @@ export function SchedulePage() {
     };
   }, [myShiftsInWeek]);
 
-  const totalHours = myKpiStats.validKpiHours;
+  const totalHours = myActualAssignedHours;
+
+  // Lọc sự kiện theo tuần hiện tại đang xem
+  const weekEvents = useMemo(() => {
+    const weekDateStrs = weekDays.map((d) => d.dateStr);
+    return events.filter((e) => !e.work_date || weekDateStrs.includes(e.work_date));
+  }, [events, weekDays]);
 
   const getEventTypeBadge = (type) => {
     switch (type) {
@@ -1260,7 +1274,7 @@ export function SchedulePage() {
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", marginTop: 4 }}>
             {myShiftsInWeek.length}{" "}
-            <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({totalHours} giờ)</span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)} giờ)</span>
           </div>
         </div>
 
@@ -1269,7 +1283,7 @@ export function SchedulePage() {
             Sự kiện các ca trực
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#8b5cf6", marginTop: 4 }}>
-            {events.length} <span style={{ fontSize: 13, fontWeight: 500 }}>sự kiện</span>
+            {weekEvents.length} <span style={{ fontSize: 13, fontWeight: 500 }}>sự kiện</span>
           </div>
         </div>
 

@@ -108,8 +108,8 @@ export function KpiLeaderboardModal({
         }
       });
 
-      // Mặc định mọi tuần đều tính quỹ KPI chuẩn (20.0h), chỉ trừ khi có ca báo vắng
-      const totalAssignedHours = Math.max(kpiTarget, explicitAssignedHours);
+      // Tính quỹ KPI và giờ xếp lịch theo đúng ca trực được phân công thực tế trong tuần
+      const totalAssignedHours = explicitAssignedHours;
       const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
       const kpiPercent = Math.min(100, Math.round((validKpiHours / kpiTarget) * 100));
       const isMet = validKpiHours >= kpiTarget;
