@@ -255,7 +255,7 @@ export function SchedulePage() {
   const [bulkAbsenceDate, setBulkAbsenceDate] = useState(null);
   const [showClassScheduleModal, setShowClassScheduleModal] = useState(false);
   const [classConflicts, setClassConflicts] = useState([]);
-  const LAB_KPI_TARGET = 81.0;
+  const LAB_KPI_TARGET = 20.0;
   const [announcement, setAnnouncement] = useState(
     "Quản lý đã xuất bản lịch làm việc cho tuần mới. Các bạn nhân viên vui lòng kiểm tra ca trực của mình và chuẩn bị đúng giờ."
   );
@@ -568,7 +568,7 @@ export function SchedulePage() {
 
   // Quick restore all absent shifts in current week for logged-in user
   const handleQuickRestoreWeek = async () => {
-    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${myKpiStats.absentCount} ca đang vắng trong tuần này về trạng thái Có Mặt để cộng lại đủ 81.0h KPI?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${myKpiStats.absentCount} ca đang vắng trong tuần này về trạng thái Có Mặt để cộng lại đủ 81.0h (chuẩn 20.0h KPI)?`)) return;
     try {
       const dates = weekDays.map((d) => d.dateStr);
       await api.cancelAbsenceBulk({
@@ -576,7 +576,7 @@ export function SchedulePage() {
         shift_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9],
         user_id: user?.id,
       });
-      showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã cộng lại đủ 81.0h KPI)!");
+      showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã cộng lại đủ 81.0 / 20.0 giờ KPI)!");
       await fetchSchedule();
     } catch (err) {
       showToast("Lỗi khi khôi phục: " + (err.message || ""), "danger");
@@ -1170,10 +1170,10 @@ export function SchedulePage() {
               cursor: "pointer",
               boxShadow: "0 2px 4px rgba(21, 128, 61, 0.1)",
             }}
-            title="Xem bảng xếp hạng và tiến độ chỉ tiêu 81 giờ/tuần (54 ca) của từng nhân sự"
+            title="Xem bảng xếp hạng và tiến độ chỉ tiêu 20 giờ/tuần của từng nhân sự"
           >
             <Trophy size={16} style={{ flexShrink: 0 }} />
-            <span>Bảng KPI 81h</span>
+            <span>Bảng KPI 20h</span>
           </button>
 
           <button
@@ -1298,7 +1298,7 @@ export function SchedulePage() {
             {myKpiStats.absentCount > 0 ? (
               <>
                 {myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 600 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/81.0 giờ KPI)</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/20.0 giờ KPI)</span>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 4 }}>
                   ⚠️ Đã trừ: -{myKpiStats.absentHours.toFixed(1)}h KPI ({myKpiStats.absentCount} ca vắng/trùng lịch)
                 </div>
@@ -1319,16 +1319,16 @@ export function SchedulePage() {
                     gap: 5,
                     boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                   }}
-                  title="Khôi phục toàn bộ ca vắng trong tuần về Có Mặt để cộng lại đủ 81.0h KPI"
+                  title="Khôi phục toàn bộ ca vắng trong tuần về Có Mặt để cộng lại đủ 81.0 / 20.0 giờ KPI"
                 >
                   <RotateCcw size={12} />
-                  <span>Khôi phục đủ 81.0h KPI</span>
+                  <span>Khôi phục đủ 81.0h (chuẩn 20h KPI)</span>
                 </button>
               </>
             ) : (
               <>
                 {myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)} giờ)</span>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)}/20.0 giờ KPI)</span>
               </>
             )}
           </div>
@@ -1350,29 +1350,29 @@ export function SchedulePage() {
             padding: 14,
             borderLeft: "4px solid #059669",
             cursor: "pointer",
-            background: myKpiStats.validKpiHours >= 81 ? "#f0fdf4" : "#ffffff",
+            background: myKpiStats.validKpiHours >= 20 ? "#f0fdf4" : "#ffffff",
             transition: "all 0.15s"
           }}
-          title="Click để xem chi tiết Bảng xếp hạng KPI 81h của toàn bộ nhân sự"
+          title="Click để xem chi tiết Bảng xếp hạng KPI 20h của toàn bộ nhân sự"
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
-              🎯 Tiến Độ KPI Tuần (Chuẩn 81h / 54 Ca)
+              🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
             </div>
-            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 81 ? "#dcfce7" : (myKpiStats.absentCount > 0 ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 81 ? "#15803d" : (myKpiStats.absentCount > 0 ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
-              {myKpiStats.validKpiHours >= 81 ? "Đạt chuẩn 100%" : `${myKpiStats.kpiPercent}%`}
+            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 20 ? "#dcfce7" : (myKpiStats.absentCount > 0 ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 20 ? "#15803d" : (myKpiStats.absentCount > 0 ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+              {myKpiStats.validKpiHours >= 20 ? "Đạt chuẩn 100%" : `${myKpiStats.kpiPercent}%`}
             </span>
           </div>
 
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 81 ? "#059669" : (myKpiStats.absentCount > 0 ? "#dc2626" : "#0f172a") }}>
-              {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 81.0 giờ</span>
+            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 20 ? "#059669" : (myKpiStats.absentCount > 0 ? "#dc2626" : "#0f172a") }}>
+              {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
             </div>
             <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
               {myKpiStats.absentCount > 0 ? (
                 <span style={{ color: "#dc2626" }}>Đã trừ {myKpiStats.absentHours.toFixed(1)}h vắng ({myKpiStats.absentCount} ca)</span>
               ) : (
-                <span>Lịch xếp: 81.0h (54 ca)</span>
+                <span>Lịch xếp: {myKpiStats.totalAssignedHours.toFixed(1)}h (54 ca)</span>
               )}
             </div>
           </div>
@@ -1382,7 +1382,7 @@ export function SchedulePage() {
               style={{
                 height: "100%",
                 width: `${myKpiStats.kpiPercent}%`,
-                background: myKpiStats.validKpiHours >= 81 ? "#10b981" : (myKpiStats.absentCount > 0 ? "#ef4444" : "#f59e0b"),
+                background: myKpiStats.validKpiHours >= 20 ? "#10b981" : (myKpiStats.absentCount > 0 ? "#ef4444" : "#f59e0b"),
                 transition: "width 0.3s ease",
               }}
             />
@@ -5081,11 +5081,22 @@ export function SchedulePage() {
         currentUser={user}
         allMembers={allMembers}
         weekDays={weekDays}
-        onSuccess={async () => {
+        onSuccess={async (targetDate) => {
           try {
             await api.syncClassScheduleKpi();
           } catch (e) {
             console.error(e);
+          }
+          if (targetDate) {
+            const d = new Date(targetDate + "T00:00:00");
+            if (!isNaN(d.getTime())) {
+              const dayOfWeek = d.getDay();
+              const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+              const monday = new Date(d);
+              monday.setDate(d.getDate() + diffToMonday);
+              setMondayDate(monday);
+              setActiveDay(targetDate);
+            }
           }
           await fetchSchedule();
         }}
@@ -5119,7 +5130,7 @@ export function SchedulePage() {
         allMembers={allMembers}
         schedule={schedule}
         weekDays={weekDays}
-        kpiTarget={81.0}
+        kpiTarget={20.0}
       />
 
 

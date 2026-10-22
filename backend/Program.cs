@@ -1917,12 +1917,13 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
         string checkAbsentsQuery = @"
             SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date
             FROM shift_registrations sr
-            WHERE sr.attendance_status = 'absent'
+            WHERE (sr.attendance_status = 'absent' OR sr.attendance_status = 'pending_absence')
               AND (
-                  sr.absence_reason LIKE '%Trùng lịch học%' 
-                  OR sr.absence_reason LIKE '%lịch học%' 
+                  sr.absence_reason LIKE '%học%' 
                   OR sr.absence_reason LIKE '%TKB%' 
+                  OR sr.absence_reason LIKE '%Trùng%' 
                   OR sr.time_note LIKE '%Trùng TKB%' 
+                  OR sr.time_note LIKE '%học%' 
                   OR sr.note LIKE '%lịch học%' 
                   OR sr.note LIKE '%TKB%'
               )
@@ -2582,14 +2583,18 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
         return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày cần khôi phục có mặt!" });
     }
 
-    // Only allow restoring for today or future dates for regular members; managers/admins can restore any dates
+    // Cho phép nhân sự khôi phục ca trực trong toàn bộ tuần làm việc hiện tại (từ Thứ 2 đến Chủ nhật) hoặc tương lai
+    var mondayOfThisWeek = DateTime.UtcNow.AddHours(7).Date;
+    int diffDaysToMon = ((int)mondayOfThisWeek.DayOfWeek == 0 ? -6 : 1) - (int)mondayOfThisWeek.DayOfWeek;
+    var currentWeekMondayStr = mondayOfThisWeek.AddDays(diffDaysToMon).ToString("yyyy-MM-dd");
+
     var validDates = canManage 
         ? targetDates.ToList() 
-        : targetDates.Where(d => string.Compare(d, todayStr, StringComparison.Ordinal) >= 0).ToList();
+        : targetDates.Where(d => string.Compare(d, currentWeekMondayStr, StringComparison.Ordinal) >= 0).ToList();
 
     if (validDates.Count == 0)
     {
-        return Results.BadRequest(new { detail = "Không thể khôi phục có mặt cho các ngày trong quá khứ đối với nhân viên!" });
+        return Results.BadRequest(new { detail = "Không thể khôi phục có mặt cho các ngày ngoài tuần làm việc hiện tại đối với nhân viên!" });
     }
 
     // Target shift IDs (1-9)
@@ -3999,6 +4004,27 @@ app.MapDelete("/api/class-schedules/{id:long}", (long id, HttpContext ctx) =>
     }
 
     conn.Execute("DELETE FROM class_schedules WHERE id = @id", new { id });
+
+    conn.Execute(@"
+        UPDATE shift_registrations
+        SET attendance_status = 'present',
+            absence_reason = NULL,
+            time_note = NULL,
+            actual_hours = NULL,
+            note = 'Lịch trực định kỳ (Khôi phục sau khi xóa TKB)'
+        WHERE user_id = @uid AND work_date = @wdate
+          AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')
+          AND (
+              absence_reason LIKE '%học%' 
+              OR absence_reason LIKE '%TKB%' 
+              OR absence_reason LIKE '%Trùng%'
+              OR time_note LIKE '%TKB%' 
+              OR time_note LIKE '%học%'
+              OR note LIKE '%học%' 
+              OR note LIKE '%TKB%'
+          )",
+        new { uid = itemUserId, wdate = itemWorkDate });
+
     SyncClassScheduleKpiDeductions(conn, itemUserId, itemWorkDate, itemWorkDate);
     return Results.Ok(new { message = "Đã xóa buổi học thành công và tự động cập nhật lại KPI!" });
 });
@@ -4031,6 +4057,27 @@ app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
         clearUserId = currentUser.id;
         deleted = conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid = currentUser.id });
     }
+
+    // Khôi phục ngay lập tức toàn bộ các ca trực bị trừ do TKB
+    conn.Execute(@"
+        UPDATE shift_registrations
+        SET attendance_status = 'present',
+            absence_reason = NULL,
+            time_note = NULL,
+            actual_hours = NULL,
+            note = 'Lịch trực định kỳ (Khôi phục sau khi xóa TKB)'
+        WHERE (attendance_status = 'absent' OR attendance_status = 'pending_absence')
+          AND (
+              absence_reason LIKE '%học%' 
+              OR absence_reason LIKE '%TKB%' 
+              OR absence_reason LIKE '%Trùng%'
+              OR time_note LIKE '%TKB%' 
+              OR time_note LIKE '%học%'
+              OR note LIKE '%học%' 
+              OR note LIKE '%TKB%'
+          )
+          AND (@uid IS NULL OR user_id = @uid)",
+        new { uid = clearUserId });
 
     SyncClassScheduleKpiDeductions(conn, clearUserId);
     return Results.Ok(new { message = $"Đã xóa sạch {deleted} buổi học trong thời khóa biểu và cập nhật lại KPI thành công!", count = deleted });

@@ -11,7 +11,7 @@ export function KpiLeaderboardModal({
   allMembers = [],
   schedule = [],
   weekDays = [],
-  kpiTarget = 81.0
+  kpiTarget = 20.0
 }) {
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'missed' | 'met_actual' | 'met_plan'
   const [expandedMemberId, setExpandedMemberId] = useState(null);
@@ -221,7 +221,7 @@ export function KpiLeaderboardModal({
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h3 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>
-                  Bảng Theo Dõi Tiến Độ KPI 81h / Tuần
+                  Bảng Theo Dõi Tiến Độ KPI 20h / Tuần
                 </h3>
                 <span
                   style={{
@@ -232,11 +232,11 @@ export function KpiLeaderboardModal({
                     fontWeight: 700,
                   }}
                 >
-                  Chuẩn 81 Giờ / Tuần
+                  Chuẩn 20 Giờ / Tuần
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "#dbeafe", marginTop: 3 }}>
-                Mặc định toàn bộ nhân sự có mặt đầy đủ (81h) • Ca nào báo vắng sẽ trừ bớt 1.5h/ca
+                Lịch xếp chuẩn 81h/tuần (54 ca) • Chỉ tiêu hoàn thành 20h • Ca báo vắng sẽ trừ bớt 1.5h/ca
               </div>
             </div>
           </div>
@@ -383,7 +383,7 @@ export function KpiLeaderboardModal({
                 color: activeTab === "met" ? "#15803d" : "#475569",
               }}
             >
-              Đạt chuẩn 81h ({leaderboardData.filter((d) => d.isMet).length})
+              Đạt chuẩn 20h ({leaderboardData.filter((d) => d.isMet).length})
             </button>
 
             <button
@@ -399,7 +399,7 @@ export function KpiLeaderboardModal({
                 color: activeTab === "under" ? "#b45309" : "#475569",
               }}
             >
-              Chưa đủ 81h ({leaderboardData.filter((d) => !d.isMet).length})
+              Chưa đủ 20h ({leaderboardData.filter((d) => !d.isMet).length})
             </button>
 
             <button
@@ -596,7 +596,7 @@ export function KpiLeaderboardModal({
                             gap: 4,
                           }}
                         >
-                          <CheckCircle2 size={13} /> Đạt KPI 81h
+                          <CheckCircle2 size={13} /> Đạt KPI 20h
                         </span>
                       ) : absentCount > 0 ? (
                         <span

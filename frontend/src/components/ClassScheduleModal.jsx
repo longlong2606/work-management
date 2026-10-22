@@ -418,25 +418,25 @@ export function ClassScheduleModal({
   // Download template CSV
   const handleDownloadTemplate = () => {
     const csvHeader = "course_code,class_name,start_date,end_date,shift,room\n";
-    // Tự động tạo mẫu ngày theo tuần làm việc hiện tại
-    const now = new Date();
-    const curDay = now.getDay();
-    const diffToMonday = (curDay === 0 ? -6 : 1) - curDay;
-    const mon = new Date(now);
-    mon.setDate(now.getDate() + diffToMonday);
+    // Tự động tạo mẫu ngày theo tuần làm việc hiện tại đang xem trên màn hình
+    const days = (weekDays && weekDays.length >= 5)
+      ? weekDays.slice(0, 5).map((d) => d.dateStr)
+      : (() => {
+          const now = new Date();
+          const curDay = now.getDay();
+          const diffToMonday = (curDay === 0 ? -6 : 1) - curDay;
+          const mon = new Date(now);
+          mon.setDate(now.getDate() + diffToMonday);
+          const fmtDate = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+          };
+          return [0, 1, 2, 3, 4].map((i) => fmtDate(new Date(mon.getTime() + i * 86400000)));
+        })();
 
-    const fmtDate = (d) => {
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    };
-
-    const d1 = fmtDate(mon); // Thứ 2
-    const d2 = fmtDate(new Date(mon.getTime() + 1 * 86400000)); // Thứ 3
-    const d3 = fmtDate(new Date(mon.getTime() + 2 * 86400000)); // Thứ 4
-    const d4 = fmtDate(new Date(mon.getTime() + 3 * 86400000)); // Thứ 5
-    const d5 = fmtDate(new Date(mon.getTime() + 4 * 86400000)); // Thứ 6
+    const [d1, d2, d3, d4, d5] = days;
 
     const sampleRow = `COMP1752,Lập trình hướng đối tượng,${d1},${d1},"1,2,3",Room 302\nCOMP1841,Lập trình Web 1,${d2},${d2},"4,5,6",Room 401\nMATH1179,Toán cho Khoa học máy tính,${d3},${d3},3,Room 405\nCOMP1843,Nguyên lý Bảo mật,${d4},${d4},"1,2",Room 201\nCOMP1807,Quản lý dự án SCRUM,${d5},${d5},"5,6",Room 102\n`;
     const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
@@ -475,6 +475,7 @@ export function ClassScheduleModal({
         entries: validEntries,
       });
 
+      const earliestDate = validEntries[0]?.work_date;
       const successMsg = res.message || `Đã nhập thành công ${validEntries.length} buổi học và tự động trừ KPI cho các ca trực trùng!`;
       if (showToast) {
         showToast(successMsg, "success");
@@ -485,7 +486,7 @@ export function ClassScheduleModal({
       setFileContent("");
       setFileName("");
       await api.syncClassScheduleKpi().catch(() => {});
-      if (onSuccess) await onSuccess(successMsg);
+      if (onSuccess) await onSuccess(earliestDate);
       onClose(); // Đóng modal để người dùng thấy trực tiếp lịch và KPI đã được trừ ngay lập tức
     } catch (err) {
       alert("Lỗi khi import thời khóa biểu: " + err.message);
