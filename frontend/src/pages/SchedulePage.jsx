@@ -770,11 +770,6 @@ export function SchedulePage() {
 
   // Handle Admin Approve
   const handleAdminApprove = async (regId, staffName, workDate) => {
-    const todayStr = formatLocalDate(new Date());
-    if (workDate && workDate < todayStr) {
-      showToast(`Ca làm việc ngày ${workDate} đã qua ngày. Yêu cầu này đã bị khóa duyệt, chỉ có thể chuyển sang từ chối!`, "danger");
-      return;
-    }
     try {
       await api.approveShiftRequest({
         registration_id: regId,
@@ -791,9 +786,8 @@ export function SchedulePage() {
 
   // Handle Approve All or Selected Pending Requests
   const handleApproveAll = async (targetIds = null) => {
-    const todayStr = formatLocalDate(new Date());
     const validRequests = pendingRequests.filter(
-      (r) => !r.is_expired && (!r.work_date || r.work_date >= todayStr)
+      (r) => isStrictAdmin || r.attendance_status !== "pending_absence"
     );
     const countToApprove = targetIds && targetIds.length > 0 ? targetIds.length : validRequests.length;
 
@@ -4511,8 +4505,7 @@ export function SchedulePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {/* TOOLBAR PHÊ DUYỆT TẤT CẢ / CHỌN HÀNG LOẠT */}
                 {(() => {
-                  const todayStr = formatLocalDate(new Date());
-                  const validRequests = pendingRequests.filter(r => !r.is_expired && (!r.work_date || r.work_date >= todayStr) && (isStrictAdmin || r.attendance_status !== "pending_absence"));
+                  const validRequests = pendingRequests.filter(r => isStrictAdmin || r.attendance_status !== "pending_absence");
                   const isAllSelected = validRequests.length > 0 && selectedPendingIds.length === validRequests.length;
 
                   return (
@@ -4648,7 +4641,7 @@ export function SchedulePage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#991b1b", fontSize: 13 }}>
                         <AlertTriangle size={18} color="#dc2626" />
                         <span>
-                          Phát hiện <strong>{expiredCount}</strong> yêu cầu đã qua ngày ca trực (quên duyệt). Nút Duyệt đã bị khóa.
+                          Phát hiện <strong>{expiredCount}</strong> yêu cầu đã qua ngày ca trực. Bạn có thể Phê duyệt hoặc Từ chối từng ca, hoặc bấm chuyển tất cả sang Từ Chối.
                         </span>
                       </div>
                       <button
@@ -4698,7 +4691,7 @@ export function SchedulePage() {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {!isExpired && (isStrictAdmin || !isAbsence) && (
+                          {(isStrictAdmin || !isAbsence) && (
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -4797,45 +4790,26 @@ export function SchedulePage() {
                           isStrictAdmin ? (
                             <>
                               <button
+                                onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, true, req.full_name)}
+                                className="btn btn-primary btn-sm"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  background: "#10b981",
+                                  borderColor: "#10b981",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <Check size={14} /> Phê Duyệt Cho Vắng
+                              </button>
+                              <button
                                 onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, false, req.full_name, isExpired ? "Từ chối do quá hạn ngày ca làm" : "")}
                                 className="btn btn-danger btn-sm"
-                                style={{ display: "flex", alignItems: "center", gap: 4 }}
+                                style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}
                               >
-                                <X size={14} /> {isExpired ? "Chuyển Sang Từ Chối (Quá Hạn)" : "Từ Chối"}
+                                <X size={14} /> Từ Chối
                               </button>
-                              {isExpired ? (
-                                <button
-                                  disabled
-                                  className="btn btn-secondary btn-sm"
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 4,
-                                    opacity: 0.5,
-                                    cursor: "not-allowed",
-                                    background: "#cbd5e1",
-                                    color: "#64748b",
-                                    border: "none",
-                                  }}
-                                  title="Không thể phê duyệt ca làm trong quá khứ"
-                                >
-                                  <Lock size={14} /> Đã Khóa Duyệt
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleApproveAbsence(req.shift_id, req.work_date, req.user_id, true, req.full_name)}
-                                  className="btn btn-primary btn-sm"
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 4,
-                                    background: "#10b981",
-                                    borderColor: "#10b981",
-                                  }}
-                                >
-                                  <Check size={14} /> Phê Duyệt Cho Vắng
-                                </button>
-                              )}
                             </>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "4px 10px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -4845,45 +4819,26 @@ export function SchedulePage() {
                         ) : (
                           <>
                             <button
+                              onClick={() => handleAdminApprove(req.id, req.full_name, req.work_date)}
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                background: "#10b981",
+                                borderColor: "#10b981",
+                                fontWeight: 700,
+                              }}
+                            >
+                              <Check size={14} /> Phê Duyệt Ngay
+                            </button>
+                            <button
                               onClick={() => openRejectModal(req)}
                               className="btn btn-danger btn-sm"
-                              style={{ display: "flex", alignItems: "center", gap: 4 }}
+                              style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}
                             >
-                              <X size={14} /> {isExpired ? "Chuyển Sang Từ Chối (Quá Hạn)" : "Từ Chối"}
+                              <X size={14} /> Từ Chối
                             </button>
-                            {isExpired ? (
-                              <button
-                                disabled
-                                className="btn btn-secondary btn-sm"
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  opacity: 0.5,
-                                  cursor: "not-allowed",
-                                  background: "#cbd5e1",
-                                  color: "#64748b",
-                                  border: "none",
-                                }}
-                                title="Không thể phê duyệt ca làm trong quá khứ"
-                              >
-                                <Lock size={14} /> Đã Khóa Duyệt
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleAdminApprove(req.id, req.full_name, req.work_date)}
-                                className="btn btn-primary btn-sm"
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  background: "#10b981",
-                                  borderColor: "#10b981",
-                                }}
-                              >
-                                <Check size={14} /> Phê Duyệt Ngay
-                              </button>
-                            )}
                           </>
                         )}
                       </div>

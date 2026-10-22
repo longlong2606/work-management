@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Trash2,
+  Check,
 } from "lucide-react";
 
 export function ShiftNotesPage() {
@@ -91,11 +92,9 @@ export function ShiftNotesPage() {
 
   const openReplyModal = (note, forceStatus = null) => {
     setSelectedNoteForReply(note);
-    const todayStr = new Date().toISOString().split("T")[0];
-    const isPast = Boolean(note.work_date && note.work_date < todayStr);
-    const st = forceStatus || (isPast ? "rejected" : "approved");
+    const st = forceStatus || (note.status === "pending" ? "approved" : note.status);
     setAdminActionStatus(st);
-    setAdminReplyText(note.admin_response || (isPast ? "Từ chối do quá hạn duyệt (đã qua ngày ca làm việc)" : ""));
+    setAdminReplyText(note.admin_response || "");
 
     if (note.actual_hours !== null && note.actual_hours !== undefined) {
       setAdminActualHours(note.actual_hours);
@@ -461,22 +460,32 @@ export function ShiftNotesPage() {
                 )}
 
                 {isAdmin && (
-                  note.work_date && note.work_date < todayStr && note.status === "pending" ? (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      onClick={() => openReplyModal(note, "approved")}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: "flex", alignItems: "center", gap: 5, background: "#10b981", borderColor: "#059669", color: "#ffffff", fontWeight: 700 }}
+                      title="Đồng ý & phê duyệt ghi chú ca này"
+                    >
+                      <Check size={14} /> Duyệt / Đồng ý
+                    </button>
                     <button
                       onClick={() => openReplyModal(note, "rejected")}
                       className="btn btn-danger btn-sm"
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "#dc2626", borderColor: "#b91c1c", color: "#ffffff" }}
+                      style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 700 }}
+                      title="Từ chối ghi chú ca này"
                     >
-                      <XCircle size={14} /> Chuyển Sang Từ Chối (Quá Hạn)
+                      <XCircle size={14} /> Từ chối
                     </button>
-                  ) : (
                     <button
                       onClick={() => openReplyModal(note)}
                       className="btn btn-secondary btn-sm"
+                      style={{ display: "flex", alignItems: "center", gap: 5 }}
+                      title="Xem chi tiết & gửi phản hồi"
                     >
-                      <ShieldCheck size={14} color="#2563eb" /> Phản hồi ghi chú này
+                      <ShieldCheck size={14} color="#2563eb" /> Phản hồi
                     </button>
-                  )
+                  </div>
                 )}
               </div>
             </div>
@@ -693,34 +702,33 @@ export function ShiftNotesPage() {
         return (
           <div className="modal-overlay" onClick={() => setSelectedNoteForReply(null)}>
             <div className="modal-content" style={{ background: "#ffffff", color: "#0f172a", borderRadius: 16, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", padding: "26px" }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, color: isPast ? "#b91c1c" : "#0f172a" }}>
-                {isPast ? "Từ Chối Ghi Chú Ca Làm" : "Duyệt Ghi Chú Ca Làm"} ({selectedNoteForReply.author_name})
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, color: adminActionStatus === "rejected" ? "#b91c1c" : "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+                <span>{adminActionStatus === "rejected" ? "Từ Chối Ghi Chú Ca Làm" : "Phê Duyệt / Phản Hồi Ghi Chú"} ({selectedNoteForReply.author_name})</span>
+                {isPast && (
+                  <span style={{ fontSize: 11, background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", padding: "2px 8px", borderRadius: 4, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Clock size={11} /> Ca đã qua ngày
+                  </span>
+                )}
               </h3>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
                 Ca: <strong>{selectedNoteForReply.shift_name}</strong> - Ngày: <strong>{selectedNoteForReply.work_date}</strong>
               </p>
 
-              {isPast ? (
-                <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, fontSize: 13, color: "#991b1b", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <XCircle size={18} color="#dc2626" />
-                  <span>Quyết định: TỪ CHỐI (Ca làm việc đã qua ngày)</span>
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label className="form-label">Quyết định của quản lý:</label>
-                  <select
-                    className="form-select"
-                    value={adminActionStatus}
-                    onChange={(e) => setAdminActionStatus(e.target.value)}
-                  >
-                    <option value="approved">✅ Phê duyệt điều chỉnh giờ làm</option>
-                    <option value="rejected">❌ Từ chối yêu cầu</option>
-                    <option value="acknowledged">ℹ️ Đã ghi nhận thông tin</option>
-                  </select>
-                </div>
-              )}
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 700 }}>Quyết định của quản lý:</label>
+                <select
+                  className="form-select"
+                  value={adminActionStatus}
+                  onChange={(e) => setAdminActionStatus(e.target.value)}
+                  style={{ fontWeight: 600 }}
+                >
+                  <option value="approved">✅ Phê duyệt / Đồng ý điều chỉnh giờ làm</option>
+                  <option value="rejected">❌ Từ chối yêu cầu</option>
+                  <option value="acknowledged">ℹ️ Đã ghi nhận thông tin</option>
+                </select>
+              </div>
 
-              {!isPast && adminActionStatus === "approved" && (
+              {adminActionStatus === "approved" && (
                 <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <label className="form-label" style={{ fontWeight: 700, color: "#166534", marginBottom: 0 }}>
@@ -747,21 +755,21 @@ export function ShiftNotesPage() {
                       checked={syncToSchedule}
                       onChange={(e) => setSyncToSchedule(e.target.checked)}
                     />
-                    <span>Tự động đồng bộ số giờ này vào Lịch trực & Bảng KPI 20h</span>
+                    <span>Tự động đồng bộ số giờ này vào Lịch trực & Bảng KPI</span>
                   </label>
                 </div>
               )}
 
               <div className="form-group">
                 <label className="form-label">
-                  {isPast ? "Lý do từ chối gửi nhân viên:" : "Lời dặn / Phản hồi gửi cho nhân viên:"}
+                  {adminActionStatus === "rejected" ? "Lý do từ chối gửi nhân viên:" : "Lời dặn / Phản hồi gửi cho nhân viên:"}
                 </label>
                 <textarea
                   className="form-textarea"
                   rows={3}
                   value={adminReplyText}
                   onChange={(e) => setAdminReplyText(e.target.value)}
-                  placeholder={isPast ? "Lý do từ chối..." : "VD: Quản lý đã duyệt..."}
+                  placeholder={adminActionStatus === "rejected" ? "Lý do từ chối..." : "VD: Quản lý đã đồng ý phê duyệt..."}
                 />
               </div>
 
@@ -776,10 +784,10 @@ export function ShiftNotesPage() {
                 <button
                   type="button"
                   onClick={handleAdminUpdateStatus}
-                  className={isPast ? "btn btn-danger" : "btn btn-primary"}
-                  style={isPast ? { background: "#dc2626", borderColor: "#b91c1c", color: "#ffffff", fontWeight: 700 } : {}}
+                  className={adminActionStatus === "rejected" ? "btn btn-danger" : "btn btn-primary"}
+                  style={adminActionStatus === "rejected" ? { background: "#dc2626", borderColor: "#b91c1c", color: "#ffffff", fontWeight: 700 } : { background: "#10b981", borderColor: "#059669", color: "#ffffff", fontWeight: 700 }}
                 >
-                  {isPast ? "Xác Nhận Từ Chối" : "Xác Nhận & Gửi Thông Báo"}
+                  {adminActionStatus === "rejected" ? "Xác Nhận Từ Chối" : "Xác Nhận Phê Duyệt / Đồng Ý"}
                 </button>
               </div>
             </div>

@@ -2255,10 +2255,6 @@ app.MapPost("/api/shifts/approve-absence", (ApproveAbsenceRequest req, HttpConte
     }
 
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
-    if (req.approved && string.Compare(req.work_date, today, StringComparison.Ordinal) < 0)
-    {
-        return Results.BadRequest(new { detail = $"Ca làm việc ngày {req.work_date} đã qua ngày. Yêu cầu đã bị khóa duyệt, chỉ có thể chuyển sang từ chối!" });
-    }
 
     if (req.approved)
     {
@@ -2938,10 +2934,6 @@ app.MapPost("/api/shifts/approve-request", (ApproveShiftActionModel req, HttpCon
     string reason = (string)(reg.request_reason ?? "");
 
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
-    if (req.action == "approve" && string.Compare(workDate, today, StringComparison.Ordinal) < 0)
-    {
-        return Results.BadRequest(new { detail = $"Ca làm việc ngày {workDate} đã qua ngày. Yêu cầu đã bị khóa duyệt, chỉ có thể chuyển sang từ chối!" });
-    }
 
     if (req.action == "approve")
     {
@@ -3058,7 +3050,8 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin" && !currentUser.can_manage_schedule) return Results.StatusCode(403);
+    var canApprove = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule || (currentUser.username != null && currentUser.username.ToLower().Contains("leader"));
+    if (!canApprove) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
@@ -3073,19 +3066,18 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
         JOIN users u ON sr.user_id = u.id
         JOIN shift_templates st ON sr.shift_id = st.id
         LEFT JOIN shift_templates tgt ON sr.target_shift_id = tgt.id
-        WHERE (sr.status IN ('pending_cancel', 'pending_change') OR sr.attendance_status = 'pending_absence')
-          AND sr.work_date >= @today";
+        WHERE (sr.status IN ('pending_cancel', 'pending_change') OR sr.attendance_status = 'pending_absence')";
 
     List<dynamic> items;
     if (req?.registration_ids != null && req.registration_ids.Count > 0)
     {
         string ids = string.Join(",", req.registration_ids.Select(x => x.ToString()));
         query += $" AND sr.id IN ({ids})";
-        items = conn.Query<dynamic>(query, new { today }).ToList();
+        items = conn.Query<dynamic>(query).ToList();
     }
     else
     {
-        items = conn.Query<dynamic>(query, new { today }).ToList();
+        items = conn.Query<dynamic>(query).ToList();
     }
 
     int approvedCount = 0;
@@ -3103,9 +3095,8 @@ app.MapPost("/api/shifts/requests/approve-all", (BulkApproveShiftRequests? req, 
 
         if (attStatus == "pending_absence")
         {
-            if (currentUser.role != "admin")
+            if (!canApprove)
             {
-                // Chỉ Quản trị viên (Admin) mới có quyền duyệt đơn báo vắng!
                 continue;
             }
             conn.Execute(@"
