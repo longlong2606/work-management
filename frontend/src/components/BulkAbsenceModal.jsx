@@ -21,7 +21,7 @@ export function BulkAbsenceModal({
   initialMode = "absence",
   initialDate = null,
 }) {
-  const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader" || currentUser?.role === "manager" || Boolean(currentUser?.username && currentUser.username.toLowerCase().includes("leader")) || Boolean(currentUser?.can_manage_schedule);
 
   // Action Mode: 'absence' (Báo vắng) | 'restore' (Khôi phục có mặt)
   const [actionMode, setActionMode] = useState(initialMode || "absence");

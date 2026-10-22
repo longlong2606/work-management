@@ -526,9 +526,10 @@ public static class Database
                     new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đã sẵn sàng vận hành. Quản lý có thể thêm nhân sự tại mục Quản lý nhân viên và xếp lịch trực." });
             }
 
-            // 2.1 Always ensure at least one user has the 'leader' role so task creation never blocks
+            // 2.1 Always ensure accounts named leader have role 'leader'
             try
             {
+                conn.Execute("UPDATE users SET role = 'leader' WHERE LOWER(username) LIKE '%leader%' AND role != 'admin'");
                 var leaderCount = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM users WHERE role = 'leader'");
                 if (leaderCount == 0)
                 {

@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
     // 5 Chuẩn Role theo phân cấp: Admin > Leader > Core > Contributor > Learning
   const role = user?.role || "contributor";
   const isAdmin = role === "admin";
-  const isLeader = role === "leader" || role === "supervisor";
+  const isLeader = role === "leader" || role === "supervisor" || Boolean(user?.username && user.username.toLowerCase().includes("leader"));
   const isCore = role === "core";
   const isContributor = role === "contributor" || role === "technician" || role === "staff";
   const isLearning = role === "learning";

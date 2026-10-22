@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 
 export function ShiftNotesPage() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin: authIsAdmin, isLeader, isManager, canManageSchedule, user } = useAuth();
+  const isAdmin = authIsAdmin || isLeader || isManager || Boolean(canManageSchedule) || user?.role === "admin" || user?.role === "leader" || user?.role === "manager" || Boolean(user?.username && user.username.toLowerCase().includes("leader"));
   const { fetchNotifications } = useNotifications();
 
   const [notes, setNotes] = useState([]);

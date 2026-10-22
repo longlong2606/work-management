@@ -78,9 +78,9 @@ function getDaysOfWeek(mondayStr) {
 }
 
 export function SchedulePage() {
-  const { user, canManageSchedule } = useAuth();
+  const { user, canManageSchedule, isLeader, isManager } = useAuth();
   const { fetchUnreadCount } = useNotifications();
-  const isAdmin = user?.role === "admin" || user?.role === "leader" || user?.role === "manager" || Boolean(canManageSchedule);
+  const isAdmin = user?.role === "admin" || user?.role === "leader" || user?.role === "manager" || isLeader || isManager || Boolean(user?.username && user.username.toLowerCase().includes("leader")) || Boolean(canManageSchedule);
   const isStrictAdmin = isAdmin;
   const todayStr = formatLocalDate(new Date());
 

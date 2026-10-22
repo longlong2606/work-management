@@ -115,7 +115,7 @@ public static class AuthService
             // Luon dam bao admin co quyen can_manage_staff de tranh tu khoa he thong
             user.can_manage_staff = true;
         }
-        if (user.role == "admin" || user.role == "leader" || user.role == "manager")
+        if (user.role == "admin" || user.role == "leader" || user.role == "manager" || (user.username != null && user.username.ToLower().Contains("leader")))
         {
             user.can_manage_schedule = true;
         }

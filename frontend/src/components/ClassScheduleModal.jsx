@@ -49,7 +49,7 @@ export function ClassScheduleModal({
   allMembers = [],
   onSuccess
 }) {
-  const isAdmin = currentUser?.role === "admin" || Boolean(currentUser?.can_manage_schedule);
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader" || currentUser?.role === "manager" || Boolean(currentUser?.username && currentUser.username.toLowerCase().includes("leader")) || Boolean(currentUser?.can_manage_schedule);
   const [activeTab, setActiveTab] = useState("import"); // 'import' | 'list'
   const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");
   
