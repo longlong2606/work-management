@@ -603,12 +603,6 @@ public static class Database
                 }
             }
 
-            // Dọn dẹp các ca ảo từng bị chèn nhầm do lỗi nộp đơn vắng ca chưa được phân công
-            try
-            {
-                conn.Execute("DELETE FROM shift_registrations WHERE note LIKE 'Đơn xin vắng ca nhiều ngày/tuần (Chờ duyệt)%' AND attendance_status = 'pending_absence'");
-            }
-            catch { }
         }
     }
 

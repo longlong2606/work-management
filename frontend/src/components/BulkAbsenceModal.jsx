@@ -157,22 +157,6 @@ export function BulkAbsenceModal({
     return [1, 2, 3, 4, 5, 6, 7, 8, 9];
   }, [shiftScope, customShiftIds]);
 
-  // Calculate matching scheduled shifts for preview (exclude already absent and pending_absence)
-  const affectedShifts = useMemo(() => {
-    const isAll = targetUserId === "all";
-    const uid = Number(targetUserId) || currentUser?.id;
-    return schedule.filter((s) => {
-      const matchUser = isAll ? true : s.user_id === uid;
-      return (
-        matchUser &&
-        finalDates.includes(s.work_date) &&
-        finalShiftIds.includes(s.shift_id) &&
-        s.attendance_status !== "absent" &&
-        s.attendance_status !== "pending_absence"
-      );
-    });
-  }, [schedule, targetUserId, currentUser, finalDates, finalShiftIds]);
-
   // Detected duplicate shifts that already have an absence request or are marked absent
   const duplicateShifts = useMemo(() => {
     const isAll = targetUserId === "all";
@@ -187,6 +171,28 @@ export function BulkAbsenceModal({
       );
     });
   }, [schedule, targetUserId, currentUser, finalDates, finalShiftIds]);
+
+  // Calculate matching scheduled shifts for preview (exclude already absent and pending_absence)
+  const affectedShifts = useMemo(() => {
+    const isAll = targetUserId === "all";
+    const uid = Number(targetUserId) || currentUser?.id;
+    const slots = [];
+    finalDates.forEach((date) => {
+      finalShiftIds.forEach((sid) => {
+        const isDup = duplicateShifts.some(
+          (d) => d.work_date === date && d.shift_id === sid && (isAll || d.user_id === uid)
+        );
+        if (!isDup) {
+          slots.push({
+            work_date: date,
+            shift_id: sid,
+            user_id: uid,
+          });
+        }
+      });
+    });
+    return slots;
+  }, [finalDates, finalShiftIds, duplicateShifts, targetUserId, currentUser]);
 
   const allSelectedDuplicates = duplicateShifts.length > 0 && affectedShifts.length === 0;
 

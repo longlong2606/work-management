@@ -953,24 +953,26 @@ export function SchedulePage() {
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
 
-  // KPI analysis for current user: Mọi ca được xếp đều mặc định CÓ MẶT, chỉ trừ khi BÁO VẮNG
+  // KPI analysis for current user: Mọi tuần đều mặc định có quỹ KPI chuẩn 20.0h, chỉ trừ khi có ca BÁO VẮNG
   const myKpiStats = useMemo(() => {
-    let totalAssignedHours = 0;
     let absentHours = 0;
     let absentCount = 0;
+    let explicitAssignedHours = 0;
 
     myShiftsInWeek.forEach((s) => {
       const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
       const dur = s.actual_hours != null ? Number(s.actual_hours) : standardDuration;
-      totalAssignedHours += dur;
+      explicitAssignedHours += dur;
       if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
         absentHours += dur;
         absentCount += 1;
       }
     });
 
+    // Mọi tuần đều mặc định có quỹ KPI chuẩn 20.0h (hoặc tính theo lịch thực tế nếu nhiều hơn)
+    const totalAssignedHours = Math.max(LAB_KPI_TARGET, explicitAssignedHours);
     const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
-    const kpiPercent = Math.min(100, Math.round((validKpiHours / 20.0) * 100));
+    const kpiPercent = Math.min(100, Math.round((validKpiHours / LAB_KPI_TARGET) * 100));
 
     return {
       totalAssignedHours,
@@ -1804,9 +1806,6 @@ export function SchedulePage() {
                                   const myRegInSlot = schedule.find(
                                     (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
                                   );
-                                  if (!myRegInSlot) {
-                                    return null;
-                                  }
                                   const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
                                   const isMyAbsent = myRegInSlot?.attendance_status === "absent";
 
@@ -2272,9 +2271,6 @@ export function SchedulePage() {
                         const myRegInDayShift = schedule.find(
                           (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
                         );
-                        if (!myRegInDayShift) {
-                          return null;
-                        }
                         const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
                         const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
 
@@ -2884,7 +2880,7 @@ export function SchedulePage() {
                         {/* Action buttons based on Role */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {/* 1. If Staff is current logged-in user and PRESENT -> button to report absence */}
-                          {isMe && isPresent && m.registration_id && rosterModal.day?.dateStr >= todayStr && (
+                          {isMe && isPresent && rosterModal.day?.dateStr >= todayStr && (
                             <button
                               onClick={() =>
                                 openReportAbsence(rosterModal.shift, rosterModal.day, m)

@@ -23,7 +23,7 @@ export function KpiLeaderboardModal({
       // Toàn bộ các ca của nhân sự này trong tuần
       const memberShifts = schedule.filter((s) => s.user_id === member.id);
 
-      let totalAssignedHours = 0;
+      let explicitAssignedHours = 0;
       let absentHours = 0;
       let absentCount = 0;
       let attendedCount = 0;
@@ -99,7 +99,7 @@ export function KpiLeaderboardModal({
       memberShifts.forEach((s) => {
         const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
         const dur = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : standardDuration;
-        totalAssignedHours += dur;
+        explicitAssignedHours += dur;
         if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
           absentHours += dur;
           absentCount += 1;
@@ -108,6 +108,8 @@ export function KpiLeaderboardModal({
         }
       });
 
+      // Mặc định mọi tuần đều tính quỹ KPI chuẩn (20.0h), chỉ trừ khi có ca báo vắng
+      const totalAssignedHours = Math.max(kpiTarget, explicitAssignedHours);
       const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
       const kpiPercent = Math.min(100, Math.round((validKpiHours / kpiTarget) * 100));
       const isMet = validKpiHours >= kpiTarget;
