@@ -4026,6 +4026,11 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Chỉ lọc thành viên có vai trò Trưởng nhóm (Leader), không bao gồm Admin
+  const leaderMembers = useMemo(() => {
+    return (allMembers || []).filter((m) => m.role === "leader");
+  }, [allMembers]);
+
   // Sync state whenever task prop changes or modal opens
   useEffect(() => {
     if (task) {
@@ -4039,21 +4044,19 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
       } else {
         setDeadline("");
       }
-      setLeaderId(task.leader_id || "");
+      // Chỉ gán leaderId nếu người đó có vai trò Trưởng nhóm (Leader)
+      const isValidLeader = leaderMembers.some((m) => Number(m.id) === Number(task.leader_id));
+      if (isValidLeader) {
+        setLeaderId(task.leader_id);
+      } else if (leaderMembers.length > 0) {
+        setLeaderId(leaderMembers[0].id);
+      } else {
+        setLeaderId("");
+      }
       setTotalCp(task.total_cp || 0);
       setError("");
     }
-  }, [task]);
-
-  // List of potential leaders: role === 'leader' or 'admin', and ensure current leader is included
-  const leaderMembers = useMemo(() => {
-    const list = (allMembers || []).filter((m) => m.role === "leader" || m.role === "admin");
-    if (task?.leader_id && !list.some((m) => Number(m.id) === Number(task.leader_id))) {
-      const cur = (allMembers || []).find((m) => Number(m.id) === Number(task.leader_id));
-      if (cur) list.push(cur);
-    }
-    return list;
-  }, [allMembers, task]);
+  }, [task, leaderMembers]);
 
   if (!isOpen || !task) return null;
 
@@ -4294,15 +4297,20 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
                   }}
                 >
                   {leaderMembers.length === 0 ? (
-                    <option value="">-- Chưa có tài khoản Leader --</option>
+                    <option value="">-- Chưa có tài khoản nào có vai trò Leader --</option>
                   ) : (
                     leaderMembers.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.full_name} (@{m.username}) — [{m.role === 'leader' ? '⭐ Trưởng nhóm' : m.role === 'admin' ? '👑 Quản trị viên' : m.role}]
+                        {m.full_name} (@{m.username}) — [⭐ Trưởng nhóm (Leader)]
                       </option>
                     ))
                   )}
                 </select>
+                {leaderMembers.length === 0 && (
+                  <small style={{ color: "#ef4444", fontSize: 11.5, marginTop: 4, display: "block" }}>
+                    ⚠️ Hệ thống chưa có thành viên nào mang vai trò Leader. Vui lòng phân quyền vai trò Trưởng nhóm (Leader) trong trang Quản lý Nhân sự.
+                  </small>
+                )}
               </div>
             </div>
           </div>
