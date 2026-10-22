@@ -4106,8 +4106,7 @@ app.MapGet("/api/class-schedules/conflicts", (string start_date, string end_date
         FROM shift_registrations sr
         JOIN users u ON sr.user_id = u.id
         JOIN shift_templates st ON sr.shift_id = st.id
-        WHERE sr.work_date >= @start_date AND sr.work_date <= @end_date
-          AND sr.attendance_status != 'absent'";
+        WHERE sr.work_date >= @start_date AND sr.work_date <= @end_date";
 
     var assignments = conn.Query<dynamic>(assignmentsQuery, new { start_date, end_date }).ToList();
 

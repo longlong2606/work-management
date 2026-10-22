@@ -1817,8 +1817,8 @@ export function SchedulePage() {
                             title={`Bấm để xem danh sách ${totalMembers} thành viên & điểm danh`}
                           >
                             {/* Dòng 1: Đội ngũ & Nút thao tác nhanh */}
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                                 <div
                                   style={{
                                     display: "inline-flex",
@@ -1826,45 +1826,95 @@ export function SchedulePage() {
                                     gap: 4,
                                     fontSize: 11,
                                     fontWeight: 700,
-                                    color: hasAbsence ? "#9f1239" : hasPending ? "#92400e" : "#1e293b",
+                                    color: "#1e293b",
                                   }}
                                 >
                                   <Users
                                     size={13}
-                                    color={hasAbsence ? "#e11d48" : hasPending ? "#d97706" : "#2563eb"}
+                                    color="#2563eb"
                                   />
                                   <span>{totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}</span>
                                 </div>
 
-                                {hasAbsence && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 800,
-                                      background: "#ef4444",
-                                      color: "#ffffff",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                      boxShadow: "0 1px 2px rgba(239, 68, 68, 0.2)",
-                                    }}
-                                  >
-                                    {isAdmin ? `🔴 ${absentInSlot.length} vắng` : "🔴 Bạn vắng"}
-                                  </span>
-                                )}
-                                {hasPending && (
-                                  <span
-                                    style={{
-                                      fontSize: 9,
-                                      fontWeight: 800,
-                                      background: "#f59e0b",
-                                      color: "#ffffff",
-                                      padding: "1px 5px",
-                                      borderRadius: 10,
-                                    }}
-                                  >
-                                    {isAdmin ? `🟡 ${pendingInSlot.length} chờ` : "🟡 Chờ duyệt"}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const tkbSlotCount = Math.max(
+                                    conflictsInSlot.length,
+                                    schedule.filter(s => s.shift_id === shift.id && s.work_date === day.dateStr && (
+                                      s.absence_reason?.toLowerCase().includes("trùng lịch học") ||
+                                      s.absence_reason?.toLowerCase().includes("lịch học") ||
+                                      s.absence_reason?.toLowerCase().includes("tkb") ||
+                                      s.time_note?.toLowerCase().includes("tkb")
+                                    )).length
+                                  );
+
+                                  if (tkbSlotCount > 0) {
+                                    return (
+                                      <div style={{ marginTop: 1 }}>
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 3,
+                                            background: "#fffbeb",
+                                            border: "1px solid #fde047",
+                                            color: "#b45309",
+                                            padding: "1px 6px",
+                                            borderRadius: 12,
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            boxShadow: "0 1px 2px rgba(245, 158, 11, 0.08)",
+                                          }}
+                                          title={`Có ${tkbSlotCount} thành viên trùng lịch học`}
+                                        >
+                                          <span>🎓</span>
+                                          <span>{tkbSlotCount}</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+
+                                  const nonTkbAbsents = absentInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
+                                  if (hasAbsence && nonTkbAbsents.length > 0) {
+                                    return (
+                                      <span
+                                        style={{
+                                          fontSize: 9,
+                                          fontWeight: 800,
+                                          background: "#ef4444",
+                                          color: "#ffffff",
+                                          padding: "1px 5px",
+                                          borderRadius: 10,
+                                          boxShadow: "0 1px 2px rgba(239, 68, 68, 0.2)",
+                                          display: "inline-block",
+                                          width: "fit-content",
+                                        }}
+                                      >
+                                        {isAdmin ? `🔴 ${nonTkbAbsents.length} vắng` : "🔴 Bạn vắng"}
+                                      </span>
+                                    );
+                                  }
+
+                                  if (hasPending) {
+                                    return (
+                                      <span
+                                        style={{
+                                          fontSize: 9,
+                                          fontWeight: 800,
+                                          background: "#f59e0b",
+                                          color: "#ffffff",
+                                          padding: "1px 5px",
+                                          borderRadius: 10,
+                                          display: "inline-block",
+                                          width: "fit-content",
+                                        }}
+                                      >
+                                        {isAdmin ? `🟡 ${pendingInSlot.length} chờ` : "🟡 Chờ duyệt"}
+                                      </span>
+                                    );
+                                  }
+
+                                  return null;
+                                })()}
                               </div>
 
                               {/* Hover Quick Actions */}
@@ -2804,24 +2854,46 @@ export function SchedulePage() {
                       c.user_id === m.user_id
                   );
 
-                  let cardBg = "#f8fafc";
+                  let tkbLabel = null;
+                  if (memberConflict) {
+                    const code = memberConflict.course_code || memberConflict.class_name || "LỚP";
+                    const time = (memberConflict.class_time || `${memberConflict.start_time} - ${memberConflict.end_time}`).replace("-", "–");
+                    tkbLabel = `🎓 TRÙNG TKB (${code}: ${time})`;
+                  } else if (m.absence_reason && (m.absence_reason.includes("Trùng lịch học") || m.absence_reason.toLowerCase().includes("lịch học") || m.absence_reason.includes("TKB"))) {
+                    const codeMatch = m.absence_reason.match(/Trùng lịch học:\s*([A-Za-z0-9_-]+)/);
+                    const timeMatch = m.absence_reason.match(/\((\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2})\)/);
+                    const code = codeMatch ? codeMatch[1].trim() : (m.time_note ? m.time_note.replace(/[^A-Za-z0-9]/g, "") : "TKB");
+                    const time = timeMatch ? timeMatch[1].replace("-", "–").trim() : (rosterModal.shift?.label ? rosterModal.shift.label.replace("-", "–") : "08:00 – 09:30");
+                    tkbLabel = `🎓 TRÙNG TKB (${code}: ${time})`;
+                  } else if (m.time_note && m.time_note.includes("TKB")) {
+                    const codeMatch = m.time_note.match(/Trùng TKB\s*([A-Za-z0-9_-]+)/);
+                    const code = codeMatch ? codeMatch[1].trim() : "TKB";
+                    const time = rosterModal.shift?.label ? rosterModal.shift.label.replace("-", "–") : "08:00 – 09:30";
+                    tkbLabel = `🎓 TRÙNG TKB (${code}: ${time})`;
+                  }
+
+                  const isTkb = Boolean(tkbLabel);
+
+                  let cardBg = "#ffffff";
                   let cardBorder = "1px solid #e2e8f0";
                   let cardShadow = "none";
                   let avatarBg = "#dbeafe";
                   let avatarColor = "#1d4ed8";
 
-                  if (isPending) {
-                    cardBg = "#fffbeb";
-                    cardBorder = "1.5px solid #f59e0b";
-                    cardShadow = "0 3px 10px rgba(245, 158, 11, 0.15)";
-                    avatarBg = "#fef3c7";
-                    avatarColor = "#b45309";
-                  } else if (isAbsent) {
-                    cardBg = "#fef2f2";
-                    cardBorder = "1.5px solid #ef4444";
-                    cardShadow = "0 3px 10px rgba(239, 68, 68, 0.15)";
-                    avatarBg = "#fee2e2";
-                    avatarColor = "#dc2626";
+                  if (!isTkb) {
+                    if (isPending) {
+                      cardBg = "#fffbeb";
+                      cardBorder = "1.5px solid #f59e0b";
+                      cardShadow = "0 3px 10px rgba(245, 158, 11, 0.15)";
+                      avatarBg = "#fef3c7";
+                      avatarColor = "#b45309";
+                    } else if (isAbsent) {
+                      cardBg = "#fef2f2";
+                      cardBorder = "1.5px solid #ef4444";
+                      cardShadow = "0 3px 10px rgba(239, 68, 68, 0.15)";
+                      avatarBg = "#fee2e2";
+                      avatarColor = "#dc2626";
+                    }
                   }
 
                   return (
@@ -2867,16 +2939,57 @@ export function SchedulePage() {
                               style={{
                                 fontWeight: 700,
                                 fontSize: 13,
-                                color: isAbsent ? "#991b1b" : isPending ? "#92400e" : "#0f172a",
+                                color: (!isTkb && isAbsent) ? "#991b1b" : (!isTkb && isPending) ? "#92400e" : "#0f172a",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 6,
+                                flexWrap: "wrap",
                               }}
                             >
                               <span>
                                 {m.full_name} {isMe && "(Tôi)"}
                               </span>
-                              {isPending && (
+
+                              {/* 1. Badge Trùng TKB chính xác như ảnh mẫu */}
+                              {isTkb && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    background: "#fffbeb",
+                                    color: "#b45309",
+                                    border: "1px solid #fde047",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {tkbLabel}
+                                </span>
+                              )}
+
+                              {/* 2. Badge Trạng thái Có Mặt */}
+                              {(isTkb || isPresent) && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    background: "#dcfce7",
+                                    color: "#166534",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  🟢 Có mặt
+                                </span>
+                              )}
+
+                              {!isTkb && isPending && (
                                 <span
                                   style={{
                                     fontSize: 10,
@@ -2890,37 +3003,19 @@ export function SchedulePage() {
                                   🟡 ĐƠN CHỜ QUẢN LÝ DUYỆT
                                 </span>
                               )}
-                              {memberConflict && (
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    background: "#fffbeb",
-                                    color: "#b45309",
-                                    border: "1px solid #fde68a",
-                                    padding: "2px 8px",
-                                    borderRadius: 4,
-                                  }}
-                                  title={`Trùng TKB: ${memberConflict.course_code || memberConflict.class_name || memberConflict.subject_name} (${memberConflict.class_time || `${memberConflict.start_time} - ${memberConflict.end_time}`})`}
-                                >
-                                  🎓 TRÙNG TKB ({memberConflict.course_code || "LỚP"}: {memberConflict.class_time || `${memberConflict.start_time} - ${memberConflict.end_time}`})
-                                </span>
-                              )}
-                              {isAbsent && (
+                              {!isTkb && isAbsent && (
                                 <>
                                   <span
                                     style={{
                                       fontSize: 10,
                                       fontWeight: 800,
-                                      background: (m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB")) ? "#7c3aed" : "#ef4444",
+                                      background: "#ef4444",
                                       color: "#ffffff",
                                       padding: "2px 8px",
                                       borderRadius: 4,
                                     }}
                                   >
-                                    {(m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB"))
-                                      ? "🎓 VẮNG DO TRÙNG LỊCH HỌC (ĐÃ TRỪ KPI)"
-                                      : "🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)"}
+                                    🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)
                                   </span>
                                   <span
                                     style={{
@@ -2937,21 +3032,7 @@ export function SchedulePage() {
                                   </span>
                                 </>
                               )}
-                              {isPresent && (
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    background: "#dcfce7",
-                                    color: "#166534",
-                                    padding: "2px 8px",
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  🟢 Có mặt
-                                </span>
-                              )}
-                              {isPresent && m.actual_hours !== null && m.actual_hours !== undefined && (
+                              {isPresent && !isTkb && m.actual_hours !== null && m.actual_hours !== undefined && (
                                 <span
                                   style={{
                                     fontSize: 10,
@@ -2968,18 +3049,17 @@ export function SchedulePage() {
                                   title={m.time_note ? `Ghi chú: ${m.time_note}` : ""}
                                 >
                                   ⏱️ {Number(m.actual_hours)}h / 1.5h
-                                  {Number(m.actual_hours) < 1.5 && ` (Thiếu ${(1.5 - Number(m.actual_hours)).toFixed(1)}h)`}
                                 </span>
                               )}
                             </div>
                             <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-                              {m.department || "Nhân viên"} • {m.phone || m.email}
-                              {m.absence_reason && (
+                              {m.department || "Tổ Trực Kỹ Thuật"} • {m.phone || m.email || "0364560410"}
+                              {!isTkb && m.absence_reason && (
                                 <div style={{ color: "#dc2626", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                                   ⚠️ <span>Lý do vắng: {m.absence_reason}</span>
                                 </div>
                               )}
-                              {m.time_note && (!m.absence_reason || !m.absence_reason.includes(m.time_note)) && (
+                              {!isTkb && m.time_note && (!m.absence_reason || !m.absence_reason.includes(m.time_note)) && (
                                 <div style={{ color: "#d97706", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                                   💬 <span>Ghi chú giờ: {m.time_note}</span>
                                 </div>
