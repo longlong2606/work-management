@@ -1062,7 +1062,7 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, t.leader_id, t.created_by, t.status AS task_status 
+        SELECT s.id, s.status AS subtask_status, t.leader_id, t.created_by, t.status AS task_status 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
@@ -1070,6 +1070,9 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
 
     if ((string)subtask.task_status == "FINISHED")
         return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể xóa mục việc!" });
+
+    if ((string)subtask.subtask_status == "FINISHED")
+        return Results.BadRequest(new { detail = "Mục việc đã hoàn thành và nghiệm thu, không thể xóa!" });
 
     long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;

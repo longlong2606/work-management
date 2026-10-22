@@ -1934,7 +1934,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Delete subtask */}
-                                  {isPersonInCharge && (
+                                  {isPersonInCharge && sub.status !== "FINISHED" && (
                                     <button
                                       onClick={() => handleDeleteSubtask(sub.id)}
                                       style={{
