@@ -2231,9 +2231,10 @@ app.MapPost("/api/shifts/approve-absence", (ApproveAbsenceRequest req, HttpConte
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (currentUser.role != "admin")
+    var canApproveAbsence = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    if (!canApproveAbsence)
     {
-        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền phê duyệt hoặc từ chối đơn báo vắng!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) hoặc Trưởng nhóm (Leader) mới có quyền phê duyệt hoặc từ chối đơn báo vắng!" }, statusCode: 403);
     }
 
     using var conn = Database.GetConnection();
@@ -2590,7 +2591,8 @@ app.MapPost("/api/shifts/attendance/hours", (UpdateActualHoursRequest req, HttpC
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin") return Results.StatusCode(403);
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    if (!canManage) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var reg = conn.QueryFirstOrDefault(
@@ -2637,9 +2639,10 @@ app.MapPost("/api/shifts/attendance/toggle", (ToggleAttendanceRequest req, HttpC
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (req.attendance_status == "absent" && currentUser.role != "admin")
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    if (req.attendance_status == "absent" && !canManage)
     {
-        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) hoặc Trưởng nhóm (Leader) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
     }
 
     using var conn = Database.GetConnection();
@@ -2679,9 +2682,10 @@ app.MapPut("/api/shifts/registrations/{id:long}/attendance", (long id, UpdateAtt
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (req.attendance_status == "absent" && currentUser.role != "admin")
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    if (req.attendance_status == "absent" && !canManage)
     {
-        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) hoặc Trưởng nhóm (Leader) mới có quyền đánh dấu hoặc duyệt vắng ca trực!" }, statusCode: 403);
     }
 
     using var conn = Database.GetConnection();
@@ -2703,6 +2707,8 @@ app.MapGet("/api/shifts/pending-requests", (HttpContext ctx) =>
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+
     using var conn = Database.GetConnection();
     var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
     var sql = @"
@@ -2718,7 +2724,7 @@ app.MapGet("/api/shifts/pending-requests", (HttpContext ctx) =>
         JOIN shift_templates st ON sr.shift_id = st.id
         LEFT JOIN shift_templates tgt ON sr.target_shift_id = tgt.id
         WHERE (sr.status IN ('pending_cancel', 'pending_change') OR sr.attendance_status = 'pending_absence') " +
-        (currentUser.role == "admin" ? "" : "AND sr.user_id = @uid ") +
+        (canManage ? "" : "AND sr.user_id = @uid ") +
         "ORDER BY sr.id DESC";
 
     var rows = conn.Query(sql, new { uid = currentUser.id, today });
@@ -2730,7 +2736,8 @@ app.MapPost("/api/shifts/register", (ShiftRegistrationRequest req, HttpContext c
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    var targetUserId = (currentUser.role == "admin" && req.user_id.HasValue && req.user_id.Value > 0)
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    var targetUserId = (canManage && req.user_id.HasValue && req.user_id.Value > 0)
         ? req.user_id.Value
         : currentUser.id;
 
@@ -2905,7 +2912,8 @@ app.MapPost("/api/shifts/approve-request", (ApproveShiftActionModel req, HttpCon
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
-    if (currentUser.role != "admin" && !currentUser.can_manage_schedule) return Results.StatusCode(403);
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || currentUser.can_manage_schedule;
+    if (!canManage) return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var reg = conn.QueryFirstOrDefault<dynamic>(

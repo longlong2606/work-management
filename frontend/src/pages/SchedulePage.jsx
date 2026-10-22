@@ -80,8 +80,8 @@ function getDaysOfWeek(mondayStr) {
 export function SchedulePage() {
   const { user, canManageSchedule } = useAuth();
   const { fetchUnreadCount } = useNotifications();
-  const isAdmin = user?.role === "admin" || Boolean(canManageSchedule);
-  const isStrictAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "leader" || user?.role === "manager" || Boolean(canManageSchedule);
+  const isStrictAdmin = isAdmin;
   const todayStr = formatLocalDate(new Date());
 
   const [viewMode, setViewMode] = useState("week"); // 'week' | 'day' | 'my'
@@ -3016,7 +3016,7 @@ export function SchedulePage() {
                                 </div>
                               ) : (
                                 <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                  ⏳ Chờ Quản trị viên (Admin) duyệt vắng
+                                  ⏳ Chờ Quản trị viên / Leader duyệt vắng
                                 </span>
                               )}
 
@@ -4839,7 +4839,7 @@ export function SchedulePage() {
                             </>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "4px 10px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                              ⏳ Đang chờ Quản trị viên (Admin) xét duyệt
+                              ⏳ Đang chờ Quản trị viên / Leader xét duyệt
                             </span>
                           )
                         ) : (

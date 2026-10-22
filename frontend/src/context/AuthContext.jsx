@@ -102,7 +102,7 @@ export function AuthProvider({ children }) {
   // - Leader có phân ca, quản lý nhân sự, đánh giá năng lực, tính điểm CP; giao subtask (không tạo nhiệm vụ lớn)
   // - Core, Contributor, Learning không được quyền nào hết (mọi quyền = false)
   const canManageStaff = isAdmin ? true : Boolean(user?.can_manage_staff);
-  const canManageSchedule = isAdmin ? true : Boolean(user?.can_manage_schedule);
+  const canManageSchedule = isAdmin || isLeader || isManagerRole ? true : Boolean(user?.can_manage_schedule);
   const canManageTasks = isAdmin ? true : Boolean(user?.can_manage_tasks);
   const canEvaluate = isAdmin ? true : Boolean(user?.can_evaluate);
   const canManageCp = isAdmin ? true : Boolean(user?.can_manage_cp);
