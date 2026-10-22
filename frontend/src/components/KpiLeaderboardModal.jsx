@@ -43,7 +43,7 @@ export function KpiLeaderboardModal({
             startTime: s.start_time || "08:00",
             endTime: s.end_time || "09:30",
           };
-          const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+          const standardDuration = 1.5;
           const actualHours = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : null;
           const duration = actualHours !== null ? actualHours : standardDuration;
           const isAbsent = s.attendance_status === "absent";
@@ -97,7 +97,7 @@ export function KpiLeaderboardModal({
 
       // Tổng hợp toàn tuần từ memberShifts
       memberShifts.forEach((s) => {
-        const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+        const standardDuration = 1.5;
         const isAbsent = s.attendance_status === "absent" || s.attendance_status === "pending_absence";
         if (isAbsent) {
           absentHours += standardDuration;

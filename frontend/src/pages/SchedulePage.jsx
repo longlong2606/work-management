@@ -576,9 +576,8 @@ export function SchedulePage() {
         shift_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9],
         user_id: user?.id,
       });
-      await api.syncClassScheduleKpi().catch(() => {});
       showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã cộng lại đủ 81.0h KPI)!");
-      fetchSchedule();
+      await fetchSchedule();
     } catch (err) {
       showToast("Lỗi khi khôi phục: " + (err.message || ""), "danger");
     }
@@ -965,24 +964,24 @@ export function SchedulePage() {
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
 
-  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng, ca 8 là 0.5 tiếng)
+  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng)
   const myActualAssignedHours = useMemo(() => {
     return myShiftsInWeek.reduce((sum, s) => {
       if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") return sum;
-      const shiftDuration = s.shift_id === 8 ? 0.5 : 1.5;
+      const shiftDuration = 1.5;
       const dur = s.actual_hours != null && Number(s.actual_hours) >= 0 ? Number(s.actual_hours) : shiftDuration;
       return sum + dur;
     }, 0);
   }, [myShiftsInWeek]);
 
-  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h (Ca 8 là 0.5h)
+  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h = 81.0h
   const myKpiStats = useMemo(() => {
     let absentHours = 0;
     let absentCount = 0;
     let explicitAssignedHours = 0;
 
     myShiftsInWeek.forEach((s) => {
-      const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+      const standardDuration = 1.5;
       const isAbsent = s.attendance_status === "absent" || s.attendance_status === "pending_absence";
       if (isAbsent) {
         absentHours += standardDuration;
@@ -1903,7 +1902,7 @@ export function SchedulePage() {
                                   }
                                   if (isMyAbsent) {
                                     const isClassConflict = myRegInSlot?.absence_reason?.includes("lịch học") || myRegInSlot?.time_note?.includes("Trùng TKB");
-                                    const shiftDurLabel = shift.id === 8 ? "-0.5h KPI" : "-1.5h KPI";
+                                    const shiftDurLabel = "-1.5h KPI";
                                     if (isAdmin) {
                                       return (
                                         <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -2934,7 +2933,7 @@ export function SchedulePage() {
                                       borderRadius: 4,
                                     }}
                                   >
-                                    ⏱️ 0h / {rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"} (-{rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"} KPI)
+                                    ⏱️ 0h / 1.5h (-1.5h KPI)
                                   </span>
                                 </>
                               )}
@@ -2957,9 +2956,9 @@ export function SchedulePage() {
                                   style={{
                                     fontSize: 10,
                                     fontWeight: 800,
-                                    background: Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#fff7ed" : "#f0fdf4",
-                                    color: Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#c2410c" : "#15803d",
-                                    border: `1.5px solid ${Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) ? "#fdba74" : "#86efac"}`,
+                                    background: Number(m.actual_hours) < 1.5 ? "#fff7ed" : "#f0fdf4",
+                                    color: Number(m.actual_hours) < 1.5 ? "#c2410c" : "#15803d",
+                                    border: `1.5px solid ${Number(m.actual_hours) < 1.5 ? "#fdba74" : "#86efac"}`,
                                     padding: "2px 8px",
                                     borderRadius: 4,
                                     display: "inline-flex",
@@ -2968,8 +2967,8 @@ export function SchedulePage() {
                                   }}
                                   title={m.time_note ? `Ghi chú: ${m.time_note}` : ""}
                                 >
-                                  ⏱️ {Number(m.actual_hours)}h / {rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"}
-                                  {Number(m.actual_hours) < (rosterModal.shift?.id === 8 ? 0.5 : 1.5) && ` (Thiếu ${((rosterModal.shift?.id === 8 ? 0.5 : 1.5) - Number(m.actual_hours)).toFixed(1)}h)`}
+                                  ⏱️ {Number(m.actual_hours)}h / 1.5h
+                                  {Number(m.actual_hours) < 1.5 && ` (Thiếu ${(1.5 - Number(m.actual_hours)).toFixed(1)}h)`}
                                 </span>
                               )}
                             </div>
@@ -3729,9 +3728,9 @@ export function SchedulePage() {
                     style={{ fontWeight: 700, width: 120 }}
                   />
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>giờ (h)</span>
-                  {Number(editingHoursModal.actual_hours) < (editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) && (
+                  {Number(editingHoursModal.actual_hours) < 1.5 && (
                     <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>
-                      ⚠️ Trực thiếu {((editingHoursModal.shift?.id === 8 ? 0.5 : 1.5) - Number(editingHoursModal.actual_hours)).toFixed(1)}h
+                      ⚠️ Trực thiếu {(1.5 - Number(editingHoursModal.actual_hours)).toFixed(1)}h
                     </span>
                   )}
                 </div>
@@ -5088,7 +5087,7 @@ export function SchedulePage() {
           } catch (e) {
             console.error(e);
           }
-          fetchSchedule();
+          await fetchSchedule();
         }}
         showToast={showToast}
       />

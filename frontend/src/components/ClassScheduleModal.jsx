@@ -484,7 +484,8 @@ export function ClassScheduleModal({
       setParsedRows([]);
       setFileContent("");
       setFileName("");
-      if (onSuccess) onSuccess(successMsg);
+      await api.syncClassScheduleKpi().catch(() => {});
+      if (onSuccess) await onSuccess(successMsg);
       onClose(); // Đóng modal để người dùng thấy trực tiếp lịch và KPI đã được trừ ngay lập tức
     } catch (err) {
       alert("Lỗi khi import thời khóa biểu: " + err.message);

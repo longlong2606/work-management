@@ -1837,14 +1837,18 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
         {
             long uid = (long)c.user_id;
             string wdate = (string)c.work_date;
-            string cStart = (string)c.start_time;
-            string cEnd = (string)c.end_time;
+            string cStart = ((string)(c.start_time ?? "")).Trim();
+            string cEnd = ((string)(c.end_time ?? "")).Trim();
+            if (cStart.Length == 4 && cStart.Contains(':')) cStart = "0" + cStart;
+            if (cEnd.Length == 4 && cEnd.Contains(':')) cEnd = "0" + cEnd;
 
             foreach (var s in shifts)
             {
                 int sid = (int)s.id;
-                string sStart = (string)s.start_time;
-                string sEnd = (string)s.end_time;
+                string sStart = ((string)(s.start_time ?? "")).Trim();
+                string sEnd = ((string)(s.end_time ?? "")).Trim();
+                if (sStart.Length == 4 && sStart.Contains(':')) sStart = "0" + sStart;
+                if (sEnd.Length == 4 && sEnd.Contains(':')) sEnd = "0" + sEnd;
 
                 string maxStart = string.Compare(sStart, cStart, StringComparison.Ordinal) > 0 ? sStart : cStart;
                 string minEnd = string.Compare(sEnd, cEnd, StringComparison.Ordinal) < 0 ? sEnd : cEnd;
