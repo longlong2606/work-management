@@ -2837,13 +2837,15 @@ export function SchedulePage() {
                                   style={{
                                     fontSize: 10,
                                     fontWeight: 800,
-                                    background: "#ef4444",
+                                    background: (m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB")) ? "#7c3aed" : "#ef4444",
                                     color: "#ffffff",
                                     padding: "2px 8px",
                                     borderRadius: 4,
                                   }}
                                 >
-                                  🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)
+                                  {(m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB"))
+                                    ? "🎓 VẮNG DO TRÙNG LỊCH HỌC (ĐÃ TRỪ KPI)"
+                                    : "🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)"}
                                 </span>
                               )}
                               {isPresent && (
@@ -2883,7 +2885,12 @@ export function SchedulePage() {
                             </div>
                             <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
                               {m.department || "Nhân viên"} • {m.phone || m.email}
-                              {m.time_note && (
+                              {m.absence_reason && (
+                                <div style={{ color: "#dc2626", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                                  ⚠️ <span>Lý do vắng: {m.absence_reason}</span>
+                                </div>
+                              )}
+                              {m.time_note && (!m.absence_reason || !m.absence_reason.includes(m.time_note)) && (
                                 <div style={{ color: "#d97706", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                                   💬 <span>Ghi chú giờ: {m.time_note}</span>
                                 </div>

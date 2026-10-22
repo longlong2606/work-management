@@ -732,13 +732,17 @@ export function KpiLeaderboardModal({
                                       <span>{sh.duration}h</span>
                                     </div>
                                     <div style={{ fontSize: 9, opacity: 0.9 }}>
-                                      {sh.isAbsent && "❌ VẮNG (Bị trừ giờ)"}
+                                      {sh.isAbsent && (
+                                        (sh.absence_reason?.includes("Trùng lịch học") || sh.time_note?.includes("Trùng TKB"))
+                                          ? "🎓 VẮNG DO TRÙNG TKB (ĐÃ TRỪ KPI)"
+                                          : "❌ VẮNG (Bị trừ giờ)"
+                                      )}
                                       {sh.isPending && "🟡 Chờ duyệt vắng"}
                                       {!sh.isAbsent && !sh.isPending && "✅ Có mặt"}
                                     </div>
-                                    {sh.time_note && (
-                                      <div style={{ fontSize: 8, color: "#64748b", fontStyle: "italic", marginTop: 1 }}>
-                                        💬 {sh.time_note}
+                                    {(sh.absence_reason || sh.time_note) && (
+                                      <div style={{ fontSize: 8, color: "#64748b", fontStyle: "italic", marginTop: 1, wordBreak: "break-word" }}>
+                                        💬 {sh.absence_reason || sh.time_note}
                                       </div>
                                     )}
                                   </div>

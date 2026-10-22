@@ -506,7 +506,7 @@ export function ClassScheduleModal({
                 Thời Khóa Biểu & Lịch Học Cá Nhân (Class Schedule)
               </h3>
               <p style={{ margin: 0, fontSize: 12, opacity: 0.85, marginTop: 2 }}>
-                Nhập lịch học chính khóa từ file CSV/Excel để hệ thống tự động cảnh báo khi phân ca trực
+                Nhập lịch học chính khóa từ file CSV/Excel. Hệ thống sẽ tự động phát hiện ca trực trùng lịch, đánh vắng và trừ giờ KPI (81h) tương ứng.
               </p>
             </div>
           </div>
@@ -643,6 +643,11 @@ export function ClassScheduleModal({
               {/* Preview Table */}
               {parsedRows.length > 0 && (
                 <div>
+                  {overlapCount > 0 && (
+                    <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#c2410c", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>⚡ Phát hiện <strong>{overlapCount}</strong> ca trực trùng lịch học. Khi xác nhận import, hệ thống sẽ tự động chuyển sang <strong>Vắng mặt</strong> và <strong>trừ giờ KPI</strong> tương ứng.</span>
+                    </div>
+                  )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                       <span>Tổng: <strong>{parsedRows.length}</strong> buổi học</span>
@@ -699,12 +704,13 @@ export function ClassScheduleModal({
                                         borderRadius: 4,
                                         fontSize: 10.5,
                                         fontWeight: 700,
-                                        background: "#fef3c7",
-                                        color: "#b45309",
-                                        border: "1px solid #fde68a"
+                                        background: "#fee2e2",
+                                        color: "#dc2626",
+                                        border: "1px solid #fca5a5"
                                       }}
+                                      title={`Trùng với ${s.name} (${s.label}) - Sẽ tự động trừ KPI`}
                                     >
-                                      ⚠️ Ca {s.id} ({s.label})
+                                      ⚠️ Ca {s.id} (Trừ KPI)
                                     </span>
                                   ))}
                                 </div>

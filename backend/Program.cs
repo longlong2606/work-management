@@ -1814,6 +1814,141 @@ app.MapGet("/api/shifts/templates", () =>
     return Results.Ok(shifts);
 });
 
+int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? targetUserId = null, string? startDate = null, string? endDate = null)
+{
+    try
+    {
+        var shifts = conn.Query<dynamic>("SELECT id, name, start_time, end_time, label FROM shift_templates WHERE id > 0 ORDER BY id ASC").ToList();
+        if (shifts.Count == 0) return 0;
+
+        string csQuery = @"
+            SELECT cs.id, cs.user_id, cs.course_code, cs.class_name, cs.work_date, cs.start_time, cs.end_time, cs.room
+            FROM class_schedules cs
+            WHERE (@targetUserId IS NULL OR cs.user_id = @targetUserId)
+              AND (@startDate IS NULL OR cs.work_date >= @startDate)
+              AND (@endDate IS NULL OR cs.work_date <= @endDate)";
+
+        var classes = conn.Query<dynamic>(csQuery, new { targetUserId, startDate, endDate }).ToList();
+
+        int deductedCount = 0;
+        var conflictsMap = new Dictionary<(long userId, string workDate, int shiftId), dynamic>();
+
+        foreach (var c in classes)
+        {
+            long uid = (long)c.user_id;
+            string wdate = (string)c.work_date;
+            string cStart = (string)c.start_time;
+            string cEnd = (string)c.end_time;
+
+            foreach (var s in shifts)
+            {
+                int sid = (int)s.id;
+                string sStart = (string)s.start_time;
+                string sEnd = (string)s.end_time;
+
+                string maxStart = string.Compare(sStart, cStart, StringComparison.Ordinal) > 0 ? sStart : cStart;
+                string minEnd = string.Compare(sEnd, cEnd, StringComparison.Ordinal) < 0 ? sEnd : cEnd;
+
+                if (string.Compare(maxStart, minEnd, StringComparison.Ordinal) < 0)
+                {
+                    var key = (uid, wdate, sid);
+                    if (!conflictsMap.ContainsKey(key))
+                    {
+                        conflictsMap[key] = c;
+                    }
+                }
+            }
+        }
+
+        foreach (var kvp in conflictsMap)
+        {
+            long uid = kvp.Key.userId;
+            string wdate = kvp.Key.workDate;
+            int sid = kvp.Key.shiftId;
+            var c = kvp.Value;
+
+            string code = (string)(c.course_code ?? "");
+            string cname = (string)c.class_name;
+            string ctime = $"{(string)c.start_time} - {(string)c.end_time}";
+            string croom = (string)(c.room ?? "");
+
+            string absenceReason = $"Trùng lịch học: {(string.IsNullOrEmpty(code) ? "" : code + " - ")}{cname} ({ctime}){(string.IsNullOrEmpty(croom) ? "" : " tại " + croom)}";
+            string timeNote = $"Trùng TKB {(string.IsNullOrEmpty(code) ? cname : code)} (Trừ KPI)";
+            string note = $"Hệ thống tự động trừ KPI do nộp lịch học trùng ca trực: {cname} ({ctime})";
+
+            var reg = conn.QueryFirstOrDefault<dynamic>(
+                "SELECT id, attendance_status, absence_reason FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+                new { uid, sid, wdate });
+
+            if (reg == null)
+            {
+                conn.Execute(@"
+                    INSERT INTO shift_registrations (user_id, shift_id, work_date, status, attendance_status, absence_reason, time_note, note, absence_approved_at)
+                    VALUES (@uid, @sid, @wdate, 'registered', 'absent', @absenceReason, @timeNote, @note, CURRENT_TIMESTAMP)",
+                    new { uid, sid, wdate, absenceReason, timeNote, note });
+                deductedCount++;
+            }
+            else
+            {
+                string curAtt = (string)(reg.attendance_status ?? "");
+                string curReason = (string)(reg.absence_reason ?? "");
+
+                if (curAtt != "absent" || !curReason.StartsWith("Trùng lịch học"))
+                {
+                    conn.Execute(@"
+                        UPDATE shift_registrations
+                        SET attendance_status = 'absent',
+                            absence_reason = @absenceReason,
+                            time_note = @timeNote,
+                            note = @note,
+                            absence_approved_at = CURRENT_TIMESTAMP
+                        WHERE id = @id",
+                        new { absenceReason, timeNote, note, id = (long)reg.id });
+                    deductedCount++;
+                }
+            }
+        }
+
+        // Khôi phục ca trực nếu TKB bị xóa
+        string checkAbsentsQuery = @"
+            SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date
+            FROM shift_registrations sr
+            WHERE sr.attendance_status = 'absent'
+              AND sr.absence_reason LIKE 'Trùng lịch học%'
+              AND (@targetUserId IS NULL OR sr.user_id = @targetUserId)
+              AND (@startDate IS NULL OR sr.work_date >= @startDate)
+              AND (@endDate IS NULL OR sr.work_date <= @endDate)";
+
+        var autoAbsents = conn.Query<dynamic>(checkAbsentsQuery, new { targetUserId, startDate, endDate }).ToList();
+        foreach (var ab in autoAbsents)
+        {
+            long uid = (long)ab.user_id;
+            string wdate = (string)ab.work_date;
+            int sid = (int)ab.shift_id;
+            var key = (uid, wdate, sid);
+
+            if (!conflictsMap.ContainsKey(key))
+            {
+                conn.Execute(@"
+                    UPDATE shift_registrations
+                    SET attendance_status = 'present',
+                        absence_reason = NULL,
+                        time_note = NULL,
+                        note = 'Lịch trực định kỳ (Khôi phục sau khi xóa TKB)'
+                    WHERE id = @id",
+                    new { id = (long)ab.id });
+            }
+        }
+
+        return conflictsMap.Count;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SyncClassScheduleKpiDeductions Error]: {ex.Message}");
+        return 0;
+    }
+}
+
 void EnsureWeeklySchedule(System.Data.Common.DbConnection conn, string startDateStr, string endDateStr)
 {
     if (!DateTime.TryParse(startDateStr, out var startDate) || !DateTime.TryParse(endDateStr, out var endDate))
@@ -1869,6 +2004,8 @@ void EnsureWeeklySchedule(System.Data.Common.DbConnection conn, string startDate
 
         currentMonday = currentMonday.AddDays(7);
     }
+
+    SyncClassScheduleKpiDeductions(conn, null, startDateStr, endDateStr);
 }
 
 app.MapGet("/api/shifts/schedule", (string start_date, string end_date, HttpContext ctx) =>
@@ -3763,6 +3900,9 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
 
     using var conn = Database.GetConnection();
     int count = 0;
+    string? minDate = null;
+    string? maxDate = null;
+
     foreach (var e in req.entries)
     {
         if (string.IsNullOrWhiteSpace(e.class_name) || string.IsNullOrWhiteSpace(e.work_date) ||
@@ -3770,6 +3910,10 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
         {
             continue;
         }
+
+        var wdate = e.work_date.Trim();
+        if (minDate == null || string.Compare(wdate, minDate, StringComparison.Ordinal) < 0) minDate = wdate;
+        if (maxDate == null || string.Compare(wdate, maxDate, StringComparison.Ordinal) > 0) maxDate = wdate;
 
         conn.Execute(@"
             INSERT INTO class_schedules (user_id, course_code, class_name, work_date, start_time, end_time, room, source_batch_id)
@@ -3779,7 +3923,7 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
                 uid = effectiveUserId,
                 code = e.course_code?.Trim(),
                 name = e.class_name.Trim(),
-                date = e.work_date.Trim(),
+                date = wdate,
                 stime = e.start_time.Trim(),
                 etime = e.end_time.Trim(),
                 room = e.room?.Trim(),
@@ -3788,7 +3932,34 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
         count++;
     }
 
-    return Results.Ok(new { message = $"Đã nhập thành công {count} buổi học vào Thời Khóa Biểu!", count, batch_id = batchId });
+    // Đảm bảo các slot lịch trực trong khoảng thời gian này đã được tạo
+    if (minDate != null && maxDate != null)
+    {
+        EnsureWeeklySchedule(conn, minDate, maxDate);
+    }
+
+    // Tự động đồng bộ trừ KPI cho tất cả các ca trực trùng lịch học
+    int deductedCount = SyncClassScheduleKpiDeductions(conn, effectiveUserId, minDate, maxDate);
+
+    if (deductedCount > 0)
+    {
+        conn.Execute(@"
+            INSERT INTO notifications (target_user_id, sender_id, title, message, type)
+            VALUES (@target, @sender, @title, @msg, 'class_schedule_conflict')",
+            new
+            {
+                target = effectiveUserId,
+                sender = currentUser.id,
+                title = "Tự động trừ KPI do trùng Thời Khóa Biểu",
+                msg = $"Hệ thống đã phát hiện và tự động chuyển {deductedCount} ca trực trùng lịch học sang trạng thái Vắng và trừ giờ KPI tương ứng."
+            });
+    }
+
+    string msg = deductedCount > 0
+        ? $"Đã nhập thành công {count} buổi học vào Thời Khóa Biểu và tự động trừ {deductedCount} ca trực trùng lịch học khỏi KPI!"
+        : $"Đã nhập thành công {count} buổi học vào Thời Khóa Biểu!";
+
+    return Results.Ok(new { message = msg, count, deducted_shifts = deductedCount, batch_id = batchId });
 });
 
 app.MapDelete("/api/class-schedules/{id:long}", (long id, HttpContext ctx) =>
@@ -3797,16 +3968,20 @@ app.MapDelete("/api/class-schedules/{id:long}", (long id, HttpContext ctx) =>
     if (currentUser == null) return Results.Unauthorized();
 
     using var conn = Database.GetConnection();
-    var item = conn.QueryFirstOrDefault<(long id, long user_id)>("SELECT id, user_id FROM class_schedules WHERE id = @id", new { id });
-    if (item.id == 0) return Results.NotFound(new { detail = "Không tìm thấy buổi học này" });
+    var item = conn.QueryFirstOrDefault<dynamic>("SELECT id, user_id, work_date FROM class_schedules WHERE id = @id", new { id });
+    if (item == null) return Results.NotFound(new { detail = "Không tìm thấy buổi học này" });
 
-    if (currentUser.role != "admin" && currentUser.id != item.user_id)
+    long itemUserId = (long)item.user_id;
+    string itemWorkDate = (string)item.work_date;
+
+    if (currentUser.role != "admin" && currentUser.id != itemUserId)
     {
         return Results.StatusCode(403);
     }
 
     conn.Execute("DELETE FROM class_schedules WHERE id = @id", new { id });
-    return Results.Ok(new { message = "Đã xóa buổi học thành công" });
+    SyncClassScheduleKpiDeductions(conn, itemUserId, itemWorkDate, itemWorkDate);
+    return Results.Ok(new { message = "Đã xóa buổi học thành công và tự động cập nhật lại KPI!" });
 });
 
 app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
@@ -3816,10 +3991,13 @@ app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
 
     using var conn = Database.GetConnection();
     int deleted = 0;
+    long? clearUserId = null;
+
     if (currentUser.role == "admin")
     {
         if (user_id.HasValue)
         {
+            clearUserId = user_id.Value;
             deleted = conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid = user_id.Value });
         }
         else
@@ -3829,10 +4007,22 @@ app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
     }
     else
     {
+        clearUserId = currentUser.id;
         deleted = conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid = currentUser.id });
     }
 
-    return Results.Ok(new { message = $"Đã xóa sạch {deleted} buổi học trong thời khóa biểu thành công!", count = deleted });
+    SyncClassScheduleKpiDeductions(conn, clearUserId);
+    return Results.Ok(new { message = $"Đã xóa sạch {deleted} buổi học trong thời khóa biểu và cập nhật lại KPI thành công!", count = deleted });
+});
+
+app.MapPost("/api/class-schedules/sync-kpi", (HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    int count = SyncClassScheduleKpiDeductions(conn);
+    return Results.Ok(new { message = $"Đã đồng bộ trừ KPI cho {count} ca làm việc trùng lịch học!", count });
 });
 
 app.MapGet("/api/class-schedules/conflicts", (string start_date, string end_date, HttpContext ctx) =>
@@ -4107,6 +4297,13 @@ if (hasFrontend)
     var fileProvider = new PhysicalFileProvider(frontendFolder!);
     app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = fileProvider });
 }
+
+try
+{
+    using var initConn = Database.GetConnection();
+    SyncClassScheduleKpiDeductions(initConn);
+}
+catch { }
 
 app.Run();
 
