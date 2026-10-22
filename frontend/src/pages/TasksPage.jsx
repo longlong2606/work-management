@@ -1124,34 +1124,9 @@ export function TasksPage() {
 
                     {/* TITLE & DESCRIPTION */}
                     <div>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
-                        <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.4, flex: 1 }}>
-                          {taskDetail.task.title}
-                        </h3>
-                        {canEditTask(taskDetail.task) && taskDetail.task.status !== "FINISHED" && (
-                          <button
-                            onClick={() => setEditingTask(taskDetail.task)}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                              background: "#eff6ff",
-                              border: "1px solid #bfdbfe",
-                              color: "#1d4ed8",
-                              padding: "4px 9px",
-                              borderRadius: 6,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              flexShrink: 0,
-                            }}
-                            title="Chỉnh sửa thông tin nhiệm vụ lớn"
-                          >
-                            <Edit3 size={12} />
-                            <span>Sửa</span>
-                          </button>
-                        )}
-                      </div>
+                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.4 }}>
+                        {taskDetail.task.title}
+                      </h3>
                       <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
                         {taskDetail.task.description || "Không có mô tả chi tiết."}
                       </p>
