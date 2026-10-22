@@ -947,30 +947,36 @@ export function SchedulePage() {
 
   const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
 
-  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng)
+  // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng, ca 8 là 0.5 tiếng)
   const myActualAssignedHours = useMemo(() => {
     return myShiftsInWeek.reduce((sum, s) => {
-      const dur = s.actual_hours != null ? Number(s.actual_hours) : 1.5;
+      if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") return sum;
+      const shiftDuration = s.shift_id === 8 ? 0.5 : 1.5;
+      const dur = s.actual_hours != null && Number(s.actual_hours) >= 0 ? Number(s.actual_hours) : shiftDuration;
       return sum + dur;
     }, 0);
   }, [myShiftsInWeek]);
 
-  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h
+  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h (Ca 8 là 0.5h)
   const myKpiStats = useMemo(() => {
     let absentHours = 0;
     let absentCount = 0;
     let explicitAssignedHours = 0;
 
     myShiftsInWeek.forEach((s) => {
-      const dur = s.actual_hours != null ? Number(s.actual_hours) : 1.5;
-      explicitAssignedHours += dur;
-      if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
-        absentHours += dur;
+      const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+      const isAbsent = s.attendance_status === "absent" || s.attendance_status === "pending_absence";
+      if (isAbsent) {
+        absentHours += standardDuration;
         absentCount += 1;
+        explicitAssignedHours += standardDuration;
+      } else {
+        const dur = s.actual_hours != null && Number(s.actual_hours) >= 0 ? Number(s.actual_hours) : standardDuration;
+        explicitAssignedHours += dur;
       }
     });
 
-    const totalAssignedHours = explicitAssignedHours;
+    const totalAssignedHours = explicitAssignedHours > 0 ? explicitAssignedHours : LAB_KPI_TARGET;
     const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
     const kpiPercent = Math.min(100, Math.round((validKpiHours / LAB_KPI_TARGET) * 100));
 
@@ -1260,15 +1266,25 @@ export function SchedulePage() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: 14, borderLeft: "4px solid #10b981" }}>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-            Ca trực của bạn tuần này
+        <div
+          className="card"
+          style={{
+            padding: 14,
+            borderLeft: myKpiStats.absentCount > 0 ? "4px solid #ef4444" : "4px solid #10b981",
+            background: myKpiStats.absentCount > 0 ? "#fef2f2" : undefined,
+          }}
+        >
+          <div style={{ fontSize: 12, color: myKpiStats.absentCount > 0 ? "#991b1b" : "var(--text-muted)", fontWeight: 600 }}>
+            Ca trực & Quỹ KPI tuần này
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", marginTop: 4 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: myKpiStats.absentCount > 0 ? "#dc2626" : "#10b981", marginTop: 4 }}>
             {myKpiStats.absentCount > 0 ? (
               <>
                 {myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/81.0 giờ)</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/81.0 giờ KPI)</span>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 4 }}>
+                  ⚠️ Đã trừ: -{myKpiStats.absentHours.toFixed(1)}h KPI ({myKpiStats.absentCount} ca vắng/trùng lịch)
+                </div>
               </>
             ) : (
               <>
@@ -1846,42 +1862,61 @@ export function SchedulePage() {
                                     );
                                   }
                                   if (isMyAbsent) {
+                                    const isClassConflict = myRegInSlot?.absence_reason?.includes("lịch học") || myRegInSlot?.time_note?.includes("Trùng TKB");
+                                    const shiftDurLabel = shift.id === 8 ? "-0.5h KPI" : "-1.5h KPI";
                                     if (isAdmin) {
                                       return (
-                                        <button
-                                          onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
-                                          style={{
-                                            background: "#dcfce7",
-                                            border: "1px solid #86efac",
-                                            borderRadius: 4,
-                                            padding: "2px 6px",
-                                            fontSize: 9.5,
-                                            fontWeight: 700,
-                                            color: "#166534",
-                                            cursor: "pointer",
-                                            whiteSpace: "nowrap",
-                                          }}
-                                          title="Đã duyệt vắng mặt. Nhấn để khôi phục có mặt lại."
-                                        >
-                                          🔄 Khôi phục
-                                        </button>
+                                        <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                          <span
+                                            style={{
+                                              background: isClassConflict ? "#f5f3ff" : "#fee2e2",
+                                              border: `1px solid ${isClassConflict ? "#c4b5fd" : "#fca5a5"}`,
+                                              borderRadius: 4,
+                                              padding: "2px 5px",
+                                              fontSize: 9,
+                                              fontWeight: 700,
+                                              color: isClassConflict ? "#6d28d9" : "#991b1b",
+                                              whiteSpace: "nowrap",
+                                            }}
+                                            title={myRegInSlot?.absence_reason ? `Lý do: ${myRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
+                                          >
+                                            {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
+                                          </span>
+                                          <button
+                                            onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
+                                            style={{
+                                              background: "#dcfce7",
+                                              border: "1px solid #86efac",
+                                              borderRadius: 4,
+                                              padding: "2px 5px",
+                                              fontSize: 9,
+                                              fontWeight: 700,
+                                              color: "#166534",
+                                              cursor: "pointer",
+                                              whiteSpace: "nowrap",
+                                            }}
+                                            title="Khôi phục có mặt lại"
+                                          >
+                                            🔄
+                                          </button>
+                                        </div>
                                       );
                                     }
                                     return (
                                       <span
                                         style={{
-                                          background: "#fee2e2",
-                                          border: "1px solid #fca5a5",
+                                          background: isClassConflict ? "#f5f3ff" : "#fee2e2",
+                                          border: `1px solid ${isClassConflict ? "#c4b5fd" : "#fca5a5"}`,
                                           borderRadius: 4,
                                           padding: "2px 5px",
                                           fontSize: 9,
                                           fontWeight: 700,
-                                          color: "#991b1b",
+                                          color: isClassConflict ? "#6d28d9" : "#991b1b",
                                           whiteSpace: "nowrap",
                                         }}
-                                        title="Đã được duyệt vắng mặt"
+                                        title={myRegInSlot?.absence_reason ? `Lý do: ${myRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
                                       >
-                                        🔴 Đã nghỉ
+                                        {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
                                       </span>
                                     );
                                   }
@@ -2833,20 +2868,35 @@ export function SchedulePage() {
                                 </span>
                               )}
                               {isAbsent && (
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 800,
-                                    background: (m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB")) ? "#7c3aed" : "#ef4444",
-                                    color: "#ffffff",
-                                    padding: "2px 8px",
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  {(m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB"))
-                                    ? "🎓 VẮNG DO TRÙNG LỊCH HỌC (ĐÃ TRỪ KPI)"
-                                    : "🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)"}
-                                </span>
+                                <>
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 800,
+                                      background: (m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB")) ? "#7c3aed" : "#ef4444",
+                                      color: "#ffffff",
+                                      padding: "2px 8px",
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    {(m.absence_reason?.includes("Trùng lịch học") || m.time_note?.includes("Trùng TKB"))
+                                      ? "🎓 VẮNG DO TRÙNG LỊCH HỌC (ĐÃ TRỪ KPI)"
+                                      : "🔴 VẮNG MẶT (QUẢN LÝ ĐÃ DUYỆT)"}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 800,
+                                      background: "#fee2e2",
+                                      color: "#991b1b",
+                                      border: "1px solid #fca5a5",
+                                      padding: "2px 8px",
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    ⏱️ 0h / {rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"} (-{rosterModal.shift?.id === 8 ? "0.5h" : "1.5h"} KPI)
+                                  </span>
+                                </>
                               )}
                               {isPresent && (
                                 <span
@@ -4991,7 +5041,12 @@ export function SchedulePage() {
         onClose={() => setShowClassScheduleModal(false)}
         currentUser={user}
         allMembers={allMembers}
-        onSuccess={() => {
+        onSuccess={async () => {
+          try {
+            await api.syncClassScheduleKpi();
+          } catch (e) {
+            console.error(e);
+          }
           fetchSchedule();
         }}
         showToast={showToast}

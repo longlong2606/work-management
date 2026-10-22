@@ -43,7 +43,7 @@ export function KpiLeaderboardModal({
             startTime: s.start_time || "08:00",
             endTime: s.end_time || "09:30",
           };
-          const standardDuration = 1.5;
+          const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
           const actualHours = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : null;
           const duration = actualHours !== null ? actualHours : standardDuration;
           const isAbsent = s.attendance_status === "absent";
@@ -55,11 +55,11 @@ export function KpiLeaderboardModal({
           if (isAbsent) {
             finalStatus = "absent";
             dayAbsent += 1;
-            dayDeductedHours += duration;
+            dayDeductedHours += standardDuration;
           } else if (isPending) {
             finalStatus = "pending_absence";
             dayAbsent += 1;
-            dayDeductedHours += duration;
+            dayDeductedHours += standardDuration;
           } else {
             finalStatus = "present";
             dayAttended += 1;
@@ -97,13 +97,17 @@ export function KpiLeaderboardModal({
 
       // Tổng hợp toàn tuần từ memberShifts
       memberShifts.forEach((s) => {
-        const standardDuration = 1.5;
-        const dur = (s.actual_hours !== null && s.actual_hours !== undefined) ? Number(s.actual_hours) : standardDuration;
-        explicitAssignedHours += dur;
-        if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") {
-          absentHours += dur;
+        const standardDuration = s.shift_id === 8 ? 0.5 : 1.5;
+        const isAbsent = s.attendance_status === "absent" || s.attendance_status === "pending_absence";
+        if (isAbsent) {
+          absentHours += standardDuration;
           absentCount += 1;
+          explicitAssignedHours += standardDuration;
         } else {
+          const dur = (s.actual_hours !== null && s.actual_hours !== undefined && Number(s.actual_hours) >= 0)
+            ? Number(s.actual_hours)
+            : standardDuration;
+          explicitAssignedHours += dur;
           attendedCount += 1;
         }
       });

@@ -261,6 +261,10 @@ export const api = {
   },
   getClassScheduleConflicts: (startDate, endDate) =>
     request(`/class-schedules/conflicts?start_date=${startDate}&end_date=${endDate}`),
+  syncClassScheduleKpi: () =>
+    request("/class-schedules/sync-kpi", {
+      method: "POST",
+    }),
 
   // Feedbacks
   getFeedbacks: () => request("/feedbacks"),

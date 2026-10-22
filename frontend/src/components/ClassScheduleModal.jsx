@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   Trash2,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  User
 } from "lucide-react";
 
 const GREENWICH_COURSES = {
@@ -47,7 +48,8 @@ export function ClassScheduleModal({
   onClose,
   currentUser,
   allMembers = [],
-  onSuccess
+  onSuccess,
+  showToast
 }) {
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader" || currentUser?.role === "manager" || Boolean(currentUser?.username && currentUser.username.toLowerCase().includes("leader")) || Boolean(currentUser?.can_manage_schedule);
   const [activeTab, setActiveTab] = useState("import"); // 'import' | 'list'
@@ -229,15 +231,54 @@ export function ClassScheduleModal({
 
     const normalizeDate = (rawStr) => {
       if (!rawStr) return "";
-      let s = rawStr.toString().trim().split(" ")[0];
+      let s = rawStr.toString().trim().split(" ")[0].trim();
+      // YYYY-MM-DD
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+        const [y, m, d] = s.split("-");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      }
+      // YYYY/MM/DD
+      if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)) {
+        const [y, m, d] = s.split("/");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      }
+      // Contains / (DD/MM/YYYY or MM/DD/YYYY)
       if (s.includes("/")) {
         const segs = s.split("/");
         if (segs.length === 3) {
-          if (segs[0].length === 4) {
-            s = `${segs[0]}-${segs[1].padStart(2, "0")}-${segs[2].padStart(2, "0")}`;
+          let y = segs[2].trim();
+          if (y.length === 2) y = "20" + y;
+          const p1 = parseInt(segs[0], 10);
+          const p2 = parseInt(segs[1], 10);
+          let m, d;
+          if (p1 > 12) {
+            d = String(p1).padStart(2, "0");
+            m = String(p2).padStart(2, "0");
+          } else if (p2 > 12) {
+            m = String(p1).padStart(2, "0");
+            d = String(p2).padStart(2, "0");
           } else {
-            s = `${segs[2]}-${segs[1].padStart(2, "0")}-${segs[0].padStart(2, "0")}`;
+            // Both <= 12: Check if p1 or p2 matches current month (e.g. October = 10)
+            const curM = new Date().getMonth() + 1;
+            if (p1 === curM && p2 !== curM) {
+              m = String(p1).padStart(2, "0");
+              d = String(p2).padStart(2, "0");
+            } else {
+              // Default to DD/MM/YYYY
+              d = String(p1).padStart(2, "0");
+              m = String(p2).padStart(2, "0");
+            }
           }
+          return `${y}-${m}-${d}`;
+        }
+      }
+      // Contains . (DD.MM.YYYY)
+      if (s.includes(".")) {
+        const segs = s.split(".");
+        if (segs.length === 3) {
+          let y = segs[2].trim();
+          if (y.length === 2) y = "20" + y;
+          return `${y}-${segs[1].trim().padStart(2, "0")}-${segs[0].trim().padStart(2, "0")}`;
         }
       }
       return s;
@@ -376,12 +417,32 @@ export function ClassScheduleModal({
   // Download template CSV
   const handleDownloadTemplate = () => {
     const csvHeader = "course_code,class_name,start_date,end_date,shift,room\n";
-    const sampleRow = 'COMP1752,Lập trình hướng đối tượng,2026-10-05,2026-10-05,"1,2,3",Room 302\nCOMP1841,Lập trình Web 1,2026-10-06,2026-10-06,"4,5,6",Room 401\nMATH1179,Toán cho Khoa học máy tính,2026-10-07,2026-10-07,3,Room 405\nCOMP1843,Nguyên lý Bảo mật,2026-10-08,2026-10-08,"5,6,7,8",Room 201\n';
+    // Tự động tạo mẫu ngày theo tuần làm việc hiện tại
+    const now = new Date();
+    const curDay = now.getDay();
+    const diffToMonday = (curDay === 0 ? -6 : 1) - curDay;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() + diffToMonday);
+
+    const fmtDate = (d) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const d1 = fmtDate(mon); // Thứ 2
+    const d2 = fmtDate(new Date(mon.getTime() + 1 * 86400000)); // Thứ 3
+    const d3 = fmtDate(new Date(mon.getTime() + 2 * 86400000)); // Thứ 4
+    const d4 = fmtDate(new Date(mon.getTime() + 3 * 86400000)); // Thứ 5
+    const d5 = fmtDate(new Date(mon.getTime() + 4 * 86400000)); // Thứ 6
+
+    const sampleRow = `COMP1752,Lập trình hướng đối tượng,${d1},${d1},"1,2,3",Room 302\nCOMP1841,Lập trình Web 1,${d2},${d2},"4,5,6",Room 401\nMATH1179,Toán cho Khoa học máy tính,${d3},${d3},3,Room 405\nCOMP1843,Nguyên lý Bảo mật,${d4},${d4},"1,2",Room 201\nCOMP1807,Quản lý dự án SCRUM,${d5},${d5},"5,6",Room 102\n`;
     const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "Mau_Thoi_Khoa_Bieu_Greenwich.csv");
+    link.setAttribute("download", `Mau_Thoi_Khoa_Bieu_Greenwich_${d1}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -407,18 +468,23 @@ export function ClassScheduleModal({
 
     try {
       setIsSubmitting(true);
+      const chosenUserId = targetUserId ? parseInt(targetUserId) : currentUser.id;
       const res = await api.importClassSchedules({
-        target_user_id: targetUserId ? parseInt(targetUserId) : currentUser.id,
+        target_user_id: chosenUserId,
         entries: validEntries,
       });
 
-      alert(res.message || `Đã nhập thành công ${validEntries.length} buổi học!`);
+      const successMsg = res.message || `Đã nhập thành công ${validEntries.length} buổi học và tự động trừ KPI cho các ca trực trùng!`;
+      if (showToast) {
+        showToast(successMsg, "success");
+      } else {
+        alert(successMsg);
+      }
       setParsedRows([]);
       setFileContent("");
       setFileName("");
-      if (onSuccess) onSuccess();
-      setActiveTab("list");
-      fetchSavedSchedules(targetUserId);
+      if (onSuccess) onSuccess(successMsg);
+      onClose(); // Đóng modal để người dùng thấy trực tiếp lịch và KPI đã được trừ ngay lập tức
     } catch (err) {
       alert("Lỗi khi import thời khóa biểu: " + err.message);
     } finally {
@@ -582,6 +648,61 @@ export function ClassScheduleModal({
           {activeTab === "import" && (
             <div>
               
+
+              {/* Member Selector for Admin/Leader */}
+              {isAdmin && allMembers.length > 0 && (
+                <div
+                  style={{
+                    background: "#f0f7ff",
+                    border: "1.5px solid #bfdbfe",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    marginBottom: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <User size={20} color="#2563eb" />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#1e3a8a" }}>
+                        Nhân sự áp dụng Thời Khóa Biểu:
+                      </div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>
+                        Hệ thống sẽ đối chiếu và tự động trừ KPI cho nhân sự được chọn này
+                      </div>
+                    </div>
+                  </div>
+                  <select
+                    value={targetUserId}
+                    onChange={(e) => {
+                      const uid = e.target.value;
+                      setTargetUserId(uid);
+                      setListFilterUser(uid);
+                    }}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      border: "1.5px solid #93c5fd",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#1e3a8a",
+                      minWidth: 260,
+                      background: "#ffffff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name || m.username} (@{m.username}) {m.role === "admin" ? "[Quản lý]" : m.role === "leader" ? "[Leader]" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Upload Dropzone / Actions */}
               <div

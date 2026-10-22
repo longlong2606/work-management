@@ -3859,12 +3859,14 @@ app.MapGet("/api/class-schedules", (long? user_id, string? start_date, string? e
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    if (currentUser.role != "admin" && user_id.HasValue && user_id.Value != currentUser.id)
+    bool canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
+
+    if (!canManage && user_id.HasValue && user_id.Value != currentUser.id)
     {
         return Results.StatusCode(403);
     }
 
-    long? targetUserId = (currentUser.role == "admin" && !user_id.HasValue) ? null : (user_id ?? currentUser.id);
+    long? targetUserId = (canManage && !user_id.HasValue) ? null : (user_id ?? currentUser.id);
 
     using var conn = Database.GetConnection();
     var query = @"
@@ -3892,7 +3894,9 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
         return Results.BadRequest(new { detail = "Danh sách buổi học nhập vào trống." });
     }
 
-    long effectiveUserId = (currentUser.role == "admin" && req.target_user_id.HasValue)
+    bool canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
+
+    long effectiveUserId = (canManage && req.target_user_id.HasValue)
         ? req.target_user_id.Value
         : currentUser.id;
 
@@ -3993,7 +3997,9 @@ app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>
     int deleted = 0;
     long? clearUserId = null;
 
-    if (currentUser.role == "admin")
+    bool canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
+
+    if (canManage)
     {
         if (user_id.HasValue)
         {
