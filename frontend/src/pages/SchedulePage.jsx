@@ -1836,77 +1836,7 @@ export function SchedulePage() {
                                   <span>{totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}</span>
                                 </div>
 
-                                {(() => {
-                                  // Tính tổng người TKB trong slot
-                                  const tkbSlotCount = Math.max(
-                                    conflictsInSlot.length,
-                                    schedule.filter(s => s.shift_id === shift.id && s.work_date === day.dateStr && (
-                                      s.absence_reason?.toLowerCase().includes("trùng lịch học") ||
-                                      s.absence_reason?.toLowerCase().includes("lịch học") ||
-                                      s.absence_reason?.toLowerCase().includes("tkb") ||
-                                      s.time_note?.toLowerCase().includes("tkb")
-                                    )).length
-                                  );
-
-                                  const nonTkbAbsents = absentInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
-                                  const nonTkbPending = pendingInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
-
-                                  // Tổng vắng/chờ (bao gồm TKB)
-                                  const totalAbsent = isAdmin ? (nonTkbAbsents.length + tkbSlotCount) : (isMyAbsent ? 1 : 0);
-                                  const totalPending = isAdmin ? nonTkbPending.length : (isMyPending ? 1 : 0);
-
-                                  // Kiểm tra bản thân có TKB không
-                                  const isMyTkb = conflictsInSlot.some(c => c.user_id === user?.id) ||
-                                    schedule.some(s => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id && (
-                                      s.absence_reason?.toLowerCase().includes("tkb") ||
-                                      s.time_note?.toLowerCase().includes("tkb")
-                                    ));
-
-                                  return (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 1 }}>
-                                      {/* Badge Đỏ: Vắng + TKB gộp chung */}
-                                      {(isAdmin ? totalAbsent > 0 : (isMyAbsent || isMyTkb)) && (
-                                        <span
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: 3,
-                                            fontSize: 10,
-                                            fontWeight: 800,
-                                            background: "#ef4444",
-                                            color: "#ffffff",
-                                            padding: "1px 6px",
-                                            borderRadius: 10,
-                                            width: "fit-content",
-                                            boxShadow: "0 1px 3px rgba(239, 68, 68, 0.3)",
-                                          }}
-                                        >
-                                          {isAdmin ? `🔴 ${totalAbsent} vắng` : "🔴 Bạn vắng"}
-                                        </span>
-                                      )}
-
-                                      {/* Badge Cam: Chờ duyệt */}
-                                      {totalPending > 0 && (
-                                        <span
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: 3,
-                                            fontSize: 10,
-                                            fontWeight: 800,
-                                            background: "#f97316",
-                                            color: "#ffffff",
-                                            padding: "1px 6px",
-                                            borderRadius: 10,
-                                            width: "fit-content",
-                                          }}
-                                        >
-                                          {isAdmin ? `🟠 ${totalPending} chờ` : "🟠 Chờ duyệt"}
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
+                                {null /* Không hiển thị badge vắng trên ô lịch — chỉ hiện trong popup */}
                               </div>
 
                               {/* Hover Quick Actions */}
