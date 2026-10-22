@@ -1806,34 +1806,7 @@ export function TasksPage() {
                                     </button>
                                   )}
 
-                                  {/* 2. Direct penalty button if member abandons or fails in PROCESSING */}
-                                  {sub.status === "PROCESSING" && isPersonInCharge && (
-                                    <button
-                                      onClick={() => {
-                                        setReviewModalSubtask({ id: sub.id, title: sub.title, cp_points: sub.cp_points, mode: 'penalty_direct' });
-                                        setReviewActionMode('penalty');
-                                        setReviewPenaltyPoints(sub.cp_points || 1);
-                                        setReviewComment("");
-                                      }}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                        background: "#fff1f2",
-                                        color: "#e11d48",
-                                        border: "1px solid #fecdd3",
-                                        padding: "6px 12px",
-                                        borderRadius: 999,
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                      }}
-                                      title="Đánh giá không hoàn thành và phạt trừ điểm CP"
-                                    >
-                                      <AlertCircle size={13} />
-                                      <span>Không Đạt / Trừ CP</span>
-                                    </button>
-                                  )}
+
 
                                   {/* 3. Leader reviews when in REVIEW */}
                                   {sub.status === "REVIEW" && isPersonInCharge && (

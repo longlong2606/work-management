@@ -862,6 +862,9 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
     // TRƯỜNG HỢP 1: Phạt trừ điểm CP do không hoàn thành / vi phạm
     if (req.is_penalty)
     {
+        if ((string)subtask.status != "REVIEW")
+            return Results.BadRequest(new { detail = "Chỉ có thể đánh giá không đạt / phạt trừ điểm khi mục việc đã được nộp duyệt (REVIEW)!" });
+
         if (string.IsNullOrWhiteSpace(req.comment))
             return Results.BadRequest(new { detail = "Vui lòng nhập lý do đánh giá không đạt / phạt trừ điểm!" });
 
