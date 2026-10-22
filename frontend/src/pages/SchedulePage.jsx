@@ -1837,6 +1837,7 @@ export function SchedulePage() {
                                 </div>
 
                                 {(() => {
+                                  // Tính tổng người TKB trong slot
                                   const tkbSlotCount = Math.max(
                                     conflictsInSlot.length,
                                     schedule.filter(s => s.shift_id === shift.id && s.work_date === day.dateStr && (
@@ -1850,33 +1851,21 @@ export function SchedulePage() {
                                   const nonTkbAbsents = absentInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
                                   const nonTkbPending = pendingInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
 
+                                  // Tổng vắng/chờ (bao gồm TKB)
+                                  const totalAbsent = isAdmin ? (nonTkbAbsents.length + tkbSlotCount) : (isMyAbsent ? 1 : 0);
+                                  const totalPending = isAdmin ? nonTkbPending.length : (isMyPending ? 1 : 0);
+
+                                  // Kiểm tra bản thân có TKB không
+                                  const isMyTkb = conflictsInSlot.some(c => c.user_id === user?.id) ||
+                                    schedule.some(s => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id && (
+                                      s.absence_reason?.toLowerCase().includes("tkb") ||
+                                      s.time_note?.toLowerCase().includes("tkb")
+                                    ));
+
                                   return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 1 }}>
-                                      {/* Badge TKB vàng */}
-                                      {tkbSlotCount > 0 && (
-                                        <span
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: 3,
-                                            background: "#fffbeb",
-                                            border: "1px solid #fde047",
-                                            color: "#b45309",
-                                            padding: "1px 6px",
-                                            borderRadius: 12,
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            width: "fit-content",
-                                          }}
-                                          title={`Có ${tkbSlotCount} thành viên trùng lịch học`}
-                                        >
-                                          <span>🎓</span>
-                                          <span>{tkbSlotCount}</span>
-                                        </span>
-                                      )}
-
-                                      {/* Badge Vắng đỏ */}
-                                      {(isAdmin ? nonTkbAbsents.length > 0 : isMyAbsent) && (
+                                      {/* Badge Đỏ: Vắng + TKB gộp chung */}
+                                      {(isAdmin ? totalAbsent > 0 : (isMyAbsent || isMyTkb)) && (
                                         <span
                                           style={{
                                             display: "inline-flex",
@@ -1892,12 +1881,12 @@ export function SchedulePage() {
                                             boxShadow: "0 1px 3px rgba(239, 68, 68, 0.3)",
                                           }}
                                         >
-                                          {isAdmin ? `🔴 ${nonTkbAbsents.length} vắng` : "🔴 Bạn vắng"}
+                                          {isAdmin ? `🔴 ${totalAbsent} vắng` : "🔴 Bạn vắng"}
                                         </span>
                                       )}
 
-                                      {/* Badge Chờ duyệt cam */}
-                                      {(isAdmin ? nonTkbPending.length > 0 : isMyPending) && (
+                                      {/* Badge Cam: Chờ duyệt */}
+                                      {totalPending > 0 && (
                                         <span
                                           style={{
                                             display: "inline-flex",
@@ -1912,7 +1901,7 @@ export function SchedulePage() {
                                             width: "fit-content",
                                           }}
                                         >
-                                          {isAdmin ? `🟠 ${nonTkbPending.length} chờ` : "🟠 Chờ duyệt"}
+                                          {isAdmin ? `🟠 ${totalPending} chờ` : "🟠 Chờ duyệt"}
                                         </span>
                                       )}
                                     </div>
@@ -2883,8 +2872,15 @@ export function SchedulePage() {
                   let avatarBg = "#dbeafe";
                   let avatarColor = "#1d4ed8";
 
-                  if (isPending) {
-                    // Báo vắng chờ duyệt -> khung đỏ cam bự
+                  if (isTkb) {
+                    // Đăng ký TKB lịch học -> khung đỏ bỰ (giống vắng)
+                    cardBg = "#fef2f2";
+                    cardBorder = "3px solid #ef4444";
+                    cardShadow = "0 4px 16px rgba(239, 68, 68, 0.25)";
+                    avatarBg = "#fee2e2";
+                    avatarColor = "#dc2626";
+                  } else if (isPending) {
+                    // Báo vắng chờ duyệt -> khung cam bự
                     cardBg = "#fff1f2";
                     cardBorder = "3px solid #f97316";
                     cardShadow = "0 4px 16px rgba(249, 115, 22, 0.25)";
@@ -2942,7 +2938,7 @@ export function SchedulePage() {
                               style={{
                                 fontWeight: 700,
                                 fontSize: 13,
-                                color: (!isTkb && isAbsent) ? "#991b1b" : (!isTkb && isPending) ? "#92400e" : "#0f172a",
+                                color: (isAbsent || isTkb) ? "#991b1b" : isPending ? "#92400e" : "#0f172a",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 6,
@@ -2953,20 +2949,21 @@ export function SchedulePage() {
                                 {m.full_name} {isMe && "(Tôi)"}
                               </span>
 
-                              {/* 1. Badge Trùng TKB chính xác như ảnh mẫu */}
+                              {/* 1. Badge Trùng TKB - đỏ */}
                               {isTkb && (
                                 <span
                                   style={{
                                     fontSize: 11,
                                     fontWeight: 700,
-                                    background: "#fffbeb",
-                                    color: "#b45309",
-                                    border: "1px solid #fde047",
+                                    background: "#ef4444",
+                                    color: "#ffffff",
+                                    border: "none",
                                     padding: "2px 8px",
                                     borderRadius: 6,
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: 4,
+                                    boxShadow: "0 1px 3px rgba(239,68,68,0.3)",
                                   }}
                                 >
                                   {tkbLabel}
