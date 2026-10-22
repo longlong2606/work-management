@@ -1914,7 +1914,14 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
             SELECT sr.id, sr.user_id, sr.shift_id, sr.work_date
             FROM shift_registrations sr
             WHERE sr.attendance_status = 'absent'
-              AND sr.absence_reason LIKE 'Trùng lịch học%'
+              AND (
+                  sr.absence_reason LIKE '%Trùng lịch học%' 
+                  OR sr.absence_reason LIKE '%lịch học%' 
+                  OR sr.absence_reason LIKE '%TKB%' 
+                  OR sr.time_note LIKE '%Trùng TKB%' 
+                  OR sr.note LIKE '%lịch học%' 
+                  OR sr.note LIKE '%TKB%'
+              )
               AND (@targetUserId IS NULL OR sr.user_id = @targetUserId)
               AND (@startDate IS NULL OR sr.work_date >= @startDate)
               AND (@endDate IS NULL OR sr.work_date <= @endDate)";
@@ -1934,6 +1941,7 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
                     SET attendance_status = 'present',
                         absence_reason = NULL,
                         time_note = NULL,
+                        actual_hours = NULL,
                         note = 'Lịch trực định kỳ (Khôi phục sau khi xóa TKB)'
                     WHERE id = @id",
                     new { id = (long)ab.id });
@@ -2494,7 +2502,7 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
     var targetUserId = (canManage && req.user_id.HasValue && req.user_id.Value > 0) 
         ? req.user_id.Value 
         : currentUser.id;
@@ -2507,6 +2515,7 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
             absence_approved_by = NULL,
             absence_approved_at = NULL,
             actual_hours = NULL,
+            time_note = NULL,
             note = 'Đã xác nhận có mặt'
         WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
         new { uid = targetUserId, sid = req.shift_id, wdate = req.work_date }
@@ -2520,7 +2529,7 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null) return Results.Unauthorized();
 
-    var canManage = currentUser.role == "admin" || currentUser.can_manage_schedule;
+    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
     
     using var conn = Database.GetConnection();
     long? targetUserId = null;
@@ -2594,6 +2603,7 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
                 absence_approved_by = NULL,
                 absence_approved_at = NULL,
                 actual_hours = NULL,
+                time_note = NULL,
                 note = 'Đã khôi phục có mặt'
             WHERE user_id = @uid 
               AND shift_id IN @shifts 
@@ -2611,6 +2621,7 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
                 absence_approved_by = NULL,
                 absence_approved_at = NULL,
                 actual_hours = NULL,
+                time_note = NULL,
                 note = 'Đã khôi phục có mặt'
             WHERE shift_id IN @shifts 
               AND work_date IN @dates 

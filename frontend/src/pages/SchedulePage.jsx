@@ -566,6 +566,24 @@ export function SchedulePage() {
     }
   };
 
+  // Quick restore all absent shifts in current week for logged-in user
+  const handleQuickRestoreWeek = async () => {
+    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${myKpiStats.absentCount} ca đang vắng trong tuần này về trạng thái Có Mặt để cộng lại đủ 81.0h KPI?`)) return;
+    try {
+      const dates = weekDays.map((d) => d.dateStr);
+      await api.cancelAbsenceBulk({
+        dates,
+        shift_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        user_id: user?.id,
+      });
+      await api.syncClassScheduleKpi().catch(() => {});
+      showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã cộng lại đủ 81.0h KPI)!");
+      fetchSchedule();
+    } catch (err) {
+      showToast("Lỗi khi khôi phục: " + (err.message || ""), "danger");
+    }
+  };
+
   // Open Event Modal
   const openEventModal = (shift, day, eventList) => {
     setEventModal({
@@ -1285,6 +1303,28 @@ export function SchedulePage() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 4 }}>
                   ⚠️ Đã trừ: -{myKpiStats.absentHours.toFixed(1)}h KPI ({myKpiStats.absentCount} ca vắng/trùng lịch)
                 </div>
+                <button
+                  onClick={handleQuickRestoreWeek}
+                  style={{
+                    marginTop: 6,
+                    background: "#ffffff",
+                    border: "1.5px solid #86efac",
+                    borderRadius: 6,
+                    padding: "3px 9px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#15803d",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                  }}
+                  title="Khôi phục toàn bộ ca vắng trong tuần về Có Mặt để cộng lại đủ 81.0h KPI"
+                >
+                  <RotateCcw size={12} />
+                  <span>Khôi phục đủ 81.0h KPI</span>
+                </button>
               </>
             ) : (
               <>
@@ -5041,6 +5081,7 @@ export function SchedulePage() {
         onClose={() => setShowClassScheduleModal(false)}
         currentUser={user}
         allMembers={allMembers}
+        weekDays={weekDays}
         onSuccess={async () => {
           try {
             await api.syncClassScheduleKpi();

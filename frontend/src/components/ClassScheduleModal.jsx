@@ -48,6 +48,7 @@ export function ClassScheduleModal({
   onClose,
   currentUser,
   allMembers = [],
+  weekDays = [],
   onSuccess,
   showToast
 }) {
@@ -494,27 +495,43 @@ export function ClassScheduleModal({
 
   // Delete single schedule
   const handleDeleteSchedule = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa buổi học này không?")) return;
+    if (!window.confirm("Bạn có chắc muốn xóa buổi học này không?\n\nCác ca trực bị trừ KPI do buổi học này sẽ được tự động khôi phục có mặt và cộng lại giờ KPI!")) return;
     try {
-      await api.deleteClassSchedule(id);
+      const res = await api.deleteClassSchedule(id);
+      await api.syncClassScheduleKpi().catch(() => {});
+      const msg = res.message || "Đã xóa buổi học và tự động cộng lại giờ KPI thành công!";
+      if (showToast) {
+        showToast(msg, "success");
+      }
       fetchSavedSchedules(listFilterUser);
-      if (onSuccess) onSuccess();
+      if (onSuccess) await onSuccess();
     } catch (err) {
-      alert(err.message);
+      alert("Lỗi khi xóa buổi học: " + err.message);
     }
   };
 
   // Clear all schedules
   const handleClearAllSchedules = async () => {
-    if (!window.confirm("⚠️ CẢNH BÁO: Bạn có chắc muốn XÓA TOÀN BỘ thời khóa biểu này không?")) return;
+    const confirmMsg = "⚠️ CẢNH BÁO: Bạn có chắc muốn XÓA TOÀN BỘ thời khóa biểu này không?\n\nToàn bộ các ca trực bị trừ do trùng lịch học sẽ được tự động khôi phục có mặt và cộng lại đủ giờ KPI!";
+    if (!window.confirm(confirmMsg)) return;
+
     try {
       const params = {};
       if (listFilterUser && listFilterUser !== "all") params.user_id = listFilterUser;
-      await api.clearClassSchedules(params);
+      const res = await api.clearClassSchedules(params);
+      await api.syncClassScheduleKpi().catch(() => {});
+
+      const msg = res.message || "Đã xóa toàn bộ thời khóa biểu và khôi phục lại đủ giờ KPI thành công!";
+      if (showToast) {
+        showToast(msg, "success");
+      } else {
+        alert(msg);
+      }
       fetchSavedSchedules(listFilterUser);
-      if (onSuccess) onSuccess();
+      if (onSuccess) await onSuccess();
+      onClose(); // Tự động đóng modal để người dùng thấy trực tiếp trên giao diện KPI đã được cộng lại
     } catch (err) {
-      alert(err.message);
+      alert("Lỗi khi xóa thời khóa biểu: " + err.message);
     }
   };
 
