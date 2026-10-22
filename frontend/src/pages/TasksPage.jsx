@@ -1889,7 +1889,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Edit subtask button */}
-                                  {isPersonInCharge && sub.status !== "FINISHED" && (
+                                  {isPersonInCharge && sub.status !== "FINISHED" && sub.status !== "REJECTED" && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
