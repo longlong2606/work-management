@@ -1182,15 +1182,15 @@ export function SchedulePage() {
               display: "flex",
               alignItems: "center",
               gap: 7,
-              background: "#f0fdf4",
-              border: "1.5px solid #bbf7d0",
-              color: "#166534",
+              background: "#fff1f2",
+              border: "1.5px solid #fecdd3",
+              color: "#be123c",
               padding: "8px 14px",
               borderRadius: 8,
               fontWeight: 700,
               fontSize: 13,
               cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(22, 101, 52, 0.08)",
+              boxShadow: "0 2px 4px rgba(190, 18, 60, 0.12)",
               transition: "all 0.2s ease"
             }}
             title="Nhập và quản lý thời khóa biểu học tập (CSV/Excel) để cảnh báo trùng lịch trực"
@@ -1208,15 +1208,15 @@ export function SchedulePage() {
               display: "flex",
               alignItems: "center",
               gap: 7,
-              background: "#fff1f2",
-              border: "1.5px solid #fecdd3",
-              color: "#e11d48",
+              background: "#ef4444",
+              border: "2px solid #dc2626",
+              color: "#ffffff",
               padding: "8px 14px",
               borderRadius: 8,
-              fontWeight: 700,
+              fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(225, 29, 72, 0.1)",
+              boxShadow: "0 3px 8px rgba(239, 68, 68, 0.35)",
               transition: "all 0.2s ease"
             }}
             title="Báo vắng nhiều ca làm việc hoặc báo vắng cả tuần"
@@ -1847,9 +1847,13 @@ export function SchedulePage() {
                                     )).length
                                   );
 
-                                  if (tkbSlotCount > 0) {
-                                    return (
-                                      <div style={{ marginTop: 1 }}>
+                                  const nonTkbAbsents = absentInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
+                                  const nonTkbPending = pendingInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
+
+                                  return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 1 }}>
+                                      {/* Badge TKB vàng */}
+                                      {tkbSlotCount > 0 && (
                                         <span
                                           style={{
                                             display: "inline-flex",
@@ -1862,58 +1866,57 @@ export function SchedulePage() {
                                             borderRadius: 12,
                                             fontSize: 11,
                                             fontWeight: 700,
-                                            boxShadow: "0 1px 2px rgba(245, 158, 11, 0.08)",
+                                            width: "fit-content",
                                           }}
                                           title={`Có ${tkbSlotCount} thành viên trùng lịch học`}
                                         >
                                           <span>🎓</span>
                                           <span>{tkbSlotCount}</span>
                                         </span>
-                                      </div>
-                                    );
-                                  }
+                                      )}
 
-                                  const nonTkbAbsents = absentInSlot.filter(s => !s.absence_reason?.toLowerCase().includes("học") && !s.time_note?.toLowerCase().includes("tkb"));
-                                  if (hasAbsence && nonTkbAbsents.length > 0) {
-                                    return (
-                                      <span
-                                        style={{
-                                          fontSize: 9,
-                                          fontWeight: 800,
-                                          background: "#ef4444",
-                                          color: "#ffffff",
-                                          padding: "1px 5px",
-                                          borderRadius: 10,
-                                          boxShadow: "0 1px 2px rgba(239, 68, 68, 0.2)",
-                                          display: "inline-block",
-                                          width: "fit-content",
-                                        }}
-                                      >
-                                        {isAdmin ? `🔴 ${nonTkbAbsents.length} vắng` : "🔴 Bạn vắng"}
-                                      </span>
-                                    );
-                                  }
+                                      {/* Badge Vắng đỏ */}
+                                      {(isAdmin ? nonTkbAbsents.length > 0 : isMyAbsent) && (
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 3,
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            background: "#ef4444",
+                                            color: "#ffffff",
+                                            padding: "1px 6px",
+                                            borderRadius: 10,
+                                            width: "fit-content",
+                                            boxShadow: "0 1px 3px rgba(239, 68, 68, 0.3)",
+                                          }}
+                                        >
+                                          {isAdmin ? `🔴 ${nonTkbAbsents.length} vắng` : "🔴 Bạn vắng"}
+                                        </span>
+                                      )}
 
-                                  if (hasPending) {
-                                    return (
-                                      <span
-                                        style={{
-                                          fontSize: 9,
-                                          fontWeight: 800,
-                                          background: "#f59e0b",
-                                          color: "#ffffff",
-                                          padding: "1px 5px",
-                                          borderRadius: 10,
-                                          display: "inline-block",
-                                          width: "fit-content",
-                                        }}
-                                      >
-                                        {isAdmin ? `🟡 ${pendingInSlot.length} chờ` : "🟡 Chờ duyệt"}
-                                      </span>
-                                    );
-                                  }
-
-                                  return null;
+                                      {/* Badge Chờ duyệt cam */}
+                                      {(isAdmin ? nonTkbPending.length > 0 : isMyPending) && (
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 3,
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            background: "#f97316",
+                                            color: "#ffffff",
+                                            padding: "1px 6px",
+                                            borderRadius: 10,
+                                            width: "fit-content",
+                                          }}
+                                        >
+                                          {isAdmin ? `🟠 ${nonTkbPending.length} chờ` : "🟠 Chờ duyệt"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
                                 })()}
                               </div>
 
@@ -2880,20 +2883,20 @@ export function SchedulePage() {
                   let avatarBg = "#dbeafe";
                   let avatarColor = "#1d4ed8";
 
-                  if (!isTkb) {
-                    if (isPending) {
-                      cardBg = "#fffbeb";
-                      cardBorder = "1.5px solid #f59e0b";
-                      cardShadow = "0 3px 10px rgba(245, 158, 11, 0.15)";
-                      avatarBg = "#fef3c7";
-                      avatarColor = "#b45309";
-                    } else if (isAbsent) {
-                      cardBg = "#fef2f2";
-                      cardBorder = "1.5px solid #ef4444";
-                      cardShadow = "0 3px 10px rgba(239, 68, 68, 0.15)";
-                      avatarBg = "#fee2e2";
-                      avatarColor = "#dc2626";
-                    }
+                  if (isPending) {
+                    // Báo vắng chờ duyệt -> khung đỏ cam bự
+                    cardBg = "#fff1f2";
+                    cardBorder = "3px solid #f97316";
+                    cardShadow = "0 4px 16px rgba(249, 115, 22, 0.25)";
+                    avatarBg = "#ffedd5";
+                    avatarColor = "#c2410c";
+                  } else if (isAbsent) {
+                    // Vắng mặt đã duyệt -> khung đỏ BỰ rõ ràng
+                    cardBg = "#fef2f2";
+                    cardBorder = "3px solid #ef4444";
+                    cardShadow = "0 4px 16px rgba(239, 68, 68, 0.30)";
+                    avatarBg = "#fee2e2";
+                    avatarColor = "#dc2626";
                   }
 
                   return (
