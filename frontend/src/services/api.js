@@ -32,14 +32,32 @@ async function request(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorMsg =
+    let errorMsg =
       data.detail ||
       data.message ||
-      (response.status === 403
-        ? "Bạn không có quyền thực hiện thao tác này! Vui lòng kiểm tra lại tài khoản hoặc đăng nhập quyền Quản trị viên."
-        : response.status === 401
-        ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
-        : `Lỗi máy chủ (${response.status}). Vui lòng thử lại!`);
+      data.error ||
+      data.title;
+
+    if (!errorMsg && data.errors && typeof data.errors === "object") {
+      const keys = Object.keys(data.errors);
+      if (keys.length > 0 && Array.isArray(data.errors[keys[0]]) && data.errors[keys[0]].length > 0) {
+        errorMsg = `${keys[0]}: ${data.errors[keys[0]][0]}`;
+      }
+    }
+
+    if (!errorMsg) {
+      if (response.status === 403) {
+        errorMsg = "Bạn không có quyền thực hiện thao tác này! Vui lòng kiểm tra lại tài khoản hoặc đăng nhập quyền Quản trị viên.";
+      } else if (response.status === 401) {
+        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+      } else if (response.status === 404) {
+        errorMsg = "Không tìm thấy yêu cầu hoặc chức năng này (404)!";
+      } else if (response.status >= 500) {
+        errorMsg = `Lỗi hệ thống máy chủ (${response.status}). Vui lòng kiểm tra lại backend!`;
+      } else {
+        errorMsg = `Đã có lỗi xảy ra (${response.status}), vui lòng thử lại!`;
+      }
+    }
     throw new Error(errorMsg);
   }
 

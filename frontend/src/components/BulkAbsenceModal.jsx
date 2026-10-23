@@ -240,15 +240,21 @@ export function BulkAbsenceModal({
           shift_ids: finalShiftIds,
         };
         if (targetUserId !== "all") {
-          payload.user_id = Number(targetUserId) || currentUser?.id;
+          const parsedUid = Number(targetUserId);
+          payload.user_id = (!isNaN(parsedUid) && parsedUid > 0) ? parsedUid : currentUser?.id;
         }
         console.log("[BulkRestore] Sending payload:", JSON.stringify(payload));
         const res = await api.cancelAbsenceBulk(payload);
         console.log("[BulkRestore] Response:", res);
-        if (onSuccess) {
-          onSuccess(res.message || `Đã khôi phục có mặt thành công cho ${res.affected_count || duplicateShifts.length} ca trực!`);
-        }
+        
         onClose();
+        if (onSuccess) {
+          try {
+            onSuccess(res.message || `Đã khôi phục có mặt thành công cho ${res.affected_count || duplicateShifts.length} ca trực!`);
+          } catch (cbErr) {
+            console.error("[BulkRestore] onSuccess callback error:", cbErr);
+          }
+        }
       } catch (err) {
         console.error("[BulkRestore] Error:", err);
         const msg = err?.message || "";
@@ -660,7 +666,7 @@ export function BulkAbsenceModal({
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, background: "#ffffff", padding: 8, borderRadius: 8, border: "1px solid #e2e8f0" }}>
                     {weekDays.map((d) => {
                       const isChecked = selectedDates.includes(d.dateStr);
-                      const isPast = d.dateStr < todayStr;
+                      const isPast = (isAdmin || isRestore) ? false : d.dateStr < todayStr;
                       return (
                         <button
                           type="button"

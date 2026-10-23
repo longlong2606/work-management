@@ -2531,120 +2531,161 @@ app.MapPost("/api/shifts/cancel-absence", (CancelAbsenceRequest req, HttpContext
 
 app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, HttpContext ctx) =>
 {
-    var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null) return Results.Unauthorized();
-
-    var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
-    
-    using var conn = Database.GetConnection();
-    long? targetUserId = null;
-    string targetName = "tất cả nhân sự";
-
-    if (canManage)
+    try
     {
-        if (req.user_id.HasValue && req.user_id.Value > 0)
+        var currentUser = AuthService.GetCurrentUser(ctx);
+        if (currentUser == null) return Results.Unauthorized();
+
+        var canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
+        
+        using var conn = Database.GetConnection();
+        long? targetUserId = null;
+        string targetName = "tất cả nhân sự";
+
+        if (canManage)
         {
-            targetUserId = req.user_id.Value;
-            var targetUser = conn.QueryFirstOrDefault("SELECT full_name FROM users WHERE id = @id", new { id = targetUserId.Value });
-            if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-            targetName = (string)targetUser.full_name;
-        }
-    }
-    else
-    {
-        targetUserId = currentUser.id;
-        targetName = currentUser.full_name;
-    }
-
-    var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
-
-    // Gather dates
-    var targetDates = new HashSet<string>();
-    if (req.dates != null && req.dates.Count > 0)
-    {
-        foreach (var d in req.dates)
-        {
-            if (!string.IsNullOrWhiteSpace(d)) targetDates.Add(d.Trim());
-        }
-    }
-    else if (!string.IsNullOrWhiteSpace(req.start_date) && !string.IsNullOrWhiteSpace(req.end_date))
-    {
-        if (DateTime.TryParse(req.start_date, out var start) && DateTime.TryParse(req.end_date, out var end))
-        {
-            for (var d = start; d <= end; d = d.AddDays(1))
+            if (req.user_id.HasValue && req.user_id.Value > 0)
             {
-                targetDates.Add(d.ToString("yyyy-MM-dd"));
+                targetUserId = req.user_id.Value;
+                var targetUser = conn.QueryFirstOrDefault("SELECT full_name, username FROM users WHERE id = @id", new { id = targetUserId.Value });
+                if (targetUser != null)
+                {
+                    targetName = (string?)targetUser.full_name ?? (string?)targetUser.username ?? $"Nhân sự #{targetUserId.Value}";
+                }
+                else
+                {
+                    targetName = $"Nhân sự #{targetUserId.Value}";
+                }
             }
         }
-    }
+        else
+        {
+            targetUserId = currentUser.id;
+            targetName = !string.IsNullOrWhiteSpace(currentUser.full_name) ? currentUser.full_name : (!string.IsNullOrWhiteSpace(currentUser.username) ? currentUser.username : "Bạn");
+        }
 
-    if (targetDates.Count == 0)
+        var todayStr = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+
+        // Gather dates
+        var targetDates = new HashSet<string>();
+        if (req.dates != null && req.dates.Count > 0)
+        {
+            foreach (var d in req.dates)
+            {
+                if (!string.IsNullOrWhiteSpace(d)) targetDates.Add(d.Trim());
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(req.start_date) && !string.IsNullOrWhiteSpace(req.end_date))
+        {
+            if (DateTime.TryParse(req.start_date, out var start) && DateTime.TryParse(req.end_date, out var end))
+            {
+                for (var d = start; d <= end; d = d.AddDays(1))
+                {
+                    targetDates.Add(d.ToString("yyyy-MM-dd"));
+                }
+            }
+        }
+
+        if (targetDates.Count == 0)
+        {
+            return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày cần khôi phục có mặt!" });
+        }
+
+        // Cho phép nhân sự khôi phục ca trực trong toàn bộ tuần làm việc hiện tại (từ Thứ 2 đến Chủ nhật) hoặc tương lai
+        var mondayOfThisWeek = DateTime.UtcNow.AddHours(7).Date;
+        int diffDaysToMon = ((int)mondayOfThisWeek.DayOfWeek == 0 ? -6 : 1) - (int)mondayOfThisWeek.DayOfWeek;
+        var currentWeekMondayStr = mondayOfThisWeek.AddDays(diffDaysToMon).ToString("yyyy-MM-dd");
+
+        var validDates = canManage 
+            ? targetDates.ToList() 
+            : targetDates.Where(d => string.Compare(d, currentWeekMondayStr, StringComparison.Ordinal) >= 0).ToList();
+
+        if (validDates.Count == 0)
+        {
+            return Results.BadRequest(new { detail = "Không thể khôi phục có mặt cho các ngày ngoài tuần làm việc hiện tại đối với nhân viên!" });
+        }
+
+        // Target shift IDs (1-9)
+        var targetShifts = (req.shift_ids != null && req.shift_ids.Count > 0)
+            ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
+            : new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+        if (targetShifts.Count == 0)
+        {
+            targetShifts = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        }
+
+        int affectedCount = 0;
+        if (targetUserId.HasValue)
+        {
+            affectedCount = conn.Execute(@"
+                UPDATE shift_registrations 
+                SET attendance_status = 'present', 
+                    absence_reason = NULL,
+                    absence_approved_by = NULL,
+                    absence_approved_at = NULL,
+                    actual_hours = NULL,
+                    time_note = NULL,
+                    note = 'Đã khôi phục có mặt'
+                WHERE user_id = @uid 
+                  AND shift_id IN @shifts 
+                  AND work_date IN @dates 
+                  AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+                new { uid = targetUserId.Value, shifts = targetShifts, dates = validDates }
+            );
+
+            // Ghi nhật ký vào shift_history
+            try
+            {
+                foreach (var date in validDates)
+                {
+                    foreach (var sid in targetShifts)
+                    {
+                        conn.Execute(@"
+                            INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+                            VALUES (@uid, @sid, @wdate, 'CANCEL_ABSENCE', @note)",
+                            new {
+                                uid = targetUserId.Value,
+                                sid = sid,
+                                wdate = date,
+                                note = $"{currentUser.full_name} đã khôi phục có mặt ca {sid} ngày {date}."
+                            }
+                        );
+                    }
+                }
+            }
+            catch { }
+        }
+        else
+        {
+            affectedCount = conn.Execute(@"
+                UPDATE shift_registrations 
+                SET attendance_status = 'present', 
+                    absence_reason = NULL,
+                    absence_approved_by = NULL,
+                    absence_approved_at = NULL,
+                    actual_hours = NULL,
+                    time_note = NULL,
+                    note = 'Đã khôi phục có mặt'
+                WHERE shift_id IN @shifts 
+                  AND work_date IN @dates 
+                  AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+                new { shifts = targetShifts, dates = validDates }
+            );
+        }
+
+        return Results.Ok(new 
+        { 
+            success = true, 
+            message = $"Đã khôi phục có mặt thành công cho {affectedCount} ca trực của {targetName}!",
+            affected_count = affectedCount
+        });
+    }
+    catch (Exception ex)
     {
-        return Results.BadRequest(new { detail = "Vui lòng chọn ngày hoặc khoảng ngày cần khôi phục có mặt!" });
+        Console.WriteLine($"[CancelAbsenceBulk Error]: {ex}");
+        return Results.Problem(detail: $"Lỗi khi khôi phục có mặt: {ex.Message}", statusCode: 500);
     }
-
-    // Cho phép nhân sự khôi phục ca trực trong toàn bộ tuần làm việc hiện tại (từ Thứ 2 đến Chủ nhật) hoặc tương lai
-    var mondayOfThisWeek = DateTime.UtcNow.AddHours(7).Date;
-    int diffDaysToMon = ((int)mondayOfThisWeek.DayOfWeek == 0 ? -6 : 1) - (int)mondayOfThisWeek.DayOfWeek;
-    var currentWeekMondayStr = mondayOfThisWeek.AddDays(diffDaysToMon).ToString("yyyy-MM-dd");
-
-    var validDates = canManage 
-        ? targetDates.ToList() 
-        : targetDates.Where(d => string.Compare(d, currentWeekMondayStr, StringComparison.Ordinal) >= 0).ToList();
-
-    if (validDates.Count == 0)
-    {
-        return Results.BadRequest(new { detail = "Không thể khôi phục có mặt cho các ngày ngoài tuần làm việc hiện tại đối với nhân viên!" });
-    }
-
-    // Target shift IDs (1-9)
-    var targetShifts = (req.shift_ids != null && req.shift_ids.Count > 0)
-        ? req.shift_ids.Where(s => s >= 1 && s <= 9).Distinct().ToList()
-        : new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-
-    int affectedCount = 0;
-    if (targetUserId.HasValue)
-    {
-        affectedCount = conn.Execute(@"
-            UPDATE shift_registrations 
-            SET attendance_status = 'present', 
-                absence_reason = NULL,
-                absence_approved_by = NULL,
-                absence_approved_at = NULL,
-                actual_hours = NULL,
-                time_note = NULL,
-                note = 'Đã khôi phục có mặt'
-            WHERE user_id = @uid 
-              AND shift_id IN @shifts 
-              AND work_date IN @dates 
-              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
-            new { uid = targetUserId.Value, shifts = targetShifts, dates = validDates }
-        );
-    }
-    else
-    {
-        affectedCount = conn.Execute(@"
-            UPDATE shift_registrations 
-            SET attendance_status = 'present', 
-                absence_reason = NULL,
-                absence_approved_by = NULL,
-                absence_approved_at = NULL,
-                actual_hours = NULL,
-                time_note = NULL,
-                note = 'Đã khôi phục có mặt'
-            WHERE shift_id IN @shifts 
-              AND work_date IN @dates 
-              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
-            new { shifts = targetShifts, dates = validDates }
-        );
-    }
-
-    return Results.Ok(new 
-    { 
-        success = true, 
-        message = $"Đã khôi phục có mặt thành công cho {affectedCount} ca trực của {targetName}!",
-        affected_count = affectedCount
-    });
 });
 
 app.MapGet("/api/shifts/events", (string? work_date, int? shift_id, HttpContext ctx) =>
