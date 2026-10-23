@@ -39,7 +39,7 @@ async function request(endpoint, options = {}) {
         ? "Bạn không có quyền thực hiện thao tác này! Vui lòng kiểm tra lại tài khoản hoặc đăng nhập quyền Quản trị viên."
         : response.status === 401
         ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!"
-        : "Đã có lỗi xảy ra, vui lòng thử lại!");
+        : `Lỗi máy chủ (${response.status}). Vui lòng thử lại!`);
     throw new Error(errorMsg);
   }
 

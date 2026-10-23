@@ -242,13 +242,23 @@ export function BulkAbsenceModal({
         if (targetUserId !== "all") {
           payload.user_id = Number(targetUserId) || currentUser?.id;
         }
+        console.log("[BulkRestore] Sending payload:", JSON.stringify(payload));
         const res = await api.cancelAbsenceBulk(payload);
+        console.log("[BulkRestore] Response:", res);
         if (onSuccess) {
           onSuccess(res.message || `Đã khôi phục có mặt thành công cho ${res.affected_count || duplicateShifts.length} ca trực!`);
         }
         onClose();
       } catch (err) {
-        setErrorMsg(err.message || "Lỗi khi khôi phục có mặt hàng loạt!");
+        console.error("[BulkRestore] Error:", err);
+        const msg = err?.message || "";
+        if (msg.includes("401") || msg.toLowerCase().includes("unauthorized") || msg.includes("đăng nhập")) {
+          setErrorMsg("Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và đăng nhập lại!");
+        } else if (msg.includes("403") || msg.toLowerCase().includes("quyền")) {
+          setErrorMsg("Bạn không có quyền thực hiện thao tác này!");
+        } else {
+          setErrorMsg(msg || "Lỗi khi khôi phục có mặt hàng loạt! Vui lòng kiểm tra kết nối và thử lại.");
+        }
       } finally {
         setLoading(false);
       }
