@@ -1881,7 +1881,7 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
             string note = $"Hệ thống tự động trừ KPI do nộp lịch học trùng ca trực: {cname} ({ctime})";
 
             var reg = conn.QueryFirstOrDefault<dynamic>(
-                "SELECT id, attendance_status, absence_reason FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
+                "SELECT id, attendance_status, absence_reason, note FROM shift_registrations WHERE user_id = @uid AND shift_id = @sid AND work_date = @wdate",
                 new { uid, sid, wdate });
 
             if (reg == null)
@@ -1896,6 +1896,13 @@ int SyncClassScheduleKpiDeductions(System.Data.Common.DbConnection conn, long? t
             {
                 string curAtt = (string)(reg.attendance_status ?? "");
                 string curReason = (string)(reg.absence_reason ?? "");
+                string curNote = (string)(reg.note ?? "");
+
+                // Nếu nhân sự hoặc quản lý đã chủ động xác nhận / khôi phục có mặt cho ca này thì tôn trọng không đè lại
+                if (curAtt == "present" && (curNote.Contains("Đã khôi phục") || curNote.Contains("Đã xác nhận có mặt")))
+                {
+                    continue;
+                }
 
                 if (curAtt != "absent" || !curReason.StartsWith("Trùng lịch học"))
                 {
@@ -2616,62 +2623,73 @@ app.MapPost("/api/shifts/cancel-absence-bulk", (BulkCancelAbsenceRequest req, Ht
         }
 
         int affectedCount = 0;
-        if (targetUserId.HasValue)
+        using (var tx = conn.BeginTransaction())
         {
-            affectedCount = conn.Execute(@"
-                UPDATE shift_registrations 
-                SET attendance_status = 'present', 
-                    absence_reason = NULL,
-                    absence_approved_by = NULL,
-                    absence_approved_at = NULL,
-                    actual_hours = NULL,
-                    time_note = NULL,
-                    note = 'Đã khôi phục có mặt'
-                WHERE user_id = @uid 
-                  AND shift_id IN @shifts 
-                  AND work_date IN @dates 
-                  AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
-                new { uid = targetUserId.Value, shifts = targetShifts, dates = validDates }
-            );
-
-            // Ghi nhật ký vào shift_history
-            try
+            foreach (var date in validDates)
             {
-                foreach (var date in validDates)
+                foreach (var sid in targetShifts)
                 {
-                    foreach (var sid in targetShifts)
+                    int updated = 0;
+                    if (targetUserId.HasValue)
                     {
-                        conn.Execute(@"
-                            INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
-                            VALUES (@uid, @sid, @wdate, 'CANCEL_ABSENCE', @note)",
-                            new {
-                                uid = targetUserId.Value,
-                                sid = sid,
-                                wdate = date,
-                                note = $"{currentUser.full_name} đã khôi phục có mặt ca {sid} ngày {date}."
-                            }
+                        updated = conn.Execute(@"
+                            UPDATE shift_registrations 
+                            SET attendance_status = 'present', 
+                                absence_reason = NULL,
+                                absence_approved_by = NULL,
+                                absence_approved_at = NULL,
+                                actual_hours = NULL,
+                                time_note = NULL,
+                                note = 'Đã khôi phục có mặt'
+                            WHERE user_id = @uid 
+                              AND shift_id = @sid 
+                              AND work_date = @wdate 
+                              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+                            new { uid = targetUserId.Value, sid, wdate = date },
+                            transaction: tx
                         );
+                    }
+                    else
+                    {
+                        updated = conn.Execute(@"
+                            UPDATE shift_registrations 
+                            SET attendance_status = 'present', 
+                                absence_reason = NULL,
+                                absence_approved_by = NULL,
+                                absence_approved_at = NULL,
+                                actual_hours = NULL,
+                                time_note = NULL,
+                                note = 'Đã khôi phục có mặt'
+                            WHERE shift_id = @sid 
+                              AND work_date = @wdate 
+                              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
+                            new { sid, wdate = date },
+                            transaction: tx
+                        );
+                    }
+
+                    if (updated > 0)
+                    {
+                        affectedCount += updated;
+                        try
+                        {
+                            conn.Execute(@"
+                                INSERT INTO shift_history (user_id, shift_id, work_date, action, note)
+                                VALUES (@uid, @sid, @wdate, 'CANCEL_ABSENCE', @note)",
+                                new {
+                                    uid = targetUserId ?? currentUser.id,
+                                    sid,
+                                    wdate = date,
+                                    note = $"{currentUser.full_name} đã khôi phục có mặt ca {sid} ngày {date}."
+                                },
+                                transaction: tx
+                            );
+                        }
+                        catch { }
                     }
                 }
             }
-            catch { }
-        }
-        else
-        {
-            affectedCount = conn.Execute(@"
-                UPDATE shift_registrations 
-                SET attendance_status = 'present', 
-                    absence_reason = NULL,
-                    absence_approved_by = NULL,
-                    absence_approved_at = NULL,
-                    actual_hours = NULL,
-                    time_note = NULL,
-                    note = 'Đã khôi phục có mặt'
-                WHERE shift_id IN @shifts 
-                  AND work_date IN @dates 
-                  AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')",
-                new { shifts = targetShifts, dates = validDates }
-            );
+            tx.Commit();
         }
 
         return Results.Ok(new 
