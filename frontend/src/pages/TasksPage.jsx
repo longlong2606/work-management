@@ -133,6 +133,22 @@ export function TasksPage() {
     fetchMembers();
   }, []);
 
+  // Tự động mở chi tiết nhiệm vụ và phân rã checklist nếu đường dẫn URL có ?taskId=... hoặc ?id=... (từ email)
+  useEffect(() => {
+    try {
+      const searchStr = window.location.search || (window.location.hash.includes("?") ? window.location.hash.substring(window.location.hash.indexOf("?")) : "");
+      if (searchStr) {
+        const params = new URLSearchParams(searchStr);
+        const urlTaskId = params.get("taskId") || params.get("id");
+        if (urlTaskId) {
+          refreshTaskDetail(Number(urlTaskId));
+        }
+      }
+    } catch (e) {
+      console.error("Lỗi khi mở task từ URL:", e);
+    }
+  }, []);
+
   // Fetch detail of a task
   const openTaskDetail = async (task) => {
     setSelectedTask(task);

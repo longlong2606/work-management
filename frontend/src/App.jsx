@@ -34,7 +34,7 @@ function getTabFromUrl() {
   }
 
   // 2. Hash check (fallback cho bookmark hoặc host tĩnh: #/tv, #/schedule, #competency)
-  const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  const hash = window.location.hash.replace(/^#\/?/, "").split("?")[0].toLowerCase();
   if (hash === "tv") {
     return "tv";
   }
@@ -119,7 +119,10 @@ function MainContent() {
     return (
       <LoginPage 
         onBackToTv={() => navigateToTab("tv")} 
-        onLoginSuccess={() => navigateToTab("schedule")}
+        onLoginSuccess={() => {
+          const currentTab = getTabFromUrl();
+          navigateToTab(currentTab && currentTab !== "schedule" ? currentTab : "schedule");
+        }}
       />
     );
   }

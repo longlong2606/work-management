@@ -301,6 +301,7 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
         }
 
         EmailService.SendTaskAssignedNotification(
+            taskId,
             req.leader_id,
             req.title.Trim(),
             string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
@@ -375,6 +376,7 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
                 new { uid = targetLeaderId, senderId = currentUser.id, title = "Chuyển giao quyền phụ trách nhiệm vụ", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId = id });
 
             EmailService.SendTaskAssignedNotification(
+                id,
                 targetLeaderId,
                 req.title.Trim(),
                 string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
@@ -651,6 +653,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         {
             string parentTitle = task?.title != null ? (string)task.title : "";
             EmailService.SendSubtaskAssignedNotification(
+                taskId,
                 assigneesToNotify,
                 req.title.Trim(),
                 parentTitle,
@@ -782,6 +785,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
         {
             string parentTitle = subtask?.task_title != null ? (string)subtask.task_title : "";
             EmailService.SendSubtaskAssignedNotification(
+                (long)subtask.task_id,
                 newlyAssigned,
                 req.title.Trim(),
                 parentTitle,
@@ -4503,6 +4507,8 @@ app.MapPost("/api/emails/test-send", (TestEmailRequest req, HttpContext ctx) =>
 if (hasFrontend)
 {
     var fileProvider = new PhysicalFileProvider(frontendFolder!);
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
     app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = fileProvider });
 }
 

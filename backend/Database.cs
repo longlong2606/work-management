@@ -564,6 +564,8 @@ public static class Database
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('smtp_from_name', 'Hệ Thống Phân Ca WorkShiftPro') ON CONFLICT (key) DO NOTHING");
             conn.Execute("UPDATE system_settings SET value = 'longhvn2006@gmail.com' WHERE key = 'smtp_user' AND (value IS NULL OR value = '')");
             conn.Execute("UPDATE system_settings SET value = 'wtew euaj zcuu bjtq' WHERE key = 'smtp_password' AND (value IS NULL OR value = '')");
+            conn.Execute("INSERT INTO system_settings (key, value) VALUES ('app_url', 'https://dev-wms.codeforfun.id.vn') ON CONFLICT (key) DO NOTHING");
+            conn.Execute("UPDATE system_settings SET value = 'https://dev-wms.codeforfun.id.vn' WHERE key = 'app_url' AND (value IS NULL OR value = '' OR value LIKE '%localhost%')");
 
             // 4. Default weekly schedule registrations
             var regCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_registrations");

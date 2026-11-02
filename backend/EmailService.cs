@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using System.Data;
 using Dapper;
 
 namespace WorkManagement.Api;
@@ -25,9 +26,39 @@ public static class EmailService
         return (host, port, user, password, fromName);
     }
 
+    public static string GetAppUrl(IDbConnection? conn = null)
+    {
+        try
+        {
+            using var localConn = conn == null ? Database.GetConnection() : null;
+            var activeConn = conn ?? localConn!;
+            var url = activeConn.QueryFirstOrDefault<string>("SELECT value FROM system_settings WHERE key = 'app_url'");
+            if (!string.IsNullOrWhiteSpace(url) && !url.Contains("localhost"))
+            {
+                return url.TrimEnd('/');
+            }
+
+            if (File.Exists("C:/Projects/tunnel_url.txt"))
+            {
+                var tUrl = File.ReadAllText("C:/Projects/tunnel_url.txt").Trim();
+                if (!string.IsNullOrWhiteSpace(tUrl) && tUrl.StartsWith("http"))
+                    return tUrl.TrimEnd('/');
+            }
+
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                return url.TrimEnd('/');
+            }
+        }
+        catch { }
+
+        // Default production domain
+        return "https://dev-wms.codeforfun.id.vn";
+    }
+
     public static string GenerateScheduleEmailHtml(string recipientName, string weekStart, IEnumerable<dynamic> shiftsSummary, string announcement, string? appUrl = null)
     {
-        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : GetAppUrl();
         var rowsHtml = "";
         var hasShifts = false;
 
@@ -118,10 +149,13 @@ public static class EmailService
         int totalCp,
         string? location,
         string creatorName,
+        long? taskId = null,
         string? appUrl = null)
     {
-        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
-        var taskUrl = $"{targetUrl}/tasks";
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : GetAppUrl();
+        var taskUrl = taskId.HasValue && taskId.Value > 0
+            ? $"{targetUrl}/tasks?taskId={taskId.Value}"
+            : $"{targetUrl}/tasks";
 
         var descHtml = !string.IsNullOrWhiteSpace(description)
             ? $@"<div style=""background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 15px; font-size: 14px; color: #334155; line-height: 1.6;"">
@@ -216,10 +250,13 @@ public static class EmailService
         int cpPoints,
         int contributionPct,
         string creatorName,
+        long? taskId = null,
         string? appUrl = null)
     {
-        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
-        var taskUrl = $"{targetUrl}/tasks";
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : GetAppUrl();
+        var taskUrl = taskId.HasValue && taskId.Value > 0
+            ? $"{targetUrl}/tasks?taskId={taskId.Value}"
+            : $"{targetUrl}/tasks";
 
         var descHtml = !string.IsNullOrWhiteSpace(description)
             ? $@"<div style=""background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 15px; font-size: 14px; color: #334155; line-height: 1.6;"">
@@ -298,6 +335,7 @@ public static class EmailService
     }
 
     public static void SendTaskAssignedNotification(
+        long taskId,
         long leaderId,
         string taskTitle,
         string? taskType,
@@ -338,8 +376,7 @@ public static class EmailService
                     return;
                 }
 
-                var appUrl = conn.QueryFirstOrDefault<string>(
-                    "SELECT value FROM system_settings WHERE key = 'app_url'") ?? "http://localhost:5173";
+                var appUrl = GetAppUrl(conn);
 
                 var subject = $"[WorkShiftPro] Phân công phụ trách nhiệm vụ: {taskTitle}";
                 var html = GenerateTaskAssignedEmailHtml(
@@ -351,6 +388,7 @@ public static class EmailService
                     totalCp,
                     location,
                     creatorName,
+                    taskId,
                     appUrl);
 
                 SendRealEmail(email, fullName, subject, html);
@@ -363,6 +401,7 @@ public static class EmailService
     }
 
     public static void SendSubtaskAssignedNotification(
+        long taskId,
         IEnumerable<(long userId, int contributionPct)> assignees,
         string subtaskTitle,
         string parentTaskTitle,
@@ -379,8 +418,7 @@ public static class EmailService
             try
             {
                 using var conn = Database.GetConnection();
-                var appUrl = conn.QueryFirstOrDefault<string>(
-                    "SELECT value FROM system_settings WHERE key = 'app_url'") ?? "http://localhost:5173";
+                var appUrl = GetAppUrl(conn);
 
                 var userIds = assigneeList.Select(a => a.userId).Distinct().ToList();
                 string idsStr = string.Join(",", userIds);
@@ -416,6 +454,7 @@ public static class EmailService
                         cpPoints,
                         pct,
                         creatorName,
+                        taskId,
                         appUrl);
 
                     SendRealEmail(email, fullName, subject, html);
