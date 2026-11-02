@@ -20,7 +20,8 @@ import {
   RotateCcw,
   PauseCircle,
   PlayCircle,
-  Edit3
+  Edit3,
+  Mail
 } from "lucide-react";
 
 function formatDeadline(deadlineStr) {
@@ -1156,6 +1157,27 @@ export function TasksPage() {
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ color: "#64748b" }}>Email thông báo:</span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 11,
+                            color: "#059669",
+                            background: "#ecfdf5",
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            border: "1px solid #a7f3d0",
+                          }}
+                          title="Hệ thống tự động gửi email thông báo nhiệm vụ tới Trưởng nhóm khi tạo/lưu task"
+                        >
+                          <Mail size={12} />
+                          <span>Tự động gửi email khi lưu task</span>
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                         <span style={{ color: "#64748b" }}>Ngày dự kiến:</span>
                         <strong style={{ color: "#334155" }}>{taskDetail.task.planned_date || "Chưa đặt"}</strong>
                       </div>
@@ -1696,6 +1718,26 @@ export function TasksPage() {
                                         </span>
                                       </div>
 
+                                      {sub.assignees && sub.assignees.length > 0 && (
+                                        <div
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                            fontSize: 10.5,
+                                            color: "#059669",
+                                            background: "#ecfdf5",
+                                            padding: "2px 7px",
+                                            borderRadius: 4,
+                                            border: "1px solid #a7f3d0",
+                                          }}
+                                          title="Đã tự động gửi email thông báo giao việc đến người phụ trách khi thêm mục việc"
+                                        >
+                                          <Mail size={11} />
+                                          <span>Đã gửi mail</span>
+                                        </div>
+                                      )}
+
                                       {sub.due_at && (
                                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                                           <Clock size={13} color="#64748b" />
@@ -1920,9 +1962,9 @@ export function TasksPage() {
           isOpen={showCreateTaskModal}
           onClose={() => setShowCreateTaskModal(false)}
           allMembers={allMembers}
-          onSuccess={() => {
+          onSuccess={(msg) => {
             fetchTasks();
-            showToast("Đã tạo nhiệm vụ mới thành công!");
+            showToast(msg || "Đã tạo nhiệm vụ mới & gửi email thông báo thành công!", "success");
           }}
         />
       )}
@@ -1941,10 +1983,10 @@ export function TasksPage() {
           allMembers={allMembers}
           totalCp={taskDetail.task.total_cp || 0}
           currentAllocatedCp={(taskDetail.subtasks || []).reduce((sum, s) => sum + (s.cp_points || 0), 0)}
-          onSuccess={() => {
+          onSuccess={(msg) => {
             refreshTaskDetail(taskDetail.task.id);
             fetchTasks();
-            showToast("Đã thêm mục việc thành công!");
+            showToast(msg || "Đã thêm mục việc & gửi email thông báo thành công!", "success");
           }}
         />
       )}
@@ -2361,6 +2403,10 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
     }
   }, [leaderMembers]);
 
+  const selectedLeader = useMemo(() => {
+    return leaderMembers.find((m) => String(m.id) === String(leaderId));
+  }, [leaderMembers, leaderId]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -2390,7 +2436,10 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
         leader_id: parseInt(leaderId),
         total_cp: Math.max(0, parseInt(totalCp) || 0),
       });
-      onSuccess();
+      const leaderNotice = selectedLeader
+        ? `${selectedLeader.full_name}${selectedLeader.email ? ` (${selectedLeader.email})` : ' (chưa cấu hình email)'}`
+        : "Trưởng nhóm";
+      onSuccess(`Đã lưu nhiệm vụ "${title.trim()}" & gửi email thông báo tới ${leaderNotice}!`);
       onClose();
     } catch (err) {
       setError(err.message || "Lỗi khi tạo nhiệm vụ.");
@@ -2608,6 +2657,35 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                     ))
                   )}
                 </select>
+                {selectedLeader && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: "9px 12px",
+                      borderRadius: 8,
+                      background: selectedLeader.email ? "#f0fdf4" : "#fff7ed",
+                      border: `1px solid ${selectedLeader.email ? "#bbf7d0" : "#fed7aa"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 12.5,
+                      color: selectedLeader.email ? "#166534" : "#c2410c",
+                    }}
+                  >
+                    <Mail size={15} style={{ flexShrink: 0 }} />
+                    <span>
+                      {selectedLeader.email ? (
+                        <>
+                          📧 Sẽ tự động gửi 1 email thông báo tới Trưởng nhóm: <strong>{selectedLeader.email}</strong> ngay khi bấm Lưu nhiệm vụ.
+                        </>
+                      ) : (
+                        <>
+                          ⚠️ Tài khoản <strong>{selectedLeader.full_name}</strong> chưa có địa chỉ email. Vui lòng cập nhật email trong Quản lý nhân viên để Trưởng nhóm nhận được thư.
+                        </>
+                      )}
+                    </span>
+                  </div>
+                )}
                 {leaderMembers.length === 0 && (
                   <div style={{ fontSize: 11.5, color: "#e11d48", marginTop: 4 }}>
                     ⚠️ Chưa có tài khoản nào được phân vai trò Trưởng nhóm (Leader). Quản trị viên vui lòng gán vai trò Leader trong Quản lý nhân viên.
@@ -2754,8 +2832,8 @@ function CreateTaskModal({ isOpen, onClose, allMembers, onSuccess }) {
                 transition: "all 0.15s ease"
               }}
             >
-              <CheckSquare size={16} />
-              {loading ? "Đang lưu..." : "Lưu Nhiệm Vụ"}
+              <Mail size={16} />
+              {loading ? "Đang lưu & gửi mail..." : "Lưu Nhiệm Vụ & Gửi Mail"}
             </button>
           </div>
         </form>
@@ -2803,6 +2881,10 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
     );
   };
 
+  const selectedMemberList = useMemo(() => {
+    return assignableMembers.filter((m) => selectedAssignees.includes(Number(m.id)));
+  }, [assignableMembers, selectedAssignees]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -2828,7 +2910,10 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
         assignee_ids: selectedAssignees,
         cp_points: Math.max(0, parseInt(cpPoints) || 0),
       });
-      onSuccess();
+      const assigneeNames = selectedMemberList
+        .map((m) => `${m.full_name}${m.email ? ` (${m.email})` : ' (chưa cấu hình email)'}`)
+        .join(", ");
+      onSuccess(`Đã thêm mục việc "${title.trim()}" & gửi email thông báo tới: ${assigneeNames}!`);
       onClose();
     } catch (err) {
       setError(err.message || "Lỗi khi thêm mục việc.");
@@ -3095,6 +3180,40 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                 ? `Đã chọn ${selectedAssignees.length} thành viên. Mục việc sẽ ở trạng thái 'Chờ tiếp nhận' để thành viên xác nhận.`
                 : "Mục việc sẽ ở trạng thái 'Chờ tiếp nhận' để thành viên xác nhận chấp nhận hoặc từ chối."}
             </small>
+
+            {selectedMemberList.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                  fontSize: 12.5,
+                  color: "#166534",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+                  <Mail size={15} />
+                  <span>📧 Tự động gửi email thông báo tới người được chọn khi lưu:</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingLeft: 18 }}>
+                  {selectedMemberList.map((m) => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span>• {m.full_name}:</span>
+                      {m.email ? (
+                        <strong style={{ color: "#15803d" }}>{m.email}</strong>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: 600 }}>⚠️ Chưa có email (không nhận được thư)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -3196,9 +3315,13 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              {loading ? "Đang lưu..." : "Thêm mục việc"}
+              <Mail size={14} />
+              {loading ? "Đang lưu & gửi mail..." : "Lưu mục việc & Gửi Email"}
             </button>
           </div>
         </form>
@@ -3381,6 +3504,10 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
     );
   };
 
+  const selectedMemberList = useMemo(() => {
+    return assignableMembers.filter((m) => selectedAssignees.includes(Number(m.id)));
+  }, [assignableMembers, selectedAssignees]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -3406,7 +3533,10 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
         assignee_ids: selectedAssignees,
         cp_points: Math.max(0, parseInt(cpPoints) || 0),
       });
-      onSuccess("Đã cập nhật mục việc thành công!");
+      const assigneeNames = selectedMemberList
+        .map((m) => `${m.full_name}${m.email ? ` (${m.email})` : ' (chưa cấu hình email)'}`)
+        .join(", ");
+      onSuccess(`Đã cập nhật mục việc "${title.trim()}" & gửi email thông báo tới: ${assigneeNames}!`);
       onClose();
     } catch (err) {
       setError(err.message || "Lỗi khi cập nhật mục việc.");
@@ -3678,6 +3808,40 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                 )}
               </div>
             )}
+
+            {selectedMemberList.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                  fontSize: 12.5,
+                  color: "#166534",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+                  <Mail size={15} />
+                  <span>📧 Tự động gửi email thông báo tới người được chọn:</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingLeft: 18 }}>
+                  {selectedMemberList.map((m) => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span>• {m.full_name}:</span>
+                      {m.email ? (
+                        <strong style={{ color: "#15803d" }}>{m.email}</strong>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: 600 }}>⚠️ Chưa có email (không nhận được thư)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -3777,11 +3941,13 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                 color: "#ffffff",
                 fontSize: 13,
                 fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 4px rgba(37, 99, 235, 0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              {loading ? "Đang lưu..." : "Cập Nhật Mục Việc"}
+              <Mail size={14} />
+              {loading ? "Đang lưu & gửi mail..." : "Cập Nhật & Gửi Email"}
             </button>
           </div>
         </form>
