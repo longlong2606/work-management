@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Mail;
 using Dapper;
 
@@ -107,6 +107,297 @@ public static class EmailService
             </div>
         </body>
         </html>";
+    }
+
+    public static string GenerateTaskAssignedEmailHtml(
+        string recipientName,
+        string taskTitle,
+        string taskType,
+        string? description,
+        string deadline,
+        int totalCp,
+        string? location,
+        string creatorName,
+        string? appUrl = null)
+    {
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
+        var taskUrl = $"{targetUrl}/tasks";
+
+        var descHtml = !string.IsNullOrWhiteSpace(description)
+            ? $@"<div style=""background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 15px; font-size: 14px; color: #334155; line-height: 1.6;"">
+                    <strong style=""color: #0f172a;"">📋 Mô tả / Yêu cầu chi tiết:</strong><br/>
+                    {WebUtility.HtmlEncode(description).Replace("\n", "<br/>")}
+                 </div>"
+            : "";
+
+        var locationHtml = !string.IsNullOrWhiteSpace(location)
+            ? $@"<tr style=""border-bottom: 1px solid #f1f5f9;"">
+                    <td style=""padding: 10px 12px; color: #64748b; font-weight: 500; width: 140px;"">📍 Địa điểm/Đối tác:</td>
+                    <td style=""padding: 10px 12px; color: #1e293b; font-weight: 600;"">{WebUtility.HtmlEncode(location)}</td>
+                 </tr>"
+            : "";
+
+        return $@"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset=""utf-8"">
+            <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+                .header {{ background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 28px 24px; text-align: center; }}
+                .badge {{ display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }}
+                .content {{ padding: 28px 24px; }}
+                .info-box {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 6px; margin-bottom: 20px; color: #1e40af; font-size: 14px; line-height: 1.5; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; background: #fafafa; border-radius: 8px; overflow: hidden; border: 1px solid #f1f5f9; }}
+                .footer {{ background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
+                .btn {{ display: inline-block; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff !important; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(37,99,235,0.3); }}
+            </style>
+        </head>
+        <body>
+            <div class=""container"">
+                <div class=""header"">
+                    <span class=""badge"">Phân công nhiệm vụ</span>
+                    <h2 style=""margin:0; font-size: 21px; color: #ffffff; font-weight: 700;"">GIAO QUYỀN PHỤ TRÁCH NHIỆM VỤ</h2>
+                    <p style=""margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #dbeafe;"">Hệ thống Điều phối Công việc Work Management</p>
+                </div>
+                <div class=""content"">
+                    <p style=""font-size: 15px; color: #1e293b; margin-top: 0;"">Xin chào <strong>{WebUtility.HtmlEncode(recipientName)}</strong>,</p>
+                    <div class=""info-box"">
+                        Bạn vừa được <strong>{WebUtility.HtmlEncode(creatorName)}</strong> chỉ định làm <strong>Trưởng nhóm phụ trách (Leader)</strong> cho nhiệm vụ mới trên hệ thống.
+                    </div>
+                    
+                    <table>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500; width: 140px;"">📌 Tiêu đề nhiệm vụ:</td>
+                            <td style=""padding: 10px 12px; color: #0f172a; font-weight: 700; font-size: 15px;"">{WebUtility.HtmlEncode(taskTitle)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">🏷️ Phân loại:</td>
+                            <td style=""padding: 10px 12px; color: #2563eb; font-weight: 600;"">{WebUtility.HtmlEncode(taskType)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">⏰ Hạn chót (Deadline):</td>
+                            <td style=""padding: 10px 12px; color: #dc2626; font-weight: 700;"">{WebUtility.HtmlEncode(deadline)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">🏆 Quỹ điểm CP:</td>
+                            <td style=""padding: 10px 12px; color: #d97706; font-weight: 700;"">+{totalCp} CP</td>
+                        </tr>
+                        {locationHtml}
+                        <tr>
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">👤 Người khởi tạo:</td>
+                            <td style=""padding: 10px 12px; color: #334155; font-weight: 600;"">{WebUtility.HtmlEncode(creatorName)}</td>
+                        </tr>
+                    </table>
+
+                    {descHtml}
+
+                    <div style=""text-align: center; margin-top: 26px;"">
+                        <a href=""{taskUrl}"" class=""btn"">Xem Chi Tiết & Phân Rã Checklist</a>
+                    </div>
+                </div>
+                <div class=""footer"">
+                    Hệ thống Phân ca & Quản lý Công việc Nội bộ WorkShiftPro.<br/>
+                    Email này được gửi tự động khi có phân công nhiệm vụ mới. Vui lòng không trả lời trực tiếp email này.
+                </div>
+            </div>
+        </body>
+        </html>";
+    }
+
+    public static string GenerateSubtaskAssignedEmailHtml(
+        string recipientName,
+        string subtaskTitle,
+        string parentTaskTitle,
+        string? description,
+        string dueAt,
+        int cpPoints,
+        int contributionPct,
+        string creatorName,
+        string? appUrl = null)
+    {
+        var targetUrl = !string.IsNullOrWhiteSpace(appUrl) ? appUrl.TrimEnd('/') : "http://localhost:5173";
+        var taskUrl = $"{targetUrl}/tasks";
+
+        var descHtml = !string.IsNullOrWhiteSpace(description)
+            ? $@"<div style=""background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 15px; font-size: 14px; color: #334155; line-height: 1.6;"">
+                    <strong style=""color: #0f172a;"">📝 Ghi chú / Hướng dẫn:</strong><br/>
+                    {WebUtility.HtmlEncode(description).Replace("\n", "<br/>")}
+                 </div>"
+            : "";
+
+        return $@"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset=""utf-8"">
+            <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+                .header {{ background: linear-gradient(135deg, #059669, #0d9488); color: white; padding: 28px 24px; text-align: center; }}
+                .badge {{ display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }}
+                .content {{ padding: 28px 24px; }}
+                .info-box {{ background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px 16px; border-radius: 6px; margin-bottom: 20px; color: #065f46; font-size: 14px; line-height: 1.5; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; background: #fafafa; border-radius: 8px; overflow: hidden; border: 1px solid #f1f5f9; }}
+                .footer {{ background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; line-height: 1.5; }}
+                .btn {{ display: inline-block; background: linear-gradient(135deg, #059669, #047857); color: #ffffff !important; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(5,150,105,0.3); }}
+            </style>
+        </head>
+        <body>
+            <div class=""container"">
+                <div class=""header"">
+                    <span class=""badge"">Phân công mục việc</span>
+                    <h2 style=""margin:0; font-size: 21px; color: #ffffff; font-weight: 700;"">BẠN ĐƯỢC GIAO MỤC VIỆC MỚI</h2>
+                    <p style=""margin: 6px 0 0 0; opacity: 0.9; font-size: 13px; color: #ccfbf1;"">Hệ thống Điều phối Công việc Work Management</p>
+                </div>
+                <div class=""content"">
+                    <p style=""font-size: 15px; color: #1e293b; margin-top: 0;"">Xin chào <strong>{WebUtility.HtmlEncode(recipientName)}</strong>,</p>
+                    <div class=""info-box"">
+                        Bạn vừa được <strong>{WebUtility.HtmlEncode(creatorName)}</strong> giao phụ trách một mục việc (checklist item) mới. Vui lòng kiểm tra và xác nhận tiếp nhận việc trên hệ thống.
+                    </div>
+                    
+                    <table>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500; width: 140px;"">📌 Mục việc checklist:</td>
+                            <td style=""padding: 10px 12px; color: #0f172a; font-weight: 700; font-size: 15px;"">{WebUtility.HtmlEncode(subtaskTitle)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">📂 Nhiệm vụ cha:</td>
+                            <td style=""padding: 10px 12px; color: #0284c7; font-weight: 600;"">{WebUtility.HtmlEncode(parentTaskTitle)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">⏰ Hạn hoàn thành:</td>
+                            <td style=""padding: 10px 12px; color: #dc2626; font-weight: 700;"">{WebUtility.HtmlEncode(dueAt)}</td>
+                        </tr>
+                        <tr style=""border-bottom: 1px solid #f1f5f9;"">
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">🏆 Điểm thưởng CP:</td>
+                            <td style=""padding: 10px 12px; color: #d97706; font-weight: 700;"">+{cpPoints} CP ({contributionPct}% đóng góp)</td>
+                        </tr>
+                        <tr>
+                            <td style=""padding: 10px 12px; color: #64748b; font-weight: 500;"">👤 Người giao việc:</td>
+                            <td style=""padding: 10px 12px; color: #334155; font-weight: 600;"">{WebUtility.HtmlEncode(creatorName)}</td>
+                        </tr>
+                    </table>
+
+                    {descHtml}
+
+                    <div style=""text-align: center; margin-top: 26px;"">
+                        <a href=""{taskUrl}"" class=""btn"">Vào Tiếp Nhận & Thực Hiện Mục Việc</a>
+                    </div>
+                </div>
+                <div class=""footer"">
+                    Hệ thống Phân ca & Quản lý Công việc Nội bộ WorkShiftPro.<br/>
+                    Email này được gửi tự động khi có mục việc được giao. Vui lòng không trả lời trực tiếp email này.
+                </div>
+            </div>
+        </body>
+        </html>";
+    }
+
+    public static void SendTaskAssignedNotification(
+        long leaderId,
+        string taskTitle,
+        string? taskType,
+        string? description,
+        string deadline,
+        int totalCp,
+        string? location,
+        string creatorName)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                using var conn = Database.GetConnection();
+                var leader = conn.QueryFirstOrDefault<dynamic>(
+                    "SELECT full_name, email FROM users WHERE id = @id", new { id = leaderId });
+
+                if (leader == null) return;
+                string email = leader.email ?? "";
+                string fullName = leader.full_name ?? "";
+
+                if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return;
+
+                var appUrl = conn.QueryFirstOrDefault<string>(
+                    "SELECT value FROM system_settings WHERE key = 'app_url'") ?? "http://localhost:5173";
+
+                var subject = $"[WorkShiftPro] Phân công phụ trách nhiệm vụ: {taskTitle}";
+                var html = GenerateTaskAssignedEmailHtml(
+                    fullName,
+                    taskTitle,
+                    taskType ?? "RESEARCH",
+                    description,
+                    deadline,
+                    totalCp,
+                    location,
+                    creatorName,
+                    appUrl);
+
+                SendRealEmail(email, fullName, subject, html);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Lỗi gửi email giao task cho leader {leaderId}: {ex.Message}");
+            }
+        });
+    }
+
+    public static void SendSubtaskAssignedNotification(
+        IEnumerable<(long userId, int contributionPct)> assignees,
+        string subtaskTitle,
+        string parentTaskTitle,
+        string? description,
+        string dueAt,
+        int cpPoints,
+        string creatorName)
+    {
+        var assigneeList = assignees.ToList();
+        if (!assigneeList.Any()) return;
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                using var conn = Database.GetConnection();
+                var appUrl = conn.QueryFirstOrDefault<string>(
+                    "SELECT value FROM system_settings WHERE key = 'app_url'") ?? "http://localhost:5173";
+
+                var userIds = assigneeList.Select(a => a.userId).Distinct().ToList();
+                string idsStr = string.Join(",", userIds);
+                var users = conn.Query<dynamic>(
+                    $"SELECT id, full_name, email FROM users WHERE id IN ({idsStr})").ToDictionary(u => Convert.ToInt64(u.id));
+
+                foreach (var (userId, pct) in assigneeList)
+                {
+                    if (!users.TryGetValue(userId, out var user)) continue;
+                    string email = user.email ?? "";
+                    string fullName = user.full_name ?? "";
+
+                    if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) continue;
+
+                    var subject = $"[WorkShiftPro] Giao mục việc mới: {subtaskTitle}";
+                    var html = GenerateSubtaskAssignedEmailHtml(
+                        fullName,
+                        subtaskTitle,
+                        parentTaskTitle,
+                        description,
+                        dueAt,
+                        cpPoints,
+                        pct,
+                        creatorName,
+                        appUrl);
+
+                    SendRealEmail(email, fullName, subject, html);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Lỗi gửi email giao subtask: {ex.Message}");
+            }
+        });
     }
 
     public static (bool success, string status, string? error) SendRealEmail(string recipientEmail, string recipientName, string subject, string htmlBody)

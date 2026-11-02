@@ -50,7 +50,7 @@ function getTabFromUrl() {
 }
 
 function MainContent() {
-  const { user, loading, isAdmin, canManageStaff } = useAuth();
+  const { user, loading, isAdmin, canManageStaff, canViewStaff } = useAuth();
   const [activeTab, setActiveTabState] = useState(getTabFromUrl);
 
   // Chuyển tab và cập nhật HTML5 history URL
@@ -86,12 +86,12 @@ function MainContent() {
   // thì tự động chuyển hướng về trang chủ ("schedule" /)
   useEffect(() => {
     if (!user) return;
-    const isStaffRestricted = activeTab === "staff" && !canManageStaff;
+    const isStaffRestricted = activeTab === "staff" && !canViewStaff && !canManageStaff;
     const isEmailRestricted = (activeTab === "emails" || activeTab === "smtp") && !isAdmin;
     if (isStaffRestricted || isEmailRestricted) {
       navigateToTab("schedule");
     }
-  }, [user, activeTab, canManageStaff, isAdmin, navigateToTab]);
+  }, [user, activeTab, canManageStaff, canViewStaff, isAdmin, navigateToTab]);
 
   // Nếu tab là "tv" (truy cập /tv):
   // Hiển thị trực tiếp màn hình Kiosk TV mà KHÔNG yêu cầu đăng nhập
@@ -137,7 +137,7 @@ function MainContent() {
           {activeTab === "history" && <ShiftHistoryPage />}
           {activeTab === "notes" && <ShiftNotesPage />}
           {activeTab === "feedback" && <FeedbackPage />}
-          {activeTab === "staff" && canManageStaff && <StaffManagementPage onNavigateToCompetency={() => navigateToTab("competency")} />}
+          {activeTab === "staff" && (canViewStaff || canManageStaff) && <StaffManagementPage onNavigateToCompetency={() => navigateToTab("competency")} />}
           {activeTab === "emails" && isAdmin && <EmailOutboxPage />}
           {activeTab === "smtp" && isAdmin && <EmailSettingsPage />}
         </main>

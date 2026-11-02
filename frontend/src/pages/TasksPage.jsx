@@ -2772,9 +2772,9 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
   const [dueAt, setDueAt] = useState("");
   const remainingCp = Math.max(0, totalCp - currentAllocatedCp);
   const [cpPoints, setCpPoints] = useState(() => (totalCp > 0 && remainingCp > 0 ? Math.min(1, remainingCp) : 1));
-  // Chỉ giao mục việc cho thành viên (không giao cho Admin và Leader)
+  // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
   const assignableMembers = useMemo(() => {
-    return (allMembers || []).filter((m) => m.role !== 'admin' && m.role !== 'leader');
+    return (allMembers || []).filter((m) => m.role !== 'admin');
   }, [allMembers]);
 
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
@@ -3024,10 +3024,10 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                 }}
               >
                 {assignableMembers.length === 0 ? (
-                  <option value="">-- Chưa có tài khoản thành viên (ngoài Admin & Leader) --</option>
+                  <option value="">-- Chưa có tài khoản thành viên hợp lệ (ngoài Admin) --</option>
                 ) : (
                   assignableMembers.map((m) => {
-                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    const roleBadge = m.role === 'leader' ? '👑 Trưởng nhóm' : m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
                     return (
                       <option key={m.id} value={m.id}>
                         {m.full_name} (@{m.username}) — [{roleBadge}]
@@ -3055,7 +3055,7 @@ function AddSubtaskModal({ isOpen, onClose, taskId, taskDeadline, assignedLeader
                 ) : (
                   assignableMembers.map((m) => {
                     const isChecked = selectedAssignees.includes(Number(m.id));
-                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    const roleBadge = m.role === 'leader' ? '👑 Trưởng nhóm' : m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
                     return (
                       <label
                         key={m.id}
@@ -3354,9 +3354,9 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
   const [dueAt, setDueAt] = useState(subtask?.due_at ? subtask.due_at.replace(" ", "T").slice(0, 16) : "");
   const [cpPoints, setCpPoints] = useState(subtask?.cp_points ?? 1);
 
-  // Chỉ giao mục việc cho thành viên (không giao cho Admin và Leader)
+  // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
   const assignableMembers = useMemo(() => {
-    return (allMembers || []).filter((m) => m.role !== 'admin' && m.role !== 'leader');
+    return (allMembers || []).filter((m) => m.role !== 'admin');
   }, [allMembers]);
 
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
@@ -3612,10 +3612,10 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                 }}
               >
                 {assignableMembers.length === 0 ? (
-                  <option value="">-- Chưa có tài khoản thành viên (ngoài Admin & Leader) --</option>
+                  <option value="">-- Chưa có tài khoản thành viên hợp lệ (ngoài Admin) --</option>
                 ) : (
                   assignableMembers.map((m) => {
-                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    const roleBadge = m.role === 'leader' ? '👑 Trưởng nhóm' : m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
                     return (
                       <option key={m.id} value={m.id}>
                         {m.full_name} (@{m.username}) — [{roleBadge}]
@@ -3643,7 +3643,7 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
                 ) : (
                   assignableMembers.map((m) => {
                     const isChecked = selectedAssignees.includes(Number(m.id));
-                    const roleBadge = m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
+                    const roleBadge = m.role === 'leader' ? '👑 Trưởng nhóm' : m.role === 'core' ? '⭐ Cốt cán' : m.role === 'learning' ? '🌱 Học việc' : '👤 Thành viên';
                     return (
                       <label
                         key={m.id}

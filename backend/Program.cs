@@ -294,6 +294,22 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
                 totalCp
             }));
 
+        if (req.leader_id != currentUser.id)
+        {
+            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                new { uid = req.leader_id, senderId = currentUser.id, title = "Phân công nhiệm vụ mới", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId });
+        }
+
+        EmailService.SendTaskAssignedNotification(
+            req.leader_id,
+            req.title.Trim(),
+            string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
+            req.description?.Trim(),
+            req.deadline.Trim(),
+            totalCp,
+            req.location?.Trim(),
+            currentUser.full_name);
+
         return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
     }
     catch (Exception ex)
@@ -352,6 +368,22 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
                 leader_id = targetLeaderId,
                 totalCp
             });
+
+        if (existingLeaderId.HasValue && existingLeaderId.Value != targetLeaderId && targetLeaderId != currentUser.id)
+        {
+            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                new { uid = targetLeaderId, senderId = currentUser.id, title = "Chuyển giao quyền phụ trách nhiệm vụ", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId = id });
+
+            EmailService.SendTaskAssignedNotification(
+                targetLeaderId,
+                req.title.Trim(),
+                string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
+                req.description?.Trim(),
+                string.IsNullOrWhiteSpace(req.deadline) ? "" : req.deadline.Trim(),
+                totalCp,
+                req.location?.Trim(),
+                currentUser.full_name);
+        }
 
         return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
     }
@@ -524,7 +556,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
     if (currentUser == null) return Results.Unauthorized();
 
     using var conn = Database.GetConnection();
-    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
+    var task = conn.QueryFirstOrDefault<dynamic>("SELECT id, title, leader_id, status FROM tasks WHERE id = @taskId", new { taskId });
     if (task == null) return Results.NotFound(new { detail = "Nhiệm vụ cha không tồn tại!" });
 
     if ((string)task.status == "FINISHED")
@@ -574,13 +606,14 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         if (req.assignee_ids != null && req.assignee_ids.Any())
         {
             string ids = string.Join(",", req.assignee_ids.Distinct());
-            // Trong phần giao người làm subtask không giao cho admin và leader
-            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
+            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
+            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
         }
 
         if (!validAssigneeIds.Any())
-            return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
+            return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
 
+        var assigneesToNotify = new List<(long userId, int contributionPct)>();
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
             var validContributions = req.assignee_contributions.Where(ac => validAssigneeIds.Contains(ac.user_id)).ToList();
@@ -593,6 +626,7 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 {
                     conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                         new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+                    assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
                 }
             }
         }
@@ -608,12 +642,26 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 {
                     conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                         new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
+                    assigneesToNotify.Add((uid, defaultPct));
                 }
             }
         }
 
+        if (assigneesToNotify.Any())
+        {
+            string parentTitle = task?.title != null ? (string)task.title : "";
+            EmailService.SendSubtaskAssignedNotification(
+                assigneesToNotify,
+                req.title.Trim(),
+                parentTitle,
+                req.description?.Trim(),
+                req.due_at?.Trim() ?? "",
+                cpPoints,
+                currentUser.full_name);
+        }
+
         // Auto transition parent task from OPEN to IN_PROGRESS
-        if ((string)task.status == "OPEN")
+        if ((string?)task?.status == "OPEN")
         {
             conn.Execute("UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = @taskId", new { taskId });
         }
@@ -633,7 +681,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.task_id, t.leader_id, t.status AS task_status 
+        SELECT s.id, s.title, s.task_id, t.title AS task_title, t.leader_id, t.status AS task_status 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
@@ -655,6 +703,8 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     try
     {
+        var existingAssigneeIds = conn.Query<long>("SELECT user_id FROM subtask_assignees WHERE subtask_id = @id", new { id }).ToHashSet();
+
         conn.Execute(@"
             UPDATE subtasks SET 
                 title = @title, description = @description, due_at = @due_at, cp_points = @cpPoints,
@@ -671,31 +721,40 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 cpPoints
             });
 
+        var newlyAssigned = new List<(long userId, int contributionPct)>();
+
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
             var uids = req.assignee_contributions.Select(ac => ac.user_id).Distinct().ToList();
             string ids = string.Join(",", uids);
-            // Trong phần giao người làm subtask không giao cho admin và leader
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
+            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
 
             if (!validUids.Any())
-                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             foreach (var ac in req.assignee_contributions.Where(ac => validUids.Contains(ac.user_id)))
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { id, uid = ac.user_id, pct = ac.contribution_pct });
+
+                if (!existingAssigneeIds.Contains(ac.user_id) && ac.user_id != currentUser.id)
+                {
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    newlyAssigned.Add((ac.user_id, ac.contribution_pct));
+                }
             }
         }
         else if (req.assignee_ids != null && req.assignee_ids.Any())
         {
             string ids = string.Join(",", req.assignee_ids.Distinct());
-            // Trong phần giao người làm subtask không giao cho admin và leader
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role NOT IN ('admin', 'leader')").ToList();
+            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
 
             if (!validUids.Any())
-                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hợp lệ (không phải Admin hoặc Leader) để giao mục việc!" });
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             int defaultPct = validUids.Count > 1 ? (100 / validUids.Count) : 100;
@@ -703,7 +762,27 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
             {
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { id, uid, defaultPct });
+
+                if (!existingAssigneeIds.Contains(uid) && uid != currentUser.id)
+                {
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    newlyAssigned.Add((uid, defaultPct));
+                }
             }
+        }
+
+        if (newlyAssigned.Any())
+        {
+            string parentTitle = subtask?.task_title != null ? (string)subtask.task_title : "";
+            EmailService.SendSubtaskAssignedNotification(
+                newlyAssigned,
+                req.title.Trim(),
+                parentTitle,
+                req.description?.Trim(),
+                req.due_at?.Trim() ?? "",
+                cpPoints,
+                currentUser.full_name);
         }
 
         return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
@@ -1371,10 +1450,7 @@ app.MapPost("/api/auth/login", (LoginRequest req) =>
         return Results.BadRequest(new { detail = "Tên đăng nhập hoặc mật khẩu không chính xác" });
     }
 
-    if (user.role == "admin")
-    {
-        user.can_manage_staff = true;
-    }
+    user.can_manage_staff = (user.role == "admin");
 
     var token = AuthService.CreateToken(user.id, user.username, user.role);
     return Results.Ok(new
@@ -1476,7 +1552,7 @@ app.MapGet("/api/users", (HttpContext ctx) =>
 app.MapPost("/api/users", (CreateUserRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) return Results.StatusCode(403);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE username = @u", new { u = req.username });
@@ -1496,7 +1572,7 @@ app.MapPost("/api/users", (CreateUserRequest req, HttpContext ctx) =>
 app.MapPost("/api/users/{id:long}/reset-password", (long id, ResetPasswordRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && currentUser.role != "manager")) return Results.StatusCode(403);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.new_password) || req.new_password.Length < 6)
     {
@@ -1516,7 +1592,7 @@ app.MapPost("/api/users/{id:long}/reset-password", (long id, ResetPasswordReques
 app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) return Results.StatusCode(403);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();
     var exists = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users WHERE id = @id", new { id });
@@ -1622,8 +1698,8 @@ app.MapPost("/api/roles", (CreateRoleRequest req, HttpContext ctx) =>
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null)
         return Results.Json(new { detail = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" }, statusCode: 401);
-    if (currentUser.role != "admin" && !currentUser.can_manage_staff) 
-        return Results.Json(new { detail = "Chỉ Quản trị viên hoặc người có quyền Quản lý nhân sự mới được tạo vai trò!" }, statusCode: 403);
+    if (currentUser.role != "admin") 
+        return Results.Json(new { detail = "Chỉ Quản trị viên cấp cao nhất mới có quyền tạo vai trò!" }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.id) || string.IsNullOrWhiteSpace(req.display_name))
         return Results.BadRequest(new { detail = "Mã vai trò và tên hiển thị không được để trống!" });
@@ -1658,8 +1734,8 @@ app.MapPut("/api/roles/{id}", (string id, UpdateRoleRequest req, HttpContext ctx
     var currentUser = AuthService.GetCurrentUser(ctx);
     if (currentUser == null)
         return Results.Json(new { detail = "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!" }, statusCode: 401);
-    if (currentUser.role != "admin" && !currentUser.can_manage_staff) 
-        return Results.Json(new { detail = "Chỉ Quản trị viên hoặc người có quyền Quản lý nhân sự mới được cập nhật vai trò!" }, statusCode: 403);
+    if (currentUser.role != "admin") 
+        return Results.Json(new { detail = "Chỉ Quản trị viên cấp cao nhất mới có quyền cập nhật vai trò!" }, statusCode: 403);
 
     using var conn = Database.GetConnection();
     var role = conn.QueryFirstOrDefault<RoleEntity>("SELECT * FROM roles WHERE id = @id", new { id });
@@ -1730,7 +1806,7 @@ app.MapGet("/api/departments", (HttpContext ctx) =>
 app.MapPost("/api/departments", (CreateDepartmentRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
+    if (currentUser == null || currentUser.role != "admin") 
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.name))
@@ -1759,7 +1835,7 @@ app.MapPost("/api/departments", (CreateDepartmentRequest req, HttpContext ctx) =
 app.MapPut("/api/departments/{id:long}", (long id, UpdateDepartmentRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
+    if (currentUser == null || currentUser.role != "admin") 
         return Results.StatusCode(403);
 
     if (string.IsNullOrWhiteSpace(req.name))
@@ -1790,7 +1866,7 @@ app.MapPut("/api/departments/{id:long}", (long id, UpdateDepartmentRequest req, 
 app.MapDelete("/api/departments/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || (currentUser.role != "admin" && !currentUser.can_manage_staff)) 
+    if (currentUser == null || currentUser.role != "admin") 
         return Results.StatusCode(403);
 
     using var conn = Database.GetConnection();

@@ -110,11 +110,9 @@ public static class AuthService
             new { id = payload.user_id });
 
         if (user == null || user.status != "active") return null;
-        if (user.role == "admin")
-        {
-            // Luon dam bao admin co quyen can_manage_staff de tranh tu khoa he thong
-            user.can_manage_staff = true;
-        }
+        // Quyền quản lý nhân sự (thêm, sửa, đổi mật khẩu): Chỉ Admin tối cao mới có quyền
+        user.can_manage_staff = (user.role == "admin");
+
         if (user.role == "admin" || user.role == "leader" || user.role == "manager" || (user.username != null && user.username.ToLower().Contains("leader")))
         {
             user.can_manage_schedule = true;

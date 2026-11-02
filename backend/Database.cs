@@ -431,7 +431,7 @@ public static class Database
             var defaultRoles = new[]
             {
                 new { id = "admin", name = "Admin (Quản trị viên)", desc = "Toàn quyền quản trị hệ thống, cấp quyền, phân ca, tạo nhiệm vụ lớn, nhân sự, đánh giá, tính điểm CP", color = "#7c3aed", is_sys = 1, cms = 1, cmt = 1, cmu = 1, cev = 1, ccp = 1 },
-                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Phân ca & duyệt ca, giao subtask checklist, quản lý nhân sự, đánh giá năng lực, tính điểm CP", color = "#059669", is_sys = 1, cms = 1, cmt = 0, cmu = 1, cev = 1, ccp = 1 },
+                new { id = "leader", name = "Leader (Trưởng nhóm / Trưởng ca)", desc = "Phân ca & duyệt ca, giao subtask checklist, xem danh sách nhân sự (chỉ đọc), đánh giá năng lực, tính điểm CP", color = "#059669", is_sys = 1, cms = 1, cmt = 0, cmu = 0, cev = 1, ccp = 1 },
                 new { id = "core", name = "Core (Thành viên Cốt cán)", desc = "Thành viên nòng cốt Lab, tham gia học việc và nhận nhiệm vụ (Không giữ quyền quản trị)", color = "#2563eb", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 },
                 new { id = "contributor", name = "Contributor (Thành viên Đóng góp)", desc = "Thành viên chính thức, nhận ca trực, triển khai nhiệm vụ, code/kỹ thuật và đóng góp nghiên cứu", color = "#0891b2", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 },
                 new { id = "learning", name = "Learning (Học viên / Thực tập sinh)", desc = "Học viên, thực tập sinh mới, tham gia học việc, hỗ trợ ca trực theo hướng dẫn của mentor", color = "#8b5cf6", is_sys = 1, cms = 0, cmt = 0, cmu = 0, cev = 0, ccp = 0 }
@@ -451,6 +451,7 @@ public static class Database
                         can_evaluate = EXCLUDED.can_evaluate,
                         can_manage_cp = EXCLUDED.can_manage_cp", r);
             }
+            conn.Execute("UPDATE roles SET can_manage_staff = 0 WHERE id != 'admin'");
 
             // 0.1 Synchronize standard Departments
             var defaultDepts = new[]

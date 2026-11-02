@@ -37,9 +37,11 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const auth = useAuth() || {};
   const user = auth.user || null;
   const updateCurrentUser = auth.updateCurrentUser;
-  const isAdmin = auth.isAdmin ?? false;
-  const canManageStaff = auth.canManageStaff ?? false;
-  const isRoleAdmin = isAdmin || Boolean(canManageStaff);
+  const isLeader = Boolean(auth.isLeader || user?.role === "leader" || user?.role === "supervisor" || (user?.username && user.username.toLowerCase().includes("leader")));
+  const isAdmin = Boolean((auth.isAdmin || user?.role === "admin") && !isLeader);
+  // Leader chỉ được xem danh sách nhân sự, tuyệt đối KHÔNG có bất kỳ action nào (không cột thao tác, không đổi MK, không sửa, không thêm)
+  const canManageStaff = Boolean(isAdmin && !isLeader && user?.role === "admin");
+  const isRoleAdmin = canManageStaff;
 
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -203,6 +205,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
 
   // 2. Reset Password Modal
   const handleOpenReset = (u) => {
+    if (!canManageStaff) return;
     setResetUser(u);
     setNewPassword("");
     setConfirmPassword("");
@@ -234,6 +237,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
 
   // 3. Edit User Modal
   const handleOpenEdit = (u) => {
+    if (!canManageStaff) return;
     setEditUser(u);
     setEditFullName(u.full_name || "");
     setEditEmail(u.email || "");
@@ -319,7 +323,23 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
 
         {/* Quick action buttons according to active tab */}
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {!canManageStaff && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              background: "#f1f5f9",
+              color: "#475569",
+              border: "1px solid #cbd5e1"
+            }}>
+              <Eye size={14} color="#64748b" /> Chế độ chỉ xem (Leader)
+            </div>
+          )}
           {canManageStaff && (
             <button
               onClick={() => setShowAddModal(true)}
@@ -328,7 +348,8 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             >
               <UserPlus size={16} /> Cấp Tài Khoản Mới
             </button>
-          )}</div>
+          )}
+        </div>
       </div>
 
 
@@ -422,13 +443,15 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Số điện thoại</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Vai trò hệ thống</th>
                   <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569" }}>Trạng thái</th>
-                  <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
+                  {canManageStaff && (
+                    <th style={{ padding: "14px 20px", fontWeight: 700, color: "#475569", textAlign: "center" }}>Thao tác</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <td colSpan={canManageStaff ? 7 : 6} style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
                       Không tìm thấy tài khoản nhân sự nào phù hợp với bộ lọc.
                     </td>
                   </tr>
@@ -502,47 +525,48 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                             <span className="badge badge-green">Hoạt động</span>
                           )}
                         </td>
-                        <td style={{ padding: "14px 20px", textAlign: "center" }}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-
-                            <button
-                              onClick={() => handleOpenReset(u)}
-                              className="btn btn-secondary btn-sm"
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: "#b45309",
-                                background: "#fffbeb",
-                                border: "1px solid #fde68a",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 4
-                              }}
-                              title={`Đổi mật khẩu cho ${u.full_name} khi quên`}
-                            >
-                              <Key size={13} /> Đổi MK
-                            </button>
-                            <button
-                              onClick={() => handleOpenEdit(u)}
-                              className="btn btn-secondary btn-sm"
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: "#1d4ed8",
-                                background: "#eff6ff",
-                                border: "1px solid #bfdbfe",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 4
-                              }}
-                              title={`Sửa thông tin tài khoản ${u.full_name}`}
-                            >
-                              <Edit3 size={13} /> Sửa
-                            </button>
-                          </div>
-                        </td>
+                        {canManageStaff && (
+                          <td style={{ padding: "14px 20px", textAlign: "center" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <button
+                                onClick={() => handleOpenReset(u)}
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: "#b45309",
+                                  background: "#fffbeb",
+                                  border: "1px solid #fde68a",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                                title={`Đổi mật khẩu cho ${u.full_name} khi quên`}
+                              >
+                                <Key size={13} /> Đổi MK
+                              </button>
+                              <button
+                                onClick={() => handleOpenEdit(u)}
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: "#1d4ed8",
+                                  background: "#eff6ff",
+                                  border: "1px solid #bfdbfe",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                                title={`Sửa thông tin tài khoản ${u.full_name}`}
+                              >
+                                <Edit3 size={13} /> Sửa
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })

@@ -72,7 +72,7 @@ const TAB_ICONS = {
 };
 
 export function Navbar({ activeTab, setActiveTab, children }) {
-  const { user, logout, isAdmin, canManageStaff } = useAuth();
+  const { user, logout, isAdmin, canManageStaff, canViewStaff } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -141,7 +141,7 @@ export function Navbar({ activeTab, setActiveTab, children }) {
     { id: "feedback", label: "Góp ý", icon: MessageSquare, desc: "Hộp thư góp ý & phản hồi" },
   ];
 
-  if (canManageStaff) {
+  if (canViewStaff || canManageStaff) {
     mainNavItems.push({ id: "staff", label: "Nhân sự", icon: Users, desc: "Danh sách thành viên & tài khoản" });
   }
 

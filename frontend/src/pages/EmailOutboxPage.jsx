@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
 import { Mail, CheckCircle2, Clock, Eye, X, Send, User } from "lucide-react";
 
@@ -27,10 +27,10 @@ export function EmailOutboxPage() {
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "28px 20px" }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
-          Nhật Ký Email Thông Báo Lịch Làm (Outbox)
+          Nhật Ký Email Hệ Thống (Outbox)
         </h1>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-          Theo dõi các email thông báo lịch làm việc tự động gửi đến hộp thư của nhân viên
+          Theo dõi các email thông báo lịch làm việc, phân công nhiệm vụ (Task) và giao việc (Subtask) gửi đến nhân viên
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export function EmailOutboxPage() {
                 <tr>
                   <td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                     <Mail size={36} color="#cbd5e1" style={{ marginBottom: 10 }} />
-                    <p>Chưa có email nào được gửi. Khi bạn bấm "Xuất bản lịch làm việc", hệ thống sẽ gửi email tự động tại đây.</p>
+                    <p>Chưa có email nào trong hòm thư đi. Khi hệ thống xuất bản lịch làm hoặc phân công nhiệm vụ, email sẽ được ghi nhận tại đây.</p>
                   </td>
                 </tr>
               ) : (

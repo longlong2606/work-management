@@ -89,9 +89,8 @@ export function AuthProvider({ children }) {
   };
 
     // 5 Chuẩn Role theo phân cấp: Admin > Leader > Core > Contributor > Learning
-  const role = user?.role || "contributor";
-  const isAdmin = role === "admin";
   const isLeader = role === "leader" || role === "supervisor" || Boolean(user?.username && user.username.toLowerCase().includes("leader"));
+  const isAdmin = role === "admin" && !isLeader;
   const isCore = role === "core";
   const isContributor = role === "contributor" || role === "technician" || role === "staff";
   const isLearning = role === "learning";
@@ -99,9 +98,10 @@ export function AuthProvider({ children }) {
 
   // Quyền hạn thực tế theo Database:
   // - Admin luôn có đủ 5 quyền tối cao
-  // - Leader có phân ca, quản lý nhân sự, đánh giá năng lực, tính điểm CP; giao subtask (không tạo nhiệm vụ lớn)
+  // - Leader có phân ca, xem danh sách nhân sự (chỉ đọc), đánh giá năng lực, tính điểm CP; giao subtask (không tạo nhiệm vụ lớn)
   // - Core, Contributor, Learning không được quyền nào hết (mọi quyền = false)
-  const canManageStaff = isAdmin ? true : Boolean(user?.can_manage_staff);
+  const canViewStaff = isAdmin || isLeader;
+  const canManageStaff = isAdmin && !isLeader; // Chỉ Admin mới có quyền thêm/sửa/đổi mật khẩu nhân sự
   const canManageSchedule = isAdmin || isLeader || isManagerRole ? true : Boolean(user?.can_manage_schedule);
   const canManageTasks = isAdmin ? true : Boolean(user?.can_manage_tasks);
   const canEvaluate = isAdmin ? true : Boolean(user?.can_evaluate);
@@ -129,6 +129,7 @@ export function AuthProvider({ children }) {
       isSupervisor,
       isContributor,
       isLearning,
+      canViewStaff,
       canManageStaff,
       canManageSchedule,
       canManageTasks,
