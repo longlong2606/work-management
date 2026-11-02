@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
-import { Mail, CheckCircle2, Clock, Eye, X, Send, User } from "lucide-react";
+import { Mail, CheckCircle2, Clock, Eye, X, Send, User, RefreshCw, AlertCircle } from "lucide-react";
 
 export function EmailOutboxPage() {
   const [emails, setEmails] = useState([]);
-// loading
+  const [loading, setLoading] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState(null);
 
   const fetchEmails = async () => {
     try {
-      
+      setLoading(true);
       const data = await api.getEmailOutbox();
-      setEmails(data);
+      setEmails(data || []);
     } catch (err) {
       console.error(err);
     } finally {
-      
+      setLoading(false);
     }
   };
 
@@ -25,13 +25,23 @@ export function EmailOutboxPage() {
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "28px 20px" }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" }}>
-          Nhật Ký Email Hệ Thống (Outbox)
-        </h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-          Theo dõi các email thông báo lịch làm việc, phân công nhiệm vụ (Task) và giao việc (Subtask) gửi đến nhân viên
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px", margin: 0 }}>
+            Nhật Ký Email Hệ Thống (Outbox)
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, marginBottom: 0 }}>
+            Theo dõi các email thông báo lịch làm việc, phân công nhiệm vụ (Task) và giao việc (Subtask) gửi đến nhân viên
+          </p>
+        </div>
+        <button
+          onClick={fetchEmails}
+          disabled={loading}
+          className="btn btn-secondary"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}
+        >
+          <RefreshCw size={14} className={loading ? "spin" : ""} /> {loading ? "Đang tải..." : "Làm mới danh sách"}
+        </button>
       </div>
 
       <div className="glass-card" style={{ overflow: "hidden" }}>
@@ -74,6 +84,10 @@ export function EmailOutboxPage() {
                       {m.status === "sent" ? (
                         <span className="badge badge-green">
                           <CheckCircle2 size={12} /> Đã gửi qua SMTP
+                        </span>
+                      ) : m.status === "failed" ? (
+                        <span className="badge" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                          <AlertCircle size={12} /> Thất bại (Thiếu Email)
                         </span>
                       ) : (
                         <span className="badge badge-blue">

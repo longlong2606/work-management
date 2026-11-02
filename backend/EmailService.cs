@@ -315,11 +315,28 @@ public static class EmailService
                 var leader = conn.QueryFirstOrDefault<dynamic>(
                     "SELECT full_name, email FROM users WHERE id = @id", new { id = leaderId });
 
-                if (leader == null) return;
+                if (leader == null)
+                {
+                    conn.Execute(
+                        "INSERT INTO email_logs (recipient_email, recipient_name, subject, html_body, status) VALUES ('chua_xac_dinh', 'Leader', @s, 'Không tìm thấy tài khoản Leader được phân công.', 'failed')",
+                        new { s = $"[WorkShiftPro] Phân công phụ trách nhiệm vụ: {taskTitle}" });
+                    return;
+                }
                 string email = leader.email ?? "";
                 string fullName = leader.full_name ?? "";
 
-                if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return;
+                if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+                {
+                    conn.Execute(
+                        "INSERT INTO email_logs (recipient_email, recipient_name, subject, html_body, status) VALUES (@e, @n, @s, @b, 'failed')",
+                        new {
+                            e = string.IsNullOrWhiteSpace(email) ? "chua_co_email" : email,
+                            n = fullName,
+                            s = $"[WorkShiftPro] Phân công phụ trách nhiệm vụ: {taskTitle}",
+                            b = $"Không thể gửi email vì tài khoản {fullName} chưa được cấu hình địa chỉ Email hợp lệ."
+                        });
+                    return;
+                }
 
                 var appUrl = conn.QueryFirstOrDefault<string>(
                     "SELECT value FROM system_settings WHERE key = 'app_url'") ?? "http://localhost:5173";
@@ -376,7 +393,18 @@ public static class EmailService
                     string email = user.email ?? "";
                     string fullName = user.full_name ?? "";
 
-                    if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) continue;
+                    if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+                    {
+                        conn.Execute(
+                            "INSERT INTO email_logs (recipient_email, recipient_name, subject, html_body, status) VALUES (@e, @n, @s, @b, 'failed')",
+                            new {
+                                e = string.IsNullOrWhiteSpace(email) ? "chua_co_email" : email,
+                                n = fullName,
+                                s = $"[WorkShiftPro] Giao mục việc mới: {subtaskTitle}",
+                                b = $"Không thể gửi email vì tài khoản {fullName} chưa được cấu hình địa chỉ Email hợp lệ."
+                            });
+                        continue;
+                    }
 
                     var subject = $"[WorkShiftPro] Giao mục việc mới: {subtaskTitle}";
                     var html = GenerateSubtaskAssignedEmailHtml(

@@ -626,8 +626,8 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 {
                     conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                         new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
-                    assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
                 }
+                assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
             }
         }
         else
@@ -642,8 +642,8 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 {
                     conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                         new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
-                    assigneesToNotify.Add((uid, defaultPct));
                 }
+                assigneesToNotify.Add((uid, defaultPct));
             }
         }
 
@@ -739,10 +739,13 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { id, uid = ac.user_id, pct = ac.contribution_pct });
 
-                if (!existingAssigneeIds.Contains(ac.user_id) && ac.user_id != currentUser.id)
+                if (!existingAssigneeIds.Contains(ac.user_id))
                 {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    if (ac.user_id != currentUser.id)
+                    {
+                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                            new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    }
                     newlyAssigned.Add((ac.user_id, ac.contribution_pct));
                 }
             }
@@ -763,10 +766,13 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { id, uid, defaultPct });
 
-                if (!existingAssigneeIds.Contains(uid) && uid != currentUser.id)
+                if (!existingAssigneeIds.Contains(uid))
                 {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    if (uid != currentUser.id)
+                    {
+                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                            new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    }
                     newlyAssigned.Add((uid, defaultPct));
                 }
             }

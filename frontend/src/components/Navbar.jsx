@@ -72,7 +72,7 @@ const TAB_ICONS = {
 };
 
 export function Navbar({ activeTab, setActiveTab, children }) {
-  const { user, logout, isAdmin, canManageStaff, canViewStaff } = useAuth();
+  const { user, logout, isAdmin, isLeader, canManageStaff, canViewStaff } = useAuth();
   const { unreadCount, setIsOpen } = useNotifications();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -148,9 +148,13 @@ export function Navbar({ activeTab, setActiveTab, children }) {
   // 2. Menu hệ thống & quản trị
   const systemItems = [
     { id: "history", label: "Lịch sử ca", icon: History, desc: "Nhật ký đăng ký, hủy & đổi ca" },
-    ...(isAdmin
+    ...(isAdmin || isLeader
       ? [
           { id: "emails", label: "Nhật ký Email", icon: Mail, desc: "Danh sách email đã gửi ra ngoài" },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
           { id: "smtp", label: "Cài đặt Email (SMTP)", icon: Settings, desc: "Cấu hình máy chủ gửi email" },
         ]
       : []),
