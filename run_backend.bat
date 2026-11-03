@@ -11,5 +11,9 @@ echo Dang khoi chay tren http://127.0.0.1:8000 ...
 echo Nhan Ctrl+C de dung server.
 echo.
 cd /d "%~dp0backend"
-dotnet run
+if exist "bin\Debug\net10.0\backend.exe" (
+    "bin\Debug\net10.0\backend.exe"
+) else (
+    dotnet run --no-restore
+)
 pause

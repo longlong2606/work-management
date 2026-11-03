@@ -1315,16 +1315,31 @@ app.MapGet("/api/health", () => Results.Ok(new
     status = "running"
 }));
 
-if (!hasFrontend)
+app.MapGet("/", (HttpContext ctx) =>
 {
-    app.MapGet("/", () => Results.Ok(new
+    var accept = ctx.Request.Headers.Accept.ToString();
+    var contentType = ctx.Request.Headers.ContentType.ToString();
+    bool wantsJson = accept.Contains("application/json") || 
+                     contentType.Contains("application/json") || 
+                     ctx.Request.Query.ContainsKey("json");
+
+    if (!hasFrontend || wantsJson)
     {
-        service = "WorkManagement C# .NET 10 API",
-        version = "2.2.0",
-        shifts_count = 9,
-        status = "running"
-    }));
-}
+        return Results.Ok(new
+        {
+            service = "WorkManagement C# .NET 10 API",
+            version = "2.2.0",
+            shifts_count = 9,
+            status = "running"
+        });
+    }
+
+    var fileProvider = new PhysicalFileProvider(frontendFolder!);
+    var fileInfo = fileProvider.GetFileInfo("index.html");
+    return fileInfo.Exists 
+        ? Results.File(fileInfo.PhysicalPath!, "text/html") 
+        : Results.Ok(new { service = "WorkManagement C# .NET 10 API", status = "running" });
+});
 
 // ================= TV DISPLAY (KIOSK MODE) =================
 app.MapGet("/api/tv/today", (string? date) =>
@@ -1896,7 +1911,7 @@ app.MapDelete("/api/departments/{id:long}", (long id, HttpContext ctx) =>
 app.MapGet("/api/shifts/templates", () =>
 {
     using var conn = Database.GetConnection();
-    var shifts = conn.Query("SELECT id, name, start_time, end_time, label, description FROM shift_templates ORDER BY id ASC");
+    var shifts = conn.Query("SELECT id, name, start_time, end_time, label, description FROM shift_templates WHERE id > 0 ORDER BY id ASC");
     return Results.Ok(shifts);
 });
 
@@ -4312,8 +4327,10 @@ app.MapGet("/api/feedbacks", (HttpContext ctx) =>
     using var conn = Database.GetConnection();
     var query = @"
         SELECT f.id, f.user_id, f.author_name, f.is_anonymous, f.category, f.title, f.content,
-               f.likes_count, f.status, f.admin_reply, f.created_at,
-               EXISTS(SELECT 1 FROM feedback_likes fl WHERE fl.feedback_id = f.id AND fl.user_id = @uid) as is_liked
+               (SELECT COUNT(*) FROM feedback_likes fl WHERE fl.feedback_id = f.id) as likes_count,
+               f.status, f.admin_reply, f.created_at,
+               EXISTS(SELECT 1 FROM feedback_likes fl WHERE fl.feedback_id = f.id AND fl.user_id = @uid) as is_liked,
+               EXISTS(SELECT 1 FROM feedback_likes fl WHERE fl.feedback_id = f.id AND fl.user_id = @uid) as has_liked
         FROM feedbacks f
         ORDER BY f.id DESC";
 
@@ -4345,17 +4362,18 @@ app.MapPost("/api/feedbacks/{id:long}/like", (long id, HttpContext ctx) =>
     if (exists > 0)
     {
         conn.Execute("DELETE FROM feedback_likes WHERE feedback_id = @fid AND user_id = @uid", new { fid = id, uid = currentUser.id });
-        conn.Execute("UPDATE feedbacks SET likes_count = MAX(0, likes_count - 1) WHERE id = @fid", new { fid = id });
         liked = false;
     }
     else
     {
         conn.Execute("INSERT INTO feedback_likes (feedback_id, user_id) VALUES (@fid, @uid)", new { fid = id, uid = currentUser.id });
-        conn.Execute("UPDATE feedbacks SET likes_count = likes_count + 1 WHERE id = @fid", new { fid = id });
         liked = true;
     }
 
-    return Results.Ok(new { liked });
+    var likesCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM feedback_likes WHERE feedback_id = @fid", new { fid = id });
+    conn.Execute("UPDATE feedbacks SET likes_count = @cnt WHERE id = @fid", new { cnt = likesCount, fid = id });
+
+    return Results.Ok(new { liked, is_liked = liked, has_liked = liked, likes_count = likesCount });
 });
 
 app.MapPost("/api/feedbacks/{id:long}/reply", (long id, ReplyFeedbackRequest req, HttpContext ctx) =>

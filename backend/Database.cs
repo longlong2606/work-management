@@ -16,8 +16,28 @@ public static class Database
         Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") ?? 
         "Host=db;Port=5432;Database=work_management;Username=postgres;Password=postgres_secret_2026";
 
-    private static readonly string DbFile = Environment.GetEnvironmentVariable("DB_FILE") ?? "work_management.db";
-    private static readonly string SqliteConnStr = $"Data Source={DbFile}";
+    private static string ResolveDbPath()
+    {
+        var envPath = Environment.GetEnvironmentVariable("DB_FILE");
+        if (!string.IsNullOrEmpty(envPath)) return envPath;
+
+        // Nếu chạy từ thư mục gốc của repo thì tìm trong backend/
+        var backendSubDb = Path.Combine(Directory.GetCurrentDirectory(), "backend", "work_management.db");
+        if (File.Exists(backendSubDb)) return backendSubDb;
+
+        // Kiểm tra thư mục hiện tại có database hợp lệ (>0 bytes)
+        if (File.Exists("work_management.db") && new FileInfo("work_management.db").Length > 0)
+            return "work_management.db";
+
+        // Kiểm tra thư mục chứa file thực thi
+        var baseDirDb = Path.Combine(AppContext.BaseDirectory, "work_management.db");
+        if (File.Exists(baseDirDb)) return baseDirDb;
+
+        return "work_management.db";
+    }
+
+    public static string DbFile => ResolveDbPath();
+    private static string SqliteConnStr => $"Data Source={DbFile}";
 
     public static bool IsPostgres => DbType == "postgres" || DbType == "postgresql";
 
@@ -481,16 +501,16 @@ public static class Database
             // 1. Synchronize shift templates
             var shifts = new[]
             {
-                new { id = 0, name = "Cả ngày (All Day)", start_time = "08:00", end_time = "22:00", label = "08:00 - 22:00", desc = "Sự kiện áp dụng cho cả ngày" },
+                new { id = 0, name = "Cả ngày (All Day)", start_time = "08:00", end_time = "22:35", label = "08:00 - 22:35", desc = "Sự kiện áp dụng cho cả ngày" },
                 new { id = 1, name = "Ca 1 (Shift 1)", start_time = "08:00", end_time = "09:30", label = "08:00 - 09:30", desc = "Ca 1: 08:00 - 09:30" },
                 new { id = 2, name = "Ca 2 (Shift 2)", start_time = "09:35", end_time = "11:05", label = "09:35 - 11:05", desc = "Ca 2: 09:35 - 11:05" },
                 new { id = 3, name = "Ca 3 (Shift 3)", start_time = "11:10", end_time = "12:40", label = "11:10 - 12:40", desc = "Ca 3: 11:10 - 12:40" },
                 new { id = 4, name = "Ca 4 (Shift 4)", start_time = "13:10", end_time = "14:40", label = "13:10 - 14:40", desc = "Ca 4: 13:10 - 14:40" },
                 new { id = 5, name = "Ca 5 (Shift 5)", start_time = "14:45", end_time = "16:15", label = "14:45 - 16:15", desc = "Ca 5: 14:45 - 16:15" },
-                new { id = 6, name = "Ca 6 (Shift 6)", start_time = "16:45", end_time = "18:15", label = "16:45 - 18:15", desc = "Ca 6: 16:45 - 18:15" },
-                new { id = 7, name = "Ca 7 (Shift 7)", start_time = "18:20", end_time = "19:50", label = "18:20 - 19:50", desc = "Ca 7: 18:20 - 19:50" },
-                new { id = 8, name = "Ca 8 (Shift 8)", start_time = "19:55", end_time = "20:25", label = "19:55 - 20:25", desc = "Ca 8: 19:55 - 20:25" },
-                new { id = 9, name = "Ca 9 (Shift 9)", start_time = "20:30", end_time = "22:00", label = "20:30 - 22:00", desc = "Ca 9: 20:30 - 22:00" }
+                new { id = 6, name = "Ca 6 (Shift 6)", start_time = "16:20", end_time = "17:50", label = "16:20 - 17:50", desc = "Ca 6: 16:20 - 17:50" },
+                new { id = 7, name = "Ca 7 (Shift 7)", start_time = "17:55", end_time = "19:25", label = "17:55 - 19:25", desc = "Ca 7: 17:55 - 19:25" },
+                new { id = 8, name = "Ca 8 (Shift 8)", start_time = "19:30", end_time = "21:00", label = "19:30 - 21:00", desc = "Ca 8: 19:30 - 21:00" },
+                new { id = 9, name = "Ca 9 (Shift 9)", start_time = "21:05", end_time = "22:35", label = "21:05 - 22:35", desc = "Ca 9: 21:05 - 22:35" }
             };
 
             foreach (var s in shifts)
@@ -507,22 +527,22 @@ public static class Database
             }
 
             // 2. Synchronize initial standard users
-            var userCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
-            if (userCount == 0)
+            var defaultUsers = new[]
             {
-                var defaultUsers = new[]
-                {
-                    new { u = "admin", p = HashPassword("admin123"), fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" },
-                    new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", r = "leader", d = "Tổ Trực Kỹ Thuật" },
-                    new { u = "nv_binh", p = HashPassword("123456"), fn = "Trần Thị Bình", e = "binh.tran@company.com", ph = "0912345678", r = "contributor", d = "Tổ Dịch Vụ Sinh Viên" },
-                    new { u = "nv_cuong", p = HashPassword("123456"), fn = "Nguyễn Văn Cường", e = "cuong.nguyen@company.com", ph = "0934567890", r = "contributor", d = "Tổ Trực Vận Hành" }
-                };
+                new { u = "admin", p = HashPassword("admin123"), fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" },
+                new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", r = "leader", d = "Tổ Trực Kỹ Thuật" },
+                new { u = "nv_binh", p = HashPassword("123456"), fn = "Trần Thị Bình", e = "binh.tran@company.com", ph = "0912345678", r = "contributor", d = "Tổ Dịch Vụ Sinh Viên" },
+                new { u = "nv_cuong", p = HashPassword("123456"), fn = "Nguyễn Văn Cường", e = "cuong.nguyen@company.com", ph = "0934567890", r = "contributor", d = "Tổ Trực Vận Hành" }
+            };
 
-                foreach (var u in defaultUsers)
-                {
-                    conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING", u);
-                }
+            foreach (var u in defaultUsers)
+            {
+                conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING", u);
+            }
 
+            var userCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
+            if (userCount <= 4)
+            {
                 conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type) VALUES (0, 1, @title, @msg, 'general')",
                     new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đã sẵn sàng vận hành. Quản lý có thể thêm nhân sự tại mục Quản lý nhân viên và xếp lịch trực." });
             }
@@ -565,7 +585,7 @@ public static class Database
             conn.Execute("UPDATE system_settings SET value = 'longhvn2006@gmail.com' WHERE key = 'smtp_user' AND (value IS NULL OR value = '')");
             conn.Execute("UPDATE system_settings SET value = 'wtew euaj zcuu bjtq' WHERE key = 'smtp_password' AND (value IS NULL OR value = '')");
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('app_url', 'https://dev-wms.codeforfun.id.vn') ON CONFLICT (key) DO NOTHING");
-            conn.Execute("UPDATE system_settings SET value = 'https://dev-wms.codeforfun.id.vn' WHERE key = 'app_url' AND (value IS NULL OR value = '' OR value LIKE '%localhost%')");
+            conn.Execute("UPDATE system_settings SET value = 'https://dev-wms.codeforfun.id.vn' WHERE key = 'app_url' AND (value IS NULL OR value = '')");
 
             // 4. Default weekly schedule registrations
             var regCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_registrations");

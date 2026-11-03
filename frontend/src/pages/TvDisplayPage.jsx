@@ -109,8 +109,8 @@ export function TvDisplayPage({ onNavigateToManagement }) {
         return {
           ...item,
           display_shift_label: item.shift_name
-            ? `${item.shift_name} (${item.shift_label || "08:00 - 22:00"})`
-            : "Cả ngày (All Day) (08:00 - 22:00)"
+            ? `${item.shift_name} (${item.shift_label || "08:00 - 22:35"})`
+            : "Cả ngày (All Day) (08:00 - 22:35)"
         };
       }
 

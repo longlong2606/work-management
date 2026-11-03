@@ -13,10 +13,10 @@ export const DEFAULT_SHIFTS = [
   { id: 3, name: "Ca 3 (Shift 3)", start_time: "11:10", end_time: "12:40", label: "11:10 - 12:40" },
   { id: 4, name: "Ca 4 (Shift 4)", start_time: "13:10", end_time: "14:40", label: "13:10 - 14:40" },
   { id: 5, name: "Ca 5 (Shift 5)", start_time: "14:45", end_time: "16:15", label: "14:45 - 16:15" },
-  { id: 6, name: "Ca 6 (Shift 6)", start_time: "16:45", end_time: "18:15", label: "16:45 - 18:15" },
-  { id: 7, name: "Ca 7 (Shift 7)", start_time: "18:20", end_time: "19:50", label: "18:20 - 19:50" },
-  { id: 8, name: "Ca 8 (Shift 8)", start_time: "19:55", end_time: "20:25", label: "19:55 - 20:25" },
-  { id: 9, name: "Ca 9 (Shift 9)", start_time: "20:30", end_time: "22:00", label: "20:30 - 22:00" },
+  { id: 6, name: "Ca 6 (Shift 6)", start_time: "16:20", end_time: "17:50", label: "16:20 - 17:50" },
+  { id: 7, name: "Ca 7 (Shift 7)", start_time: "17:55", end_time: "19:25", label: "17:55 - 19:25" },
+  { id: 8, name: "Ca 8 (Shift 8)", start_time: "19:30", end_time: "21:00", label: "19:30 - 21:00" },
+  { id: 9, name: "Ca 9 (Shift 9)", start_time: "21:05", end_time: "22:35", label: "21:05 - 22:35" },
 ];
 
 // Dữ liệu dự phòng khi mất kết nối mạng
@@ -83,7 +83,7 @@ export const MOCK_FALLBACK = {
       id: 5,
       shift_id: 6,
       shift_name: "Ca 6 (Shift 6)",
-      shift_label: "16:45 - 18:15",
+      shift_label: "16:20 - 17:50",
       title: "Bảo trì nâng cấp hệ thống giám sát",
       description: "Khởi động lại cụm proxy và kiểm tra cảnh báo tự động trên hệ thống Zabbix.",
       event_type: "task",

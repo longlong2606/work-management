@@ -52,42 +52,42 @@
   {
     id: 6,
     name: "Ca 6 (Shift 6)",
-    startTime: "16:45",
-    endTime: "18:15",
-    label: "16:45 - 18:15",
+    startTime: "16:20",
+    endTime: "17:50",
+    label: "16:20 - 17:50",
     color: "#7c3aed",
     bgLight: "rgba(124, 58, 237, 0.1)",
-    desc: "Ca 6 theo timeline trường (16:45 - 18:15)"
+    desc: "Ca 6 theo timeline trường (16:20 - 17:50)"
   },
   {
     id: 7,
     name: "Ca 7 (Shift 7)",
-    startTime: "18:20",
-    endTime: "19:50",
-    label: "18:20 - 19:50",
+    startTime: "17:55",
+    endTime: "19:25",
+    label: "17:55 - 19:25",
     color: "#9333ea",
     bgLight: "rgba(147, 51, 234, 0.1)",
-    desc: "Ca 7 theo timeline trường (18:20 - 19:50)"
+    desc: "Ca 7 theo timeline trường (17:55 - 19:25)"
   },
   {
     id: 8,
     name: "Ca 8 (Shift 8)",
-    startTime: "19:55",
-    endTime: "20:25",
-    label: "19:55 - 20:25",
+    startTime: "19:30",
+    endTime: "21:00",
+    label: "19:30 - 21:00",
     color: "#e11d48",
     bgLight: "rgba(225, 29, 72, 0.1)",
-    desc: "Ca 8 ca ngắn theo timeline trường (19:55 - 20:25)"
+    desc: "Ca 8 theo timeline trường (19:30 - 21:00)"
   },
   {
     id: 9,
     name: "Ca 9 (Shift 9)",
-    startTime: "20:30",
-    endTime: "22:00",
-    label: "20:30 - 22:00",
+    startTime: "21:05",
+    endTime: "22:35",
+    label: "21:05 - 22:35",
     color: "#4f46e5",
     bgLight: "rgba(79, 70, 229, 0.1)",
-    desc: "Ca 9 theo timeline trường (20:30 - 22:00)"
+    desc: "Ca 9 theo timeline trường (21:05 - 22:35)"
   }
 ];
 

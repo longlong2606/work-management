@@ -75,7 +75,7 @@ export function ShiftHistoryPage() {
   const registerCount = historyList.filter((h) => h.action === "REGISTER").length;
   const cancelCount = historyList.filter((h) => ["CANCEL", "APPROVED_CANCEL", "REQUEST_CANCEL", "REJECTED_CANCEL"].includes(h.action)).length;
   const changeCount = historyList.filter((h) => ["REQUEST_CHANGE", "APPROVED_CHANGE", "REJECTED_CHANGE"].includes(h.action)).length;
-  const absenceCount = historyList.filter((h) => ["SUBMIT_ABSENCE_REQUEST", "APPROVE_ABSENCE", "REPORT_ABSENCE"].includes(h.action)).length;
+  const absenceCount = historyList.filter((h) => ["SUBMIT_ABSENCE_REQUEST", "APPROVE_ABSENCE", "REPORT_ABSENCE", "REJECT_ABSENCE"].includes(h.action)).length;
 
 
   const renderActionBadge = (action) => {

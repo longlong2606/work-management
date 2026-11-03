@@ -195,7 +195,7 @@ export function CompetencyScorecardPage() {
     }
 
     // Đồng bộ điểm lên cơ sở dữ liệu cho nhân sự đang được chấm
-    const activeMemberObj = newMembers.find((m) => m.id === currentMember?.id);
+    const activeMemberObj = newMembers.find((m) => m.id === selectedMemberId);
     if (activeMemberObj && activeMemberObj.userId) {
       api.updateCompetency(activeMemberObj.userId, {
         scores_json: JSON.stringify(activeMemberObj.scores),
@@ -221,27 +221,34 @@ export function CompetencyScorecardPage() {
 
   // Find active member object
   const currentMember = useMemo(() => {
-    return members.find((m) => m.id === selectedMemberId) || members[0];
+    return members.find((m) => m.id === selectedMemberId) || members[0] || null;
   }, [members, selectedMemberId]);
 
   // Find compare member object
   const compareMember = useMemo(() => {
-    return members.find((m) => m.id === compareMemberId) || members[1];
+    return members.find((m) => m.id === compareMemberId) || members[1] || members[0] || null;
   }, [members, compareMemberId]);
 
   // Calculate current member stats
   const currentStats = useMemo(() => {
-    return calculateMemberStats(currentMember.scores);
+    return currentMember?.scores ? calculateMemberStats(currentMember.scores) : null;
   }, [currentMember]);
 
   // Calculate compare member stats
   const compareStats = useMemo(() => {
-    return calculateMemberStats(compareMember.scores);
+    return compareMember?.scores ? calculateMemberStats(compareMember.scores) : null;
   }, [compareMember]);
 
   // Overall Rank Tiers
-  const currentTier = useMemo(() => getRankTier(currentStats.overallAvg), [currentStats]);
-  const compareTier = useMemo(() => getRankTier(compareStats.overallAvg), [compareStats]);
+  const currentTier = useMemo(() => {
+    if (currentStats?.overallAvg != null) return getRankTier(currentStats.overallAvg);
+    return { rank: "C", tier: "Chưa xếp loại", color: "#94a3b8", bg: "#f1f5f9", border: "#cbd5e1", textColor: "#475569" };
+  }, [currentStats]);
+
+  const compareTier = useMemo(() => {
+    if (compareStats?.overallAvg != null) return getRankTier(compareStats.overallAvg);
+    return { rank: "C", tier: "Chưa xếp loại", color: "#94a3b8", bg: "#f1f5f9", border: "#cbd5e1", textColor: "#475569" };
+  }, [compareStats]);
 
   // Handle quick note edit for current member (Luu va dong bo thang len database)
   const handleNoteChange = (field, val) => {
@@ -347,6 +354,15 @@ export function CompetencyScorecardPage() {
       return matchSearch && matchRole;
     });
   }, [members, searchTerm, roleFilter]);
+
+  if (!currentMember || !currentStats) {
+    return (
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 20px", textAlign: "center" }}>
+        <RefreshCw size={28} className="spin" color="#2563eb" style={{ margin: "0 auto 14px", display: "block" }} />
+        <p style={{ color: "#64748b", fontSize: 15, fontWeight: 700 }}>Đang chuẩn bị bảng điểm năng lực thành viên...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="scorecard-container" style={{ width: "100%", maxWidth: 1280, margin: "0 auto", padding: "16px", boxSizing: "border-box" }}>

@@ -310,15 +310,10 @@ export function SchedulePage() {
 
   const fetchSchedule = useCallback(async () => {
     try {
-      let start, end;
-      if (viewMode === "day") {
-        start = currentDate;
-        end = currentDate;
-      } else {
-        const days = getDaysOfWeek(mondayDate);
-        start = days[0].dateStr;
-        end = days[days.length - 1].dateStr;
-      }
+      // Luôn tải đầy đủ lịch cả tuần (T2 - T7) để đảm bảo số liệu KPI và lịch tuần luôn chính xác, không bị cắt vụn khi xem theo ngày
+      const days = getDaysOfWeek(mondayDate);
+      const start = days[0].dateStr;
+      const end = days[days.length - 1].dateStr;
       const [data, evData, conflictData] = await Promise.all([
         api.getSchedule(start, end),
         api.getShiftEvents(),
@@ -334,7 +329,7 @@ export function SchedulePage() {
     } catch (err) {
       showToast("Lỗi khi tải dữ liệu: " + (err.message || ""), "danger");
     }
-  }, [viewMode, currentDate, mondayDate, isAdmin, fetchPendingRequests, showToast]);
+  }, [mondayDate, isAdmin, fetchPendingRequests, showToast]);
 
   useEffect(() => {
     fetchSchedule();
@@ -568,7 +563,7 @@ export function SchedulePage() {
 
   // Quick restore all absent shifts in current week for logged-in user
   const handleQuickRestoreWeek = async () => {
-    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${myKpiStats.absentCount} ca đang vắng trong tuần này về trạng thái Có Mặt để cộng lại đủ 81.0h (chuẩn 20.0h KPI)?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${myKpiStats.absentCount} ca đang vắng trong tuần này về trạng thái Có Mặt để bảo toàn chỉ tiêu 20.0h KPI tuần?`)) return;
     try {
       const dates = weekDays.map((d) => d.dateStr);
       await api.cancelAbsenceBulk({
@@ -576,7 +571,7 @@ export function SchedulePage() {
         shift_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9],
         user_id: user?.id,
       });
-      showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã cộng lại đủ 81.0 / 20.0 giờ KPI)!");
+      showToast("Đã khôi phục toàn bộ ca trực về Có Mặt (đã bảo toàn tiến độ KPI 20h tuần)!");
       await fetchSchedule();
     } catch (err) {
       showToast("Lỗi khi khôi phục: " + (err.message || ""), "danger");
@@ -962,7 +957,24 @@ export function SchedulePage() {
     }
   };
 
-  const myShiftsInWeek = schedule.filter((s) => s.user_id === user?.id);
+  const myShiftsInWeek = useMemo(() => {
+    const weekDateStrs = weekDays.map((d) => d.dateStr);
+    return schedule.filter((s) => s.user_id === user?.id && (!s.work_date || weekDateStrs.includes(s.work_date)));
+  }, [schedule, user?.id, weekDays]);
+
+  // Ca làm của user trong ngày đang chọn (currentDate)
+  const myShiftsToday = useMemo(() => {
+    return schedule.filter((s) => s.user_id === user?.id && s.work_date === currentDate);
+  }, [schedule, user?.id, currentDate]);
+
+  const myTodayHours = useMemo(() => {
+    return myShiftsToday.reduce((sum, s) => {
+      if (s.attendance_status === "absent" || s.attendance_status === "pending_absence") return sum;
+      const shiftDuration = 1.5;
+      const dur = s.actual_hours != null && Number(s.actual_hours) >= 0 ? Number(s.actual_hours) : shiftDuration;
+      return sum + dur;
+    }, 0);
+  }, [myShiftsToday]);
 
   // Tổng số giờ làm việc thực tế được xếp lịch của người dùng trong tuần (mỗi ca chuẩn 1.5 tiếng)
   const myActualAssignedHours = useMemo(() => {
@@ -974,7 +986,7 @@ export function SchedulePage() {
     }, 0);
   }, [myShiftsInWeek]);
 
-  // KPI analysis for current user: Mỗi shift chuẩn là 1.5h, tổng giờ = số ca * 1.5h = 81.0h
+  // KPI analysis for current user: Chuẩn 20.0h / tuần (tính lũy kế cả tuần 7 ngày)
   const myKpiStats = useMemo(() => {
     let absentHours = 0;
     let absentCount = 0;
@@ -993,7 +1005,7 @@ export function SchedulePage() {
       }
     });
 
-    const totalAssignedHours = explicitAssignedHours > 0 ? explicitAssignedHours : LAB_KPI_TARGET;
+    const totalAssignedHours = explicitAssignedHours > 0 ? explicitAssignedHours : (myShiftsInWeek.length === 0 ? 0 : LAB_KPI_TARGET);
     const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
     const kpiPercent = Math.min(100, Math.round((validKpiHours / LAB_KPI_TARGET) * 100));
 
@@ -1287,51 +1299,52 @@ export function SchedulePage() {
           className="card"
           style={{
             padding: 14,
-            borderLeft: myKpiStats.absentCount > 0 ? "4px solid #ef4444" : "4px solid #10b981",
-            background: myKpiStats.absentCount > 0 ? "#fef2f2" : undefined,
+            borderLeft: myKpiStats.validKpiHours >= 20 ? "4px solid #10b981" : (myKpiStats.absentCount > 0 ? "4px solid #ef4444" : "4px solid #3b82f6"),
+            background: myKpiStats.validKpiHours >= 20 ? "#f0fdf4" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#fef2f2" : undefined),
           }}
         >
-          <div style={{ fontSize: 12, color: myKpiStats.absentCount > 0 ? "#991b1b" : "var(--text-muted)", fontWeight: 600 }}>
-            Ca trực & Quỹ KPI tuần này
+          <div style={{ fontSize: 12, color: (myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#991b1b" : "var(--text-muted)", fontWeight: 600 }}>
+            {viewMode === "day" ? "Ca trực ngày & KPI tuần" : "Ca trực & Quỹ KPI tuần này"}
           </div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: myKpiStats.absentCount > 0 ? "#dc2626" : "#10b981", marginTop: 4 }}>
-            {myKpiStats.absentCount > 0 ? (
-              <>
-                {myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 600 }}>ca ({myKpiStats.validKpiHours.toFixed(1)}/20.0 giờ KPI)</span>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 4 }}>
-                  ⚠️ Đã trừ: -{myKpiStats.absentHours.toFixed(1)}h KPI ({myKpiStats.absentCount} ca vắng/trùng lịch)
-                </div>
-                <button
-                  onClick={handleQuickRestoreWeek}
-                  style={{
-                    marginTop: 6,
-                    background: "#ffffff",
-                    border: "1.5px solid #86efac",
-                    borderRadius: 6,
-                    padding: "3px 9px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#15803d",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                  }}
-                  title="Khôi phục toàn bộ ca vắng trong tuần về Có Mặt để cộng lại đủ 81.0 / 20.0 giờ KPI"
-                >
-                  <RotateCcw size={12} />
-                  <span>Khôi phục đủ 81.0h (chuẩn 20h KPI)</span>
-                </button>
-              </>
+          <div style={{ fontSize: 20, fontWeight: 800, color: myKpiStats.validKpiHours >= 20 ? "#10b981" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#dc2626" : "#1e293b"), marginTop: 4 }}>
+            {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ tuần</span>
+          </div>
+          <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+            {viewMode === "day" ? (
+              <span>Hôm nay: <strong>{myShiftsToday.length} ca ({myTodayHours.toFixed(1)}h)</strong> • Tuần: {myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length} ca</span>
             ) : (
-              <>
-                {myShiftsInWeek.length}{" "}
-                <span style={{ fontSize: 13, fontWeight: 500 }}>ca ({myActualAssignedHours.toFixed(1)}/20.0 giờ KPI)</span>
-              </>
+              <span>Đã hoàn thành <strong>{myShiftsInWeek.length - myKpiStats.absentCount}/{myShiftsInWeek.length} ca</strong> trong tuần</span>
             )}
           </div>
+          {myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20 && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 4 }}>
+              ⚠️ Đã trừ: -{myKpiStats.absentHours.toFixed(1)}h KPI ({myKpiStats.absentCount} ca vắng)
+            </div>
+          )}
+          {myKpiStats.absentCount > 0 && (
+            <button
+              onClick={handleQuickRestoreWeek}
+              style={{
+                marginTop: 6,
+                background: "#ffffff",
+                border: "1.5px solid #86efac",
+                borderRadius: 6,
+                padding: "3px 9px",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#15803d",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              }}
+              title="Khôi phục toàn bộ ca vắng trong tuần về Có Mặt để bảo toàn KPI tuần"
+            >
+              <RotateCcw size={12} />
+              <span>Khôi phục các ca vắng tuần này</span>
+            </button>
+          )}
         </div>
 
         <div className="card" style={{ padding: 14, borderLeft: "4px solid #8b5cf6" }}>
@@ -1357,22 +1370,24 @@ export function SchedulePage() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
-              🎯 Tiến Độ KPI Tuần (Chuẩn 20h)
+              🎯 Tiến Độ KPI Tuần (Chuẩn 20h/tuần)
             </div>
-            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 20 ? "#dcfce7" : (myKpiStats.absentCount > 0 ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 20 ? "#15803d" : (myKpiStats.absentCount > 0 ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+            <span style={{ fontSize: 11, background: myKpiStats.validKpiHours >= 20 ? "#dcfce7" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#fee2e2" : "#fef3c7"), color: myKpiStats.validKpiHours >= 20 ? "#15803d" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#b91c1c" : "#b45309"), padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
               {myKpiStats.validKpiHours >= 20 ? "Đạt chuẩn 100%" : `${myKpiStats.kpiPercent}%`}
             </span>
           </div>
 
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 20 ? "#059669" : (myKpiStats.absentCount > 0 ? "#dc2626" : "#0f172a") }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: myKpiStats.validKpiHours >= 20 ? "#059669" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#dc2626" : "#0f172a") }}>
               {myKpiStats.validKpiHours.toFixed(1)} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>/ 20.0 giờ</span>
             </div>
             <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
-              {myKpiStats.absentCount > 0 ? (
-                <span style={{ color: "#dc2626" }}>Đã trừ {myKpiStats.absentHours.toFixed(1)}h vắng ({myKpiStats.absentCount} ca)</span>
+              {myKpiStats.validKpiHours >= 20 ? (
+                <span style={{ color: "#16a34a", fontWeight: 700 }}>✅ Đã đạt mục tiêu 20h tuần!</span>
+              ) : myKpiStats.absentCount > 0 ? (
+                <span style={{ color: "#dc2626" }}>Còn thiếu {(20 - myKpiStats.validKpiHours).toFixed(1)}h (đã trừ {myKpiStats.absentHours.toFixed(1)}h vắng)</span>
               ) : (
-                <span>Lịch xếp: {myKpiStats.totalAssignedHours.toFixed(1)}h (54 ca)</span>
+                <span>Còn thiếu {(20 - myKpiStats.validKpiHours).toFixed(1)}h trong tuần</span>
               )}
             </div>
           </div>
@@ -1382,10 +1397,14 @@ export function SchedulePage() {
               style={{
                 height: "100%",
                 width: `${myKpiStats.kpiPercent}%`,
-                background: myKpiStats.validKpiHours >= 20 ? "#10b981" : (myKpiStats.absentCount > 0 ? "#ef4444" : "#f59e0b"),
+                background: myKpiStats.validKpiHours >= 20 ? "#10b981" : ((myKpiStats.absentCount > 0 && myKpiStats.validKpiHours < 20) ? "#ef4444" : "#f59e0b"),
                 transition: "width 0.3s ease",
               }}
             />
+          </div>
+          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+            <span>Lũy kế cả tuần 7 ngày (~3.3h/ngày)</span>
+            <span style={{ color: "#059669", fontWeight: 600 }}>Xem bảng xếp hạng →</span>
           </div>
         </div>
       </div>
@@ -2160,9 +2179,12 @@ export function SchedulePage() {
                   return `${dayNames[d.getDay()] || ""} (${dStr})`;
                 })()}
               </h2>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Xem danh sách thành viên trong từng ca trực (Thứ 2 đến Thứ 7, Chủ nhật nghỉ). Ai vắng mặt sẽ hiện màu đỏ kèm lý do.
-              </span>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span>Xem danh sách thành viên trong từng ca trực (Thứ 2 đến Thứ 7, Chủ nhật nghỉ).</span>
+                <span style={{ background: "#eff6ff", color: "#1d4ed8", padding: "1px 8px", borderRadius: 10, fontWeight: 600, fontSize: 11 }}>
+                  💡 KPI 20h là tổng lũy kế cả tuần (Thứ 2 - Thứ 7, ~3.3h/ngày), không phải mỗi ngày 20 tiếng
+                </span>
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {(isAdmin || currentDate >= todayStr) && (

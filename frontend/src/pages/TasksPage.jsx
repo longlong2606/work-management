@@ -133,22 +133,6 @@ export function TasksPage() {
     fetchMembers();
   }, []);
 
-  // Tự động mở chi tiết nhiệm vụ và phân rã checklist nếu đường dẫn URL có ?taskId=... hoặc ?id=... (từ email)
-  useEffect(() => {
-    try {
-      const searchStr = window.location.search || (window.location.hash.includes("?") ? window.location.hash.substring(window.location.hash.indexOf("?")) : "");
-      if (searchStr) {
-        const params = new URLSearchParams(searchStr);
-        const urlTaskId = params.get("taskId") || params.get("id");
-        if (urlTaskId) {
-          refreshTaskDetail(Number(urlTaskId));
-        }
-      }
-    } catch (e) {
-      console.error("Lỗi khi mở task từ URL:", e);
-    }
-  }, []);
-
   // Fetch detail of a task
   const openTaskDetail = async (task) => {
     setSelectedTask(task);
@@ -176,6 +160,22 @@ export function TasksPage() {
       console.error(err);
     }
   };
+
+  // Tự động mở chi tiết nhiệm vụ và phân rã checklist nếu đường dẫn URL có ?taskId=... hoặc ?id=... (từ email)
+  useEffect(() => {
+    try {
+      const searchStr = window.location.search || (window.location.hash.includes("?") ? window.location.hash.substring(window.location.hash.indexOf("?")) : "");
+      if (searchStr) {
+        const params = new URLSearchParams(searchStr);
+        const urlTaskId = params.get("taskId") || params.get("id");
+        if (urlTaskId) {
+          refreshTaskDetail(Number(urlTaskId));
+        }
+      }
+    } catch (e) {
+      console.error("Lỗi khi mở task từ URL:", e);
+    }
+  }, []);
 
   // Metrics
   const totalCount = taskStats.total;
@@ -966,63 +966,40 @@ export function TasksPage() {
       {/* ================= MODAL: TASK DETAIL & CHECKLIST WORKFLOW ================= */}
       {selectedTask && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
+          className="task-detail-modal-overlay"
           onClick={() => {
             setSelectedTask(null);
             setTaskDetail(null);
           }}
         >
           <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              width: "95%",
-              maxWidth: 1200,
-              maxHeight: "92vh",
-              overflowY: "auto",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              border: "1px solid #cbd5e1",
-              display: "flex",
-              flexDirection: "column",
-            }}
+            className="task-detail-modal-container"
             onClick={(e) => e.stopPropagation()}
           >
             {/* MODAL HEADER */}
-            <div
-              style={{
-                padding: "18px 24px",
-                borderBottom: "1px solid #e2e8f0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                background: "#f8fafc",
-                borderTopLeftRadius: 16,
-                borderTopRightRadius: 16,
-                position: "sticky",
-                top: 0,
-                zIndex: 10,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <CheckSquare size={22} color="#2563eb" />
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            <div className="task-detail-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                <CheckSquare size={20} color="#2563eb" style={{ flexShrink: 0 }} />
+                <h2
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    margin: 0,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={taskDetail ? taskDetail.task.title : selectedTask.title}
+                >
                   {taskDetail ? taskDetail.task.title : selectedTask.title}
                 </h2>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 {canEditTask(taskDetail?.task || selectedTask) && (taskDetail?.task || selectedTask)?.status !== "FINISHED" && (
                   <button
                     onClick={() => setEditingTask(taskDetail?.task || selectedTask)}
+                    className="task-header-edit-btn"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -1035,12 +1012,13 @@ export function TasksPage() {
                       fontSize: 12.5,
                       fontWeight: 700,
                       cursor: "pointer",
+                      whiteSpace: "nowrap",
                       transition: "all 0.15s ease",
                     }}
                     title="Chỉnh sửa thông tin nhiệm vụ lớn"
                   >
-                    <Edit3 size={14} />
-                    <span>Chỉnh Sửa Nhiệm Vụ</span>
+                    <Edit3 size={14} style={{ flexShrink: 0 }} />
+                    <span className="task-header-edit-text">Chỉnh Sửa Nhiệm Vụ</span>
                   </button>
                 )}
                 <button
@@ -1087,28 +1065,9 @@ export function TasksPage() {
               const cpPercent = taskTotalCp > 0 ? Math.round((allocatedCp / taskTotalCp) * 100) : 0;
 
               return (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
-                    gap: 24,
-                    padding: 24,
-                    alignItems: "start",
-                  }}
-                >
+                <div className="task-detail-grid">
                   {/* ================= LEFT COLUMN: TASK METADATA & CONTROLS ================= */}
-                  <div
-                    style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 14,
-                      padding: 20,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 16,
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                    }}
-                  >
+                  <div className="task-detail-card">
                     {/* TYPE & STATUS BADGES */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                       <span
@@ -1141,10 +1100,10 @@ export function TasksPage() {
 
                     {/* TITLE & DESCRIPTION */}
                     <div>
-                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.4 }}>
+                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.4, wordBreak: "break-word" }}>
                         {taskDetail.task.title}
                       </h3>
-                      <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                      <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line", wordBreak: "break-word" }}>
                         {taskDetail.task.description || "Không có mô tả chi tiết."}
                       </p>
                     </div>
@@ -1154,27 +1113,41 @@ export function TasksPage() {
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: 10,
+                        gap: 12,
                         borderTop: "1px solid #e2e8f0",
                         paddingTop: 14,
                         fontSize: 13,
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Trưởng nhóm:</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <strong style={{ color: "#0f172a" }}>@{taskDetail.task.leader_name}</strong>
+                      <div className="task-meta-row">
+                        <span style={{ color: "#64748b", flexShrink: 0, fontWeight: 500 }}>Trưởng nhóm:</span>
+                        <div className="task-meta-row-value">
+                          <strong style={{ color: "#0f172a", whiteSpace: "nowrap" }}>@{taskDetail.task.leader_name}</strong>
                           {taskDetail.task.leader_id === user?.id && (
-                            <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "1px 6px", borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                            <span
+                              style={{
+                                background: "#fef3c7",
+                                color: "#b45309",
+                                border: "1px solid #fde68a",
+                                padding: "2px 7px",
+                                borderRadius: 5,
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                              }}
+                            >
                               ⭐ Bạn là Trưởng nhóm
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Email thông báo:</span>
+                      <div className="task-meta-row">
+                        <span style={{ color: "#64748b", flexShrink: 0, fontWeight: 500 }}>Email thông báo:</span>
                         <span
+                          className="task-meta-row-value"
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -1182,25 +1155,30 @@ export function TasksPage() {
                             fontSize: 11,
                             color: "#059669",
                             background: "#ecfdf5",
-                            padding: "2px 8px",
-                            borderRadius: 4,
+                            padding: "3px 8px",
+                            borderRadius: 5,
                             border: "1px solid #a7f3d0",
+                            whiteSpace: "nowrap",
                           }}
                           title="Hệ thống tự động gửi email thông báo nhiệm vụ tới Trưởng nhóm khi tạo/lưu task"
                         >
-                          <Mail size={12} />
+                          <Mail size={12} style={{ flexShrink: 0 }} />
                           <span>Tự động gửi email khi lưu task</span>
                         </span>
                       </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Ngày dự kiến:</span>
-                        <strong style={{ color: "#334155" }}>{taskDetail.task.planned_date || "Chưa đặt"}</strong>
+                      <div className="task-meta-row">
+                        <span style={{ color: "#64748b", flexShrink: 0, fontWeight: 500 }}>Ngày dự kiến:</span>
+                        <strong className="task-meta-row-value" style={{ color: "#334155", whiteSpace: "nowrap" }}>
+                          {taskDetail.task.planned_date || "Chưa đặt"}
+                        </strong>
                       </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#64748b" }}>Hạn chót:</span>
-                        <strong style={{ color: "#dc2626", fontWeight: 800 }}>{taskDetail.task.deadline || "Không có"}</strong>
+                      <div className="task-meta-row">
+                        <span style={{ color: "#64748b", flexShrink: 0, fontWeight: 500 }}>Hạn chót:</span>
+                        <strong className="task-meta-row-value" style={{ color: "#dc2626", fontWeight: 800, whiteSpace: "nowrap" }}>
+                          {taskDetail.task.deadline || "Không có"}
+                        </strong>
                       </div>
                     </div>
 
@@ -1252,9 +1230,9 @@ export function TasksPage() {
 
                     {/* OVERALL CHECKLIST PROGRESS BAR */}
                     <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontWeight: 700, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
                         <span style={{ color: "#475569" }}>Tiến độ checklist:</span>
-                        <span style={{ color: percent === 100 ? "#059669" : "#2563eb" }}>
+                        <span style={{ color: percent === 100 ? "#059669" : "#2563eb", whiteSpace: "nowrap" }}>
                           {finishedSub}/{totalSub} ({percent}%)
                         </span>
                       </div>
@@ -1273,10 +1251,10 @@ export function TasksPage() {
 
                     {/* CP BUDGET & ALLOCATION PROGRESS BAR */}
                     <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#475569" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#475569", flexWrap: "wrap" }}>
                           <span>🏆 Quỹ Điểm CP:</span>
-                          <strong style={{ color: "#7c3aed", fontSize: 13 }}>{taskTotalCp} CP</strong>
+                          <strong style={{ color: "#7c3aed", fontSize: 13, whiteSpace: "nowrap" }}>{taskTotalCp} CP</strong>
                           {isAdmin && taskDetail.task.status !== "FINISHED" && (
                             <button
                               onClick={() => setEditTaskCpModal(taskDetail.task)}
@@ -1289,6 +1267,7 @@ export function TasksPage() {
                                 fontSize: 10.5,
                                 cursor: "pointer",
                                 fontWeight: 700,
+                                whiteSpace: "nowrap",
                               }}
                               title="Chỉnh sửa điểm CP tổng của nhiệm vụ"
                             >
@@ -1296,7 +1275,7 @@ export function TasksPage() {
                             </button>
                           )}
                         </div>
-                        <span style={{ fontSize: 11.5, fontWeight: 800, color: taskTotalCp === 0 ? "#94a3b8" : remainingCp < 0 ? "#dc2626" : remainingCp === 0 ? "#059669" : "#7c3aed" }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap", color: taskTotalCp === 0 ? "#94a3b8" : remainingCp < 0 ? "#dc2626" : remainingCp === 0 ? "#059669" : "#7c3aed" }}>
                           {taskTotalCp === 0 
                             ? "Chưa đặt quỹ" 
                             : remainingCp < 0 
@@ -1330,29 +1309,19 @@ export function TasksPage() {
 
                     {/* ACTION BUTTONS (FINISH & POSTPONE & EDIT) */}
                     {canManageTaskSubtasks && (
-                      <div style={{ display: "flex", gap: 10, marginTop: 4, borderTop: "1px solid #e2e8f0", paddingTop: 14, flexWrap: "wrap" }}>
+                      <div className="task-action-buttons-group">
                         {canEditTask(taskDetail.task) && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => setEditingTask(taskDetail.task)}
+                            className="task-action-btn"
                             style={{
-                              flex: 1,
-                              minWidth: 100,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
                               background: "#eff6ff",
                               color: "#1d4ed8",
                               border: "1.5px solid #bfdbfe",
-                              padding: "9px 12px",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              fontSize: 12,
-                              cursor: "pointer",
                             }}
                             title="Chỉnh sửa thông tin nhiệm vụ lớn"
                           >
-                            <Edit3 size={15} />
+                            <Edit3 size={15} style={{ flexShrink: 0 }} />
                             <span>Chỉnh Sửa</span>
                           </button>
                         )}
@@ -1370,58 +1339,41 @@ export function TasksPage() {
                               borderRadius: 8,
                               fontSize: 12,
                               fontWeight: 700,
+                              width: "100%",
                             }}
                           >
-                            <CheckCircle2 size={16} color="#059669" />
+                            <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
                             <span>Nhiệm vụ đã hoàn thành xuất sắc (Chế độ chỉ xem)</span>
                           </div>
                         ) : taskDetail.task.status === "POSTPONED" ? (
                           canEditTask(taskDetail.task) && (
                             <button
                               onClick={() => handleResumeTask(taskDetail.task.id)}
+                              className="task-action-btn"
                               style={{
-                                flex: 1,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: 6,
                                 background: "#059669",
                                 color: "#ffffff",
                                 border: "none",
-                                padding: "9px 12px",
-                                borderRadius: 8,
-                                fontWeight: 700,
-                                fontSize: 12,
-                                cursor: "pointer",
                                 boxShadow: "0 2px 6px rgba(5, 150, 105, 0.25)",
                               }}
                               title="Dừng tạm hoãn và mở hộp thoại chỉnh sửa lại lịch mới cho nhiệm vụ"
                             >
-                              <PlayCircle size={15} />
-                              <span>Dừng Tạm Hoãn & Chỉnh Sửa Lịch Mới</span>
+                              <PlayCircle size={15} style={{ flexShrink: 0 }} />
+                              <span>Dừng Hoãn & Đặt Lại Lịch</span>
                             </button>
                           )
                         ) : (
                           <button
                             onClick={() => handleFinishTask(taskDetail.task.id)}
+                            className="task-action-btn"
                             style={{
-                              flex: 1,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
                               background: "#10b981",
                               color: "#ffffff",
                               border: "none",
-                              padding: "9px 12px",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              fontSize: 12,
-                              cursor: "pointer",
                               boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
                             }}
                           >
-                            <Award size={15} />
+                            <Award size={15} style={{ flexShrink: 0 }} />
                             <span>Hoàn Thành</span>
                           </button>
                         )}
@@ -1429,46 +1381,29 @@ export function TasksPage() {
                         {isAdmin && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => handleDeleteTask(taskDetail.task.id)}
+                            className="task-action-btn"
                             style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
                               background: "#fff1f2",
                               color: "#e11d48",
                               border: "1.5px solid #fecdd3",
-                              padding: "9px 14px",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              fontSize: 12,
-                              cursor: "pointer",
                             }}
                             title="Xóa vĩnh viễn nhiệm vụ này"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={15} style={{ flexShrink: 0 }} />
                             <span>Xóa</span>
                           </button>
                         )}
                         {taskDetail.task.status !== "POSTPONED" && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => setPostponeModalTask(taskDetail.task)}
+                            className="task-action-btn"
                             style={{
-                              flex: 1,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
                               background: "#ffffff",
                               color: "#dc2626",
                               border: "1.5px solid #fca5a5",
-                              padding: "9px 12px",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              fontSize: 12,
-                              cursor: "pointer",
                             }}
                           >
-                            <PauseCircle size={15} />
+                            <PauseCircle size={15} style={{ flexShrink: 0 }} />
                             <span>Tạm Hoãn</span>
                           </button>
                         )}
@@ -1477,17 +1412,7 @@ export function TasksPage() {
                   </div>
 
                   {/* ================= RIGHT COLUMN: SUBTASKS CHECKLIST ================= */}
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 14,
-                      padding: 20,
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                    }}
-                  >
+                  <div className="task-detail-subtask-card">
                     {/* CHECKLIST HEADER */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
                       <div>
@@ -1576,8 +1501,8 @@ export function TasksPage() {
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                               }}
                             >
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1, minWidth: 240 }}>
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1, minWidth: 0 }}>
                                   <div
                                     style={{
                                       width: 26,
@@ -1766,7 +1691,7 @@ export function TasksPage() {
 
                                 {/* WORKFLOW BUTTONS FOR THIS SUBTASK */}
                                 {taskDetail.task.status !== "FINISHED" && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
+                                <div className="subtask-workflow-actions" style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexWrap: "wrap" }}>
                                   {/* 0. Member accepts or rejects when PENDING - ONLY assigned member can accept or reject */}
                                   {sub.status === "PENDING" && isAssignedToMe && (
                                     <>

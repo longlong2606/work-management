@@ -7,6 +7,7 @@ import urllib.request
 import urllib.error
 import json
 import sys
+import datetime
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -48,7 +49,7 @@ def run_tests():
         print(f"       Ca {s['id']}: {s['start_time']} - {s['end_time']} ({s['label']})")
 
     # 2. Staff & Admin Login
-    code, staff_login = request("/api/auth/login", method="POST", data={"username": "nv_an", "password": "123456"})
+    code, staff_login = request("/api/auth/login", method="POST", data={"username": "nv_binh", "password": "123456"})
     assert code == 200, f"Staff login failed: {code} {staff_login}"
     staff_token = staff_login["access_token"]
     staff_user = staff_login["user"]
@@ -60,7 +61,8 @@ def run_tests():
     print(f"[PASS] Admin login successful: {admin_login['user']['full_name']} ({admin_login['user']['role']})")
 
     # 3. Clean up test date
-    test_date = "2026-09-25"
+    today = datetime.date.today()
+    test_date = (today + datetime.timedelta(days=2)).isoformat()
     for sid in range(1, 10):
         request(f"/api/shifts/register?shift_id={sid}&work_date={test_date}&user_id={staff_user['id']}", method="DELETE", token=admin_token)
 
@@ -156,10 +158,11 @@ def run_tests():
     print(f"[PASS] Admin approved shift note {note_id}")
 
     # 11. Admin publishes weekly schedule
+    week_start = (today - datetime.timedelta(days=today.weekday())).isoformat()
     code, pub_res = request("/api/shifts/publish", method="POST", data={
-        "week_start": "2026-09-22",
+        "week_start": week_start,
         "send_email": True,
-        "announcement": "Th?ng b?o 9 ca l?m vi?c m?i theo khung gi? chu?n."
+        "announcement": "Thông báo 9 ca làm việc mới theo khung giờ chuẩn."
     }, token=admin_token)
     assert code == 200, f"Publish schedule failed: {code} {pub_res}"
     print(f"[PASS] Published schedule successfully. Emails sent: {pub_res.get('emails_sent')}")

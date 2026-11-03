@@ -10,8 +10,13 @@ echo.
 
 echo [1/4] Dang lay dia chi IP mang Wi-Fi/LAN...
 set LOCAL_IP=127.0.0.1
-for /f %%i in ('powershell -NoProfile -Command "(Get-NetIPAddress -InterfaceAlias 'Wi-Fi' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"') do (
-    if not "%%i"=="" set LOCAL_IP=%%i
+for /f "tokens=4" %%a in ('route print 0.0.0.0 ^| findstr 0.0.0.0') do (
+    if not "%%a"=="" set LOCAL_IP=%%a
+)
+if "%LOCAL_IP%"=="127.0.0.1" (
+    for /f %%i in ('powershell -NoProfile -Command "(Get-NetIPAddress -InterfaceAlias 'Wi-Fi' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"') do (
+        if not "%%i"=="" set LOCAL_IP=%%i
+    )
 )
 echo       -^> Dia chi IP mang hien tai: %LOCAL_IP%
 echo.
@@ -38,7 +43,11 @@ if not exist "%FRONTEND_DIR%" (
 )
 
 echo [3/4] Dang khoi chay Backend API (.NET 10 tren cong 8000)...
-start "1. Backend API (:8000)" cmd /k "cd /d %BACKEND_DIR% && dotnet run"
+if exist "%BACKEND_DIR%\bin\Debug\net10.0\backend.exe" (
+    start "1. Backend API (:8000)" cmd /k "cd /d %BACKEND_DIR% && bin\Debug\net10.0\backend.exe"
+) else (
+    start "1. Backend API (:8000)" cmd /k "cd /d %BACKEND_DIR% && dotnet run --no-restore"
+)
 ping -n 4 127.0.0.1 >nul
 
 echo [4/4] Dang khoi chay Web App Tong Hop (tren cong 5173)...

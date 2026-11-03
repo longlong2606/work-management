@@ -112,8 +112,8 @@ export function KpiLeaderboardModal({
         }
       });
 
-      // Tính quỹ KPI chuẩn 81.0h (54 ca làm việc trong tuần)
-      const totalAssignedHours = explicitAssignedHours > 0 ? explicitAssignedHours : kpiTarget;
+      // Tính quỹ KPI chuẩn 20.0h / tuần (tính lũy kế cả tuần)
+      const totalAssignedHours = explicitAssignedHours > 0 ? explicitAssignedHours : (memberShifts.length === 0 ? 0 : kpiTarget);
       const validKpiHours = Math.max(0, totalAssignedHours - absentHours);
       const kpiPercent = Math.min(100, Math.round((validKpiHours / kpiTarget) * 100));
       const isMet = validKpiHours >= kpiTarget;
@@ -236,7 +236,7 @@ export function KpiLeaderboardModal({
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "#dbeafe", marginTop: 3 }}>
-                Lịch xếp chuẩn 81h/tuần (54 ca) • Chỉ tiêu hoàn thành 20h • Ca báo vắng sẽ trừ bớt 1.5h/ca
+                Chỉ tiêu: Có mặt tối thiểu 20 giờ / tuần (tính lũy kế cả tuần từ Thứ 2 đến Thứ 7, ~3.3h/ngày, không phải mỗi ngày 20h) • Ca báo vắng sẽ trừ bớt giờ
               </div>
             </div>
           </div>
@@ -286,6 +286,9 @@ export function KpiLeaderboardModal({
             </div>
             <div style={{ fontSize: 20, fontWeight: 900, color: "#1e293b", marginTop: 2 }}>
               {kpiTarget}h <span style={{ fontSize: 11, fontWeight: 500 }}>/ tuần</span>
+            </div>
+            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>
+              (Lũy kế cả tuần, ~3.3h/ngày)
             </div>
           </div>
 
@@ -520,14 +523,12 @@ export function KpiLeaderboardModal({
                         <div style={{ fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
                           <span>@{member.username}</span>
                           <span>•</span>
-                          <span style={{ color: "#16a34a", fontWeight: 600 }}>{attendedCount} ca có mặt</span>
-                          <span>•</span>
-                          <span>Lịch: {totalAssignedHours.toFixed(1)}h</span>
+                          <span style={{ color: "#16a34a", fontWeight: 600 }}>{attendedCount} ca có mặt ({validKpiHours.toFixed(1)}h)</span>
                           {absentCount > 0 && (
                             <>
                               <span>•</span>
-                              <span style={{ color: "#dc2626", fontWeight: 700 }}>
-                                ⚠️ Trừ {absentCount} ca ({absentHours.toFixed(1)}h)
+                              <span style={{ color: isMet ? "#d97706" : "#dc2626", fontWeight: 600 }}>
+                                Vắng {absentCount} ca (-{absentHours.toFixed(1)}h)
                               </span>
                             </>
                           )}
@@ -575,8 +576,14 @@ export function KpiLeaderboardModal({
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", marginTop: 3 }}>
-                        <span>{absentCount > 0 ? `Bị trừ ${absentHours.toFixed(1)}h do vắng` : "Mặc định có mặt 100%"}</span>
-                        <span>{isMet ? "Đạt chuẩn" : `Còn thiếu ${(kpiTarget - validKpiHours).toFixed(1)}h`}</span>
+                        <span>
+                          {isMet
+                            ? "✅ Đã đủ 20 giờ chuẩn tuần"
+                            : (absentCount > 0 ? `Bị trừ ${absentHours.toFixed(1)}h do vắng/trùng lịch` : "Đang tích lũy giờ trong tuần")}
+                        </span>
+                        <span style={{ fontWeight: 700, color: isMet ? "#16a34a" : "#dc2626" }}>
+                          {isMet ? "Đạt chuẩn" : `Còn thiếu ${(kpiTarget - validKpiHours).toFixed(1)}h`}
+                        </span>
                       </div>
                     </div>
 
@@ -596,13 +603,13 @@ export function KpiLeaderboardModal({
                             gap: 4,
                           }}
                         >
-                          <CheckCircle2 size={13} /> Đạt KPI 20h
+                          <CheckCircle2 size={13} /> Đạt KPI 20h/tuần
                         </span>
-                      ) : absentCount > 0 ? (
+                      ) : (
                         <span
                           style={{
-                            background: "#fee2e2",
-                            color: "#b91c1c",
+                            background: absentCount > 0 ? "#fee2e2" : "#fef3c7",
+                            color: absentCount > 0 ? "#b91c1c" : "#b45309",
                             padding: "3px 10px",
                             borderRadius: 20,
                             fontSize: 11,
@@ -612,20 +619,8 @@ export function KpiLeaderboardModal({
                             gap: 4,
                           }}
                         >
-                          <AlertTriangle size={13} /> Hụt giờ do vắng
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: "#fef3c7",
-                            color: "#b45309",
-                            padding: "3px 10px",
-                            borderRadius: 20,
-                            fontSize: 11,
-                            fontWeight: 700,
-                          }}
-                        >
-                          Thiếu {(kpiTarget - validKpiHours).toFixed(1)}h lịch
+                          {absentCount > 0 ? <AlertTriangle size={13} /> : null}
+                          Thiếu {(kpiTarget - validKpiHours).toFixed(1)}h
                         </span>
                       )}
 
@@ -659,7 +654,7 @@ export function KpiLeaderboardModal({
                     >
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                         <Calendar size={14} color="#2563eb" />
-                        Chi tiết lịch trực 6 ngày trong tuần của {member.full_name || member.username}:
+                        <span>Chi tiết 6 ngày làm việc trong tuần của {member.full_name || member.username} (Mục tiêu tổng: 20h/tuần, ~3.3h/ngày):</span>
                       </div>
 
                       {/* 6 Days Grid */}
@@ -756,15 +751,20 @@ export function KpiLeaderboardModal({
 
                             {/* Day Summary */}
                             <div style={{ marginTop: "auto", paddingTop: 4, borderTop: "1px solid #f1f5f9", fontSize: 9 }}>
-                              {day.hasMissed ? (
-                                <span style={{ color: "#dc2626", fontWeight: 800 }}>
-                                  ⚠️ Bị trừ {day.absentCount} ca!
-                                </span>
-                              ) : day.shifts.length > 0 ? (
-                                <span style={{ color: "#16a34a", fontWeight: 700 }}>
-                                  Có mặt {day.actualHours}h
-                                </span>
-                              ) : null}
+                              {day.shifts.length === 0 ? (
+                                <span style={{ color: "#94a3b8" }}>Nghỉ</span>
+                              ) : (
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                                    Có mặt {day.actualHours}h
+                                  </span>
+                                  {day.absentCount > 0 && (
+                                    <span style={{ color: "#dc2626", fontWeight: 600 }}>
+                                      (-{day.absentCount * 1.5}h)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -788,10 +788,10 @@ export function KpiLeaderboardModal({
             alignItems: "center",
           }}
         >
-          <div style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ fontSize: 12, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
             <Info size={14} color="#2563eb" />
             <span>
-              <strong>Quy tắc tính KPI:</strong> Mọi ca trong lịch phân công mặc định được tính CÓ MẶT đủ giờ. Khi nhân sự báo vắng (đã duyệt), hệ thống sẽ trừ trực tiếp số giờ vắng ra khỏi quỹ KPI tuần.
+              <strong>Quy tắc tính KPI 20 giờ / tuần:</strong> Định mức 20 giờ là chỉ tiêu tính <strong>tổng lũy kế cho cả 1 tuần</strong> (trung bình ~3.3 giờ/ngày làm việc, <strong>không phải mỗi ngày 20 tiếng</strong>). Nhân sự có mặt đủ các ca đã xếp đạt từ 20 giờ trở lên trong tuần sẽ được tính đạt 100% KPI.
             </span>
           </div>
 

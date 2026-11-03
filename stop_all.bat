@@ -6,4 +6,4 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') 
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5174 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
 echo Da giai phong toan bo cac cong va dong chuong trinh thanh cong!
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul

@@ -88,13 +88,18 @@ export function FeedbackPage() {
   const handleToggleLike = async (feedbackId) => {
     try {
       const res = await api.toggleLikeFeedback(feedbackId);
+      const isLiked = Boolean(res.liked ?? res.has_liked ?? res.is_liked);
       setFeedbacks((prev) =>
         prev.map((f) => {
           if (f.id === feedbackId) {
+            const count = typeof res.likes_count === "number"
+              ? res.likes_count
+              : (isLiked ? (f.likes_count || 0) + 1 : Math.max(0, (f.likes_count || 0) - 1));
             return {
               ...f,
-              has_liked: res.liked ? 1 : 0,
-              likes_count: res.liked ? f.likes_count + 1 : Math.max(0, f.likes_count - 1),
+              has_liked: isLiked ? 1 : 0,
+              is_liked: isLiked ? 1 : 0,
+              likes_count: count,
             };
           }
           return f;
@@ -318,27 +323,32 @@ export function FeedbackPage() {
 
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {/* Upvote / Like Button */}
-                    <button
-                      onClick={() => handleToggleLike(fb.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        padding: "5px 10px",
-                        borderRadius: 20,
-                        border: fb.has_liked ? "1px solid #fecaca" : "1px solid var(--border)",
-                        background: fb.has_liked ? "#fef2f2" : "#f8fafc",
-                        color: fb.has_liked ? "#ef4444" : "#64748b",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.15s"
-                      }}
-                      title="Đồng thuận / Thích góp ý này"
-                    >
-                      <Heart size={14} fill={fb.has_liked ? "#ef4444" : "none"} color={fb.has_liked ? "#ef4444" : "#64748b"} />
-                      <span>{fb.likes_count}</span>
-                    </button>
+                    {(() => {
+                      const isLiked = Boolean(fb.has_liked || fb.is_liked);
+                      return (
+                        <button
+                          onClick={() => handleToggleLike(fb.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "5px 10px",
+                            borderRadius: 20,
+                            border: isLiked ? "1px solid #fecaca" : "1px solid var(--border)",
+                            background: isLiked ? "#fef2f2" : "#f8fafc",
+                            color: isLiked ? "#ef4444" : "#64748b",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "all 0.15s"
+                          }}
+                          title={isLiked ? "Bỏ thích góp ý này" : "Đồng thuận / Thích góp ý này"}
+                        >
+                          <Heart size={14} fill={isLiked ? "#ef4444" : "none"} color={isLiked ? "#ef4444" : "#64748b"} />
+                          <span>{fb.likes_count ?? 0}</span>
+                        </button>
+                      );
+                    })()}
 
                     {/* Admin Reply Button */}
                     {isAdmin && (
