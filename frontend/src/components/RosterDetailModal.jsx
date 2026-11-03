@@ -102,7 +102,11 @@ export function RosterDetailModal({ shift, dateStr, members, events, onClose }) 
               }}
             >
               <Users size={18} color="#2563eb" />
-              DANH SÁCH THÀNH VIÊN TRỰC ({members.length} NGƯỜI)
+              {(() => {
+                const absent = members.filter(m => m.attendance_status === 'absent').length;
+                const present = Math.max(0, members.length - absent);
+                return `DANH SÁCH THÀNH VIÊN TRỰC (${present}/${members.length} NGƯỜI CÓ MẶT${absent > 0 ? ` • ${absent} VẮNG` : ""})`;
+              })()}
             </h4>
 
             {members.length === 0 ? (

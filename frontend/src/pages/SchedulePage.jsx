@@ -1803,8 +1803,11 @@ export function SchedulePage() {
                       );
                       const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
                       const isMyAbsent = myRegInSlot?.attendance_status === "absent";
-                      const hasAbsence = isAdmin ? (absentInSlot.length > 0) : Boolean(isMyAbsent);
+                      const absentCount = absentInSlot.length;
+                      const hasAbsence = absentCount > 0 || Boolean(isMyAbsent);
                       const hasPending = isAdmin ? (pendingInSlot.length > 0) : Boolean(isMyPending);
+                      const slotTotal = totalMembers > 0 ? totalMembers : 21;
+                      const presentCount = Math.max(0, slotTotal - absentCount);
                       const eventsInThisSlot = events.filter(
                         (e) =>
                           (!e.shift_id || e.shift_id === 0 || e.shift_id === shift.id) &&
@@ -1833,7 +1836,11 @@ export function SchedulePage() {
                           <div
                             className={`schedule-slot-card ${hasAbsence ? "has-absence" : hasPending ? "has-pending" : ""} ${day.isToday ? "is-today" : ""}`}
                             onClick={() => openRosterModal(shift, day)}
-                            title={`Bấm để xem danh sách ${totalMembers} thành viên & điểm danh`}
+                            title={
+                              absentCount > 0
+                                ? `Có mặt: ${presentCount}/${slotTotal} người (${absentCount} người vắng mặt) • Bấm để xem danh sách & điểm danh`
+                                : `Bấm để xem danh sách ${slotTotal} thành viên & điểm danh`
+                            }
                           >
                             {/* Dòng 1: Đội ngũ & Nút thao tác nhanh */}
                             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
@@ -1845,14 +1852,14 @@ export function SchedulePage() {
                                     gap: 4,
                                     fontSize: 11,
                                     fontWeight: 700,
-                                    color: "#1e293b",
+                                    color: absentCount > 0 ? "#dc2626" : "#1e293b",
                                   }}
                                 >
                                   <Users
                                     size={13}
-                                    color="#2563eb"
+                                    color={absentCount > 0 ? "#dc2626" : "#2563eb"}
                                   />
-                                  <span>{totalMembers > 0 ? `${totalMembers} người` : "Điểm danh"}</span>
+                                  <span>{slotTotal > 0 ? `${presentCount} người` : "Điểm danh"}</span>
                                 </div>
 
                                 {null /* Không hiển thị badge vắng trên ô lịch — chỉ hiện trong popup */}
@@ -2382,7 +2389,7 @@ export function SchedulePage() {
                         className="btn btn-primary btn-sm"
                         style={{ display: "flex", alignItems: "center", gap: 6 }}
                       >
-                        <Users size={14} /> {totalMembers > 0 ? `Xem ${totalMembers} Người (Điểm danh)` : "Điểm danh"}
+                        <Users size={14} /> {totalMembers > 0 ? `Xem ${Math.max(0, totalMembers - absentInShift.length)}/${totalMembers} Người (Điểm danh)` : "Điểm danh"}
                       </button>
                     </div>
                   </div>
@@ -2390,7 +2397,7 @@ export function SchedulePage() {
                   {/* Summary row */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
-                      👥 Đội ngũ: <strong>{totalMembers} người</strong> •{" "}
+                      👥 Đội ngũ: <strong>{Math.max(0, totalMembers - absentInShift.length)} người có mặt</strong> ({Math.max(0, totalMembers - absentInShift.length)}/{totalMembers}) •{" "}
                       {isAdmin ? (
                         <>
                           {absentInShift.length > 0 ? (
@@ -2691,7 +2698,12 @@ export function SchedulePage() {
             >
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  Danh Sách Thành Viên Ca Trực ({rosterModal.rosterList.length || totalMembers} Người)
+                  Danh Sách Thành Viên Ca Trực ({(() => {
+                    const total = rosterModal.rosterList.length || totalMembers;
+                    const absent = rosterModal.rosterList.filter(m => m.attendance_status === 'absent').length;
+                    const present = Math.max(0, total - absent);
+                    return `${present}/${total} Người Có Mặt`;
+                  })()})
                 </h3>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                   {rosterModal.shift?.name} ({rosterModal.shift?.label}) • Ngày:{" "}
@@ -2724,10 +2736,21 @@ export function SchedulePage() {
                 marginBottom: 16,
               }}
             >
-              💡 <strong>Quy chuẩn:</strong> Ca trực bao gồm đầy đủ <strong>{rosterModal.rosterList.length || totalMembers} thành viên</strong> trong hệ thống.
-              Thành viên nào <strong>Vắng mặt</strong> sẽ hiển thị{" "}
-              <span style={{ color: "#dc2626", fontWeight: 800 }}>MÀU ĐỎ</span> kèm lý do đã báo cho
-              Quản lý.
+              {(() => {
+                const total = rosterModal.rosterList.length || totalMembers;
+                const absent = rosterModal.rosterList.filter(m => m.attendance_status === 'absent').length;
+                const present = Math.max(0, total - absent);
+                return (
+                  <>
+                    💡 <strong>Điểm danh ca trực:</strong> Hiện có <strong>{present}/{total} người có mặt</strong>
+                    {absent > 0 ? (
+                      <span style={{ color: "#dc2626", fontWeight: 700 }}> (⚠️ {absent} người vắng mặt)</span>
+                    ) : (
+                      <span style={{ color: "#16a34a", fontWeight: 700 }}> (đầy đủ tất cả thành viên)</span>
+                    )}.
+                  </>
+                );
+              })()}
             </div>
 
             {/* List of members */}

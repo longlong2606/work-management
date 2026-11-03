@@ -879,6 +879,8 @@ export function TvDisplayPage({ onNavigateToManagement }) {
               const shiftMembers = scheduleData.registrations.filter(
                 (r) => r.shift_id === shift.id || r.shiftId === shift.id
               );
+              const absentCount = shiftMembers.filter((m) => m.attendance_status === "absent").length;
+              const presentCount = Math.max(0, (shiftMembers.length || totalAssignedStaff || 21) - absentCount);
 
               // Danh sách sự kiện riêng của ca này
               const shiftEvents = scheduleData.events.filter((e) => e.shift_id === shift.id);
@@ -966,9 +968,9 @@ export function TvDisplayPage({ onNavigateToManagement }) {
                       {/* Badge số lượng người */}
                       <span
                         style={{
-                          background: "#eff6ff",
-                          border: "1px solid #bfdbfe",
-                          color: "#1d4ed8",
+                          background: absentCount > 0 ? "#fff1f2" : "#eff6ff",
+                          border: absentCount > 0 ? "1px solid #fecdd3" : "1px solid #bfdbfe",
+                          color: absentCount > 0 ? "#be123c" : "#1d4ed8",
                           padding: "1px 6px",
                           borderRadius: 6,
                           fontSize: 11,
@@ -978,7 +980,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
                           gap: 3
                         }}
                       >
-                        <Users size={11} /> {shiftMembers.length} người
+                        <Users size={11} /> {presentCount} người
                       </span>
 
                       {/* Huy hiệu vắng mặt nếu có */}
