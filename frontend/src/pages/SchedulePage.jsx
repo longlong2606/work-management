@@ -119,6 +119,21 @@ export function SchedulePage() {
   const [allMembers, setAllMembers] = useState([]);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
 
+  // Nhân sự được chọn để xem lịch (mặc định là chính user đang đăng nhập)
+  const [filterUserId, setFilterUserId] = useState(() => user?.id || null);
+
+  useEffect(() => {
+    if (user?.id && filterUserId === null) {
+      setFilterUserId(user.id);
+    }
+  }, [user?.id]);
+
+  const activeUserId = filterUserId === "all" ? null : (filterUserId || user?.id);
+  const effectiveUser = useMemo(() => {
+    if (!activeUserId) return user;
+    return allMembers.find((m) => m.id === activeUserId) || user;
+  }, [activeUserId, allMembers, user]);
+
   // Expanded Day state & Table Scroll
   const [expandedDay, setExpandedDay] = useState(null);
   const [isFullWidth, setIsFullWidth] = useState(false);
@@ -959,13 +974,15 @@ export function SchedulePage() {
 
   const myShiftsInWeek = useMemo(() => {
     const weekDateStrs = weekDays.map((d) => d.dateStr);
-    return schedule.filter((s) => s.user_id === user?.id && (!s.work_date || weekDateStrs.includes(s.work_date)));
-  }, [schedule, user?.id, weekDays]);
+    const uId = activeUserId || user?.id;
+    return schedule.filter((s) => s.user_id === uId && (!s.work_date || weekDateStrs.includes(s.work_date)));
+  }, [schedule, activeUserId, user?.id, weekDays]);
 
   // Ca làm của user trong ngày đang chọn (currentDate)
   const myShiftsToday = useMemo(() => {
-    return schedule.filter((s) => s.user_id === user?.id && s.work_date === currentDate);
-  }, [schedule, user?.id, currentDate]);
+    const uId = activeUserId || user?.id;
+    return schedule.filter((s) => s.user_id === uId && s.work_date === currentDate);
+  }, [schedule, activeUserId, user?.id, currentDate]);
 
   const myTodayHours = useMemo(() => {
     return myShiftsToday.reduce((sum, s) => {
@@ -1450,6 +1467,44 @@ export function SchedulePage() {
             <span className="tab-label-full">Ca Trực Của Tôi ({myShiftsInWeek.length})</span>
             <span className="tab-label-mobile">Của Tôi ({myShiftsInWeek.length})</span>
           </button>
+
+          {isAdmin && allMembers.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", whiteSpace: "nowrap" }}>
+                👤 Xem lịch:
+              </span>
+              <select
+                value={filterUserId ?? user?.id ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFilterUserId(val === "all" ? "all" : (val ? Number(val) : null));
+                }}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 7,
+                  border: "1.5px solid #cbd5e1",
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  cursor: "pointer",
+                  outline: "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                }}
+                title="Chọn nhân sự để chỉ hiện các ca vắng của riêng nhân sự đó"
+              >
+                <option value={user?.id}>-- Tôi ({user?.full_name || user?.username}) --</option>
+                <option value="all">🌐 Toàn bộ đội ngũ (Tổng quan {totalMembers} người)</option>
+                {allMembers
+                  .filter((m) => m.id !== user?.id)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name || m.username} (@{m.username})
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Date Controls */}
@@ -1798,16 +1853,21 @@ export function SchedulePage() {
                           s.actual_hours !== null &&
                           s.actual_hours !== undefined
                       );
-                      const myRegInSlot = schedule.find(
-                        (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
-                      );
-                      const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
-                      const isMyAbsent = myRegInSlot?.attendance_status === "absent";
+                      const targetRegInSlot = activeUserId
+                        ? schedule.find(
+                            (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === activeUserId
+                          )
+                        : null;
+                      const isTargetPending = targetRegInSlot?.attendance_status === "pending_absence";
+                      const isTargetAbsent = targetRegInSlot?.attendance_status === "absent";
                       const absentCount = absentInSlot.length;
-                      const hasAbsence = absentCount > 0 || Boolean(isMyAbsent);
-                      const hasPending = isAdmin ? (pendingInSlot.length > 0) : Boolean(isMyPending);
                       const slotTotal = totalMembers > 0 ? totalMembers : 21;
                       const presentCount = Math.max(0, slotTotal - absentCount);
+
+                      // CHỈ HIỆN ĐỎ KHI NHÂN SỰ ĐANG XEM (HOẶC ĐƯỢC CHỌN) BỊ VẮNG TRONG CA NÀY
+                      // Nếu chọn xem "all", chỉ đỏ khi ca hoàn toàn không có ai trực (0 người)
+                      const hasAbsence = filterUserId === "all" ? (presentCount === 0) : Boolean(isTargetAbsent);
+                      const hasPending = filterUserId === "all" ? (pendingInSlot.length > 0) : Boolean(isTargetPending);
                       const eventsInThisSlot = events.filter(
                         (e) =>
                           (!e.shift_id || e.shift_id === 0 || e.shift_id === shift.id) &&
@@ -1852,14 +1912,30 @@ export function SchedulePage() {
                                     gap: 4,
                                     fontSize: 11,
                                     fontWeight: 700,
-                                    color: absentCount > 0 ? "#dc2626" : "#1e293b",
+                                    color: isTargetAbsent ? "#dc2626" : "#1e293b",
                                   }}
                                 >
                                   <Users
                                     size={13}
-                                    color={absentCount > 0 ? "#dc2626" : "#2563eb"}
+                                    color={isTargetAbsent ? "#dc2626" : "#2563eb"}
                                   />
                                   <span>{slotTotal > 0 ? `${presentCount} người` : "Điểm danh"}</span>
+                                  {filterUserId === "all" && absentCount > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 9.5,
+                                        color: "#64748b",
+                                        background: "#f1f5f9",
+                                        border: "1px solid #e2e8f0",
+                                        padding: "1px 4px",
+                                        borderRadius: 4,
+                                        fontWeight: 600,
+                                        marginLeft: 2,
+                                      }}
+                                    >
+                                      ({absentCount} vắng)
+                                    </span>
+                                  )}
                                 </div>
 
                                 {null /* Không hiển thị badge vắng trên ô lịch — chỉ hiện trong popup */}
@@ -1871,16 +1947,10 @@ export function SchedulePage() {
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {(() => {
-                                  const myRegInSlot = schedule.find(
-                                    (s) => s.shift_id === shift.id && s.work_date === day.dateStr && s.user_id === user?.id
-                                  );
-                                  const isMyPending = myRegInSlot?.attendance_status === "pending_absence";
-                                  const isMyAbsent = myRegInSlot?.attendance_status === "absent";
-
-                                  if (isMyPending) {
+                                  if (isTargetPending) {
                                     return (
                                       <button
-                                        onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
+                                        onClick={() => handleCancelAbsence(shift.id, day.dateStr, effectiveUser?.id)}
                                         style={{
                                           background: "#fef3c7",
                                           border: "1px solid #fde68a",
@@ -1898,29 +1968,29 @@ export function SchedulePage() {
                                       </button>
                                     );
                                   }
-                                  if (isMyAbsent) {
-                                    const isClassConflict = myRegInSlot?.absence_reason?.includes("lịch học") || myRegInSlot?.time_note?.includes("Trùng TKB");
+                                  if (isTargetAbsent) {
+                                    const isClassConflict = targetRegInSlot?.absence_reason?.includes("lịch học") || targetRegInSlot?.time_note?.includes("Trùng TKB");
                                     const shiftDurLabel = "-1.5h KPI";
-                                    if (isAdmin) {
-                                      return (
-                                        <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                                          <span
-                                            style={{
-                                              background: isClassConflict ? "#f5f3ff" : "#fee2e2",
-                                              border: `1px solid ${isClassConflict ? "#c4b5fd" : "#fca5a5"}`,
-                                              borderRadius: 4,
-                                              padding: "2px 5px",
-                                              fontSize: 9,
-                                              fontWeight: 700,
-                                              color: isClassConflict ? "#6d28d9" : "#991b1b",
-                                              whiteSpace: "nowrap",
-                                            }}
-                                            title={myRegInSlot?.absence_reason ? `Lý do: ${myRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
-                                          >
-                                            {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
-                                          </span>
+                                    return (
+                                      <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                        <span
+                                          style={{
+                                            background: isClassConflict ? "#f5f3ff" : "#fee2e2",
+                                            border: `1px solid ${isClassConflict ? "#c4b5fd" : "#fca5a5"}`,
+                                            borderRadius: 4,
+                                            padding: "2px 5px",
+                                            fontSize: 9,
+                                            fontWeight: 700,
+                                            color: isClassConflict ? "#6d28d9" : "#991b1b",
+                                            whiteSpace: "nowrap",
+                                          }}
+                                          title={targetRegInSlot?.absence_reason ? `Lý do: ${targetRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
+                                        >
+                                          {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
+                                        </span>
+                                        {(isAdmin || effectiveUser?.id === user?.id) && (
                                           <button
-                                            onClick={() => handleCancelAbsence(shift.id, day.dateStr, user?.id)}
+                                            onClick={() => handleCancelAbsence(shift.id, day.dateStr, effectiveUser?.id)}
                                             style={{
                                               background: "#dcfce7",
                                               border: "1px solid #86efac",
@@ -1936,25 +2006,8 @@ export function SchedulePage() {
                                           >
                                             🔄
                                           </button>
-                                        </div>
-                                      );
-                                    }
-                                    return (
-                                      <span
-                                        style={{
-                                          background: isClassConflict ? "#f5f3ff" : "#fee2e2",
-                                          border: `1px solid ${isClassConflict ? "#c4b5fd" : "#fca5a5"}`,
-                                          borderRadius: 4,
-                                          padding: "2px 5px",
-                                          fontSize: 9,
-                                          fontWeight: 700,
-                                          color: isClassConflict ? "#6d28d9" : "#991b1b",
-                                          whiteSpace: "nowrap",
-                                        }}
-                                        title={myRegInSlot?.absence_reason ? `Lý do: ${myRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
-                                      >
-                                        {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
-                                      </span>
+                                        )}
+                                      </div>
                                     );
                                   }
                                   if (day.dateStr < todayStr) {
@@ -1962,7 +2015,7 @@ export function SchedulePage() {
                                   }
                                   return (
                                     <button
-                                      onClick={() => openReportAbsence(shift, day)}
+                                      onClick={() => openReportAbsence(shift, day, effectiveUser)}
                                       style={{
                                         background: "#fee2e2",
                                         border: "1px solid #fca5a5",
@@ -1974,7 +2027,7 @@ export function SchedulePage() {
                                         cursor: "pointer",
                                         whiteSpace: "nowrap",
                                       }}
-                                      title="Báo vắng ca này"
+                                      title={effectiveUser?.id === user?.id ? "Báo vắng ca này" : `Báo vắng ca này cho ${effectiveUser?.full_name || effectiveUser?.username}`}
                                     >
                                       Báo vắng
                                     </button>
@@ -2252,13 +2305,15 @@ export function SchedulePage() {
                   e.shift_id === shift.id && (!e.work_date || e.work_date === currentDate)
               );
 
-              const myRegInDayShift = schedule.find(
-                (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
-              );
-              const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
-              const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
-              const dayHasAbsence = isAdmin ? (absentInShift.length > 0) : Boolean(isMyAbsentInDay);
-              const dayHasPending = isAdmin ? (pendingInShift.length > 0) : Boolean(isMyPendingInDay);
+              const targetDayReg = activeUserId
+                ? schedule.find(
+                    (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === activeUserId
+                  )
+                : null;
+              const isDayTargetPending = targetDayReg?.attendance_status === "pending_absence";
+              const isDayTargetAbsent = targetDayReg?.attendance_status === "absent";
+              const dayHasAbsence = filterUserId === "all" ? (absentInShift.length >= (totalMembers || 21)) : Boolean(isDayTargetAbsent);
+              const dayHasPending = filterUserId === "all" ? (pendingInShift.length > 0) : Boolean(isDayTargetPending);
 
               return (
                 <div
@@ -2309,16 +2364,10 @@ export function SchedulePage() {
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {(() => {
-                        const myRegInDayShift = schedule.find(
-                          (s) => s.shift_id === shift.id && s.work_date === currentDate && s.user_id === user?.id
-                        );
-                        const isMyPendingInDay = myRegInDayShift?.attendance_status === "pending_absence";
-                        const isMyAbsentInDay = myRegInDayShift?.attendance_status === "absent";
-
-                        if (isMyPendingInDay) {
+                        if (isDayTargetPending) {
                           return (
                             <button
-                              onClick={() => handleCancelAbsence(shift.id, currentDate, user?.id)}
+                              onClick={() => handleCancelAbsence(shift.id, currentDate, effectiveUser?.id)}
                               style={{
                                 background: "#fef3c7",
                                 border: "1px solid #fde68a",
@@ -2335,7 +2384,7 @@ export function SchedulePage() {
                             </button>
                           );
                         }
-                        if (isMyAbsentInDay) {
+                        if (isDayTargetAbsent) {
                           if (currentDate < todayStr) {
                             return (
                               <span
@@ -2355,7 +2404,7 @@ export function SchedulePage() {
                           }
                           return (
                             <button
-                              onClick={() => handleCancelAbsence(shift.id, currentDate, user?.id)}
+                              onClick={() => handleCancelAbsence(shift.id, currentDate, effectiveUser?.id)}
                               className="btn btn-primary btn-sm"
                               title="Đã duyệt vắng mặt. Nhấn để xác nhận có mặt lại."
                             >
@@ -2368,7 +2417,7 @@ export function SchedulePage() {
                         }
                         return (
                           <button
-                            onClick={() => openReportAbsence(shift, dayObj)}
+                            onClick={() => openReportAbsence(shift, dayObj, effectiveUser)}
                             style={{
                               background: "#fee2e2",
                               border: "1px solid #fca5a5",
