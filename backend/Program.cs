@@ -294,11 +294,8 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
                 totalCp
             }));
 
-        if (req.leader_id != currentUser.id)
-        {
-            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                new { uid = req.leader_id, senderId = currentUser.id, title = "Phân công nhiệm vụ mới", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId });
-        }
+        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+            new { uid = req.leader_id, senderId = currentUser.id, title = "Phân công nhiệm vụ mới", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId });
 
         EmailService.SendTaskAssignedNotification(
             taskId,
@@ -370,7 +367,8 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
                 totalCp
             });
 
-        if (existingLeaderId.HasValue && existingLeaderId.Value != targetLeaderId && targetLeaderId != currentUser.id)
+        bool leaderChanged = targetLeaderId > 0 && targetLeaderId != (existingLeaderId ?? 0);
+        if (leaderChanged)
         {
             conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                 new { uid = targetLeaderId, senderId = currentUser.id, title = "Chuyển giao quyền phụ trách nhiệm vụ", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId = id });
@@ -608,12 +606,11 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         if (req.assignee_ids != null && req.assignee_ids.Any())
         {
             string ids = string.Join(",", req.assignee_ids.Distinct());
-            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
-            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
+            validAssigneeIds = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
         }
 
         if (!validAssigneeIds.Any())
-            return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
+            return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ để giao mục việc!" });
 
         var assigneesToNotify = new List<(long userId, int contributionPct)>();
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
@@ -624,11 +621,8 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { subtaskId, uid = ac.user_id, pct = ac.contribution_pct });
 
-                if (ac.user_id != currentUser.id)
-                {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
-                }
+                conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                    new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
                 assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
             }
         }
@@ -640,11 +634,8 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@subtaskId, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { subtaskId, uid, defaultPct });
 
-                if (uid != currentUser.id)
-                {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
-                }
+                conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                    new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId });
                 assigneesToNotify.Add((uid, defaultPct));
             }
         }
@@ -724,17 +715,19 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 cpPoints
             });
 
-        var newlyAssigned = new List<(long userId, int contributionPct)>();
+        var assigneesToNotify = new List<(long userId, int contributionPct)>();
 
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
         {
             var uids = req.assignee_contributions.Select(ac => ac.user_id).Distinct().ToList();
             string ids = string.Join(",", uids);
-            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
 
             if (!validUids.Any())
-                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ để giao mục việc!" });
+
+            var newAssigneeSet = validUids.ToHashSet();
+            bool assigneesChanged = !newAssigneeSet.SetEquals(existingAssigneeIds);
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             foreach (var ac in req.assignee_contributions.Where(ac => validUids.Contains(ac.user_id)))
@@ -742,25 +735,26 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { id, uid = ac.user_id, pct = ac.contribution_pct });
 
-                if (!existingAssigneeIds.Contains(ac.user_id))
+                bool isNew = !existingAssigneeIds.Contains(ac.user_id);
+                if (isNew || assigneesChanged)
                 {
-                    if (ac.user_id != currentUser.id)
-                    {
-                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                            new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
-                    }
-                    newlyAssigned.Add((ac.user_id, ac.contribution_pct));
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    
+                    assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
                 }
             }
         }
         else if (req.assignee_ids != null && req.assignee_ids.Any())
         {
             string ids = string.Join(",", req.assignee_ids.Distinct());
-            // Cho phép giao mục việc cho cả thành viên và Leader (chỉ loại trừ Admin)
-            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids}) AND role != 'admin'").ToList();
+            var validUids = conn.Query<long>($"SELECT id FROM users WHERE id IN ({ids})").ToList();
 
             if (!validUids.Any())
-                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ (không phải Admin) để giao mục việc!" });
+                return Results.BadRequest(new { detail = "Vui lòng chọn ít nhất 1 thành viên hoặc Leader hợp lệ để giao mục việc!" });
+
+            var newAssigneeSet = validUids.ToHashSet();
+            bool assigneesChanged = !newAssigneeSet.SetEquals(existingAssigneeIds);
 
             conn.Execute("DELETE FROM subtask_assignees WHERE subtask_id = @id", new { id });
             int defaultPct = validUids.Count > 1 ? (100 / validUids.Count) : 100;
@@ -769,24 +763,23 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { id, uid, defaultPct });
 
-                if (!existingAssigneeIds.Contains(uid))
+                bool isNew = !existingAssigneeIds.Contains(uid);
+                if (isNew || assigneesChanged)
                 {
-                    if (uid != currentUser.id)
-                    {
-                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                            new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
-                    }
-                    newlyAssigned.Add((uid, defaultPct));
+                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+
+                    assigneesToNotify.Add((uid, defaultPct));
                 }
             }
         }
 
-        if (newlyAssigned.Any())
+        if (assigneesToNotify.Any())
         {
             string parentTitle = subtask?.task_title != null ? (string)subtask.task_title : "";
             EmailService.SendSubtaskAssignedNotification(
                 (long)subtask.task_id,
-                newlyAssigned,
+                assigneesToNotify,
                 req.title.Trim(),
                 parentTitle,
                 req.description?.Trim(),

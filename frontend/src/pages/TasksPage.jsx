@@ -3436,6 +3436,28 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Đồng bộ lại form khi subtask hoặc danh sách assignableMembers thay đổi / khi modal mở
+  useEffect(() => {
+    if (!subtask) return;
+    setTitle(subtask.title || "");
+    setDescription(subtask.description || "");
+    setDueAt(subtask.due_at ? subtask.due_at.replace(" ", "T").slice(0, 16) : "");
+    setCpPoints(subtask.cp_points ?? 1);
+    if (subtask.assignees && subtask.assignees.length > 0) {
+      const ids = subtask.assignees.map((a) => Number(a.user_id));
+      const filtered = ids.filter((id) => assignableMembers.some((m) => Number(m.id) === id));
+      setSelectedAssignees(filtered.length > 0 ? filtered : ids);
+      setIsMulti(subtask.assignees.length > 1);
+    } else if (assignableMembers.length > 0) {
+      setSelectedAssignees([Number(assignableMembers[0].id)]);
+      setIsMulti(false);
+    } else {
+      setSelectedAssignees([]);
+      setIsMulti(false);
+    }
+    setError("");
+  }, [subtask, assignableMembers, isOpen]);
+
   const remainingCp = Math.max(0, totalCp - currentAllocatedCp);
 
   const toggleAssignee = (userId) => {
@@ -4136,7 +4158,13 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
         leader_id: leaderId ? parseInt(leaderId) : task.leader_id,
         total_cp: Math.max(0, parseInt(totalCp) || 0),
       });
-      onSuccess("Đã cập nhật thông tin nhiệm vụ thành công!");
+      const leaderChanged = Number(leaderId) !== Number(task.leader_id);
+      const newLeader = leaderMembers.find((m) => Number(m.id) === Number(leaderId));
+      if (leaderChanged && newLeader) {
+        onSuccess(`Đã cập nhật nhiệm vụ & gửi email thông báo cho Trưởng nhóm mới: ${newLeader.full_name} (${newLeader.email || 'chưa có email'})!`);
+      } else {
+        onSuccess("Đã cập nhật thông tin nhiệm vụ thành công!");
+      }
       onClose();
     } catch (err) {
       setError(err.message || "Lỗi khi cập nhật nhiệm vụ.");
