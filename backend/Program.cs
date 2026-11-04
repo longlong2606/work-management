@@ -4099,6 +4099,15 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
         if (minDate == null || string.Compare(wdate, minDate, StringComparison.Ordinal) < 0) minDate = wdate;
         if (maxDate == null || string.Compare(wdate, maxDate, StringComparison.Ordinal) > 0) maxDate = wdate;
 
+        var stimeTrim = e.start_time.Trim();
+        var etimeTrim = e.end_time.Trim();
+
+        // Xoa buoi hoc cu cung gio neu da ton tai de tranh duplicate
+        conn.Execute(@"
+            DELETE FROM class_schedules 
+            WHERE user_id = @uid AND work_date = @date AND start_time = @stime AND end_time = @etime",
+            new { uid = effectiveUserId, date = wdate, stime = stimeTrim, etime = etimeTrim });
+
         conn.Execute(@"
             INSERT INTO class_schedules (user_id, course_code, class_name, work_date, start_time, end_time, room, source_batch_id)
             VALUES (@uid, @code, @name, @date, @stime, @etime, @room, @batchId)",
@@ -4108,8 +4117,8 @@ app.MapPost("/api/class-schedules/import", (ImportClassScheduleRequest req, Http
                 code = e.course_code?.Trim(),
                 name = e.class_name.Trim(),
                 date = wdate,
-                stime = e.start_time.Trim(),
-                etime = e.end_time.Trim(),
+                stime = stimeTrim,
+                etime = etimeTrim,
                 room = e.room?.Trim(),
                 batchId
             });
@@ -4187,6 +4196,65 @@ app.MapDelete("/api/class-schedules/{id:long}", (long id, HttpContext ctx) =>
 
     SyncClassScheduleKpiDeductions(conn, itemUserId, itemWorkDate, itemWorkDate);
     return Results.Ok(new { message = "Đã xóa buổi học thành công và tự động cập nhật lại KPI!" });
+});
+
+app.MapDelete("/api/class-schedules/by-course", (long? user_id, string? course_code, string? class_name, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    bool canManage = currentUser.role == "admin" || currentUser.role == "leader" || currentUser.role == "manager" || (currentUser.username != null && currentUser.username.ToLower().Contains("leader")) || currentUser.can_manage_schedule;
+
+    long effectiveUserId = (canManage && user_id.HasValue)
+        ? user_id.Value
+        : currentUser.id;
+
+    if (string.IsNullOrWhiteSpace(course_code) && string.IsNullOrWhiteSpace(class_name))
+    {
+        return Results.BadRequest(new { detail = "Thiếu mã môn hoặc tên môn học cần xóa" });
+    }
+
+    var dates = conn.Query<string>(@"
+        SELECT DISTINCT work_date FROM class_schedules 
+        WHERE user_id = @uid 
+          AND (@code IS NULL OR course_code = @code)
+          AND (@name IS NULL OR class_name = @name)",
+        new { uid = effectiveUserId, code = string.IsNullOrWhiteSpace(course_code) ? null : course_code.Trim(), name = string.IsNullOrWhiteSpace(class_name) ? null : class_name.Trim() }).ToList();
+
+    int deleted = conn.Execute(@"
+        DELETE FROM class_schedules 
+        WHERE user_id = @uid 
+          AND (@code IS NULL OR course_code = @code)
+          AND (@name IS NULL OR class_name = @name)",
+        new { uid = effectiveUserId, code = string.IsNullOrWhiteSpace(course_code) ? null : course_code.Trim(), name = string.IsNullOrWhiteSpace(class_name) ? null : class_name.Trim() });
+
+    foreach (var d in dates)
+    {
+        conn.Execute(@"
+            UPDATE shift_registrations
+            SET attendance_status = 'present',
+                absence_reason = NULL,
+                time_note = NULL,
+                actual_hours = NULL,
+                note = 'Lịch trực định kỳ (Khôi phục sau khi xóa môn học TKB)'
+            WHERE user_id = @uid AND work_date = @wdate
+              AND (attendance_status = 'absent' OR attendance_status = 'pending_absence')
+              AND (
+                  absence_reason LIKE '%học%' 
+                  OR absence_reason LIKE '%TKB%' 
+                  OR absence_reason LIKE '%Trùng%'
+                  OR time_note LIKE '%TKB%' 
+                  OR time_note LIKE '%học%'
+                  OR note LIKE '%học%' 
+                  OR note LIKE '%TKB%'
+              )",
+            new { uid = effectiveUserId, wdate = d });
+
+        SyncClassScheduleKpiDeductions(conn, effectiveUserId, d, d);
+    }
+
+    return Results.Ok(new { message = $"Đã xóa thành công {deleted} buổi học của môn này và khôi phục KPI cho các tuần tương ứng!", count = deleted });
 });
 
 app.MapDelete("/api/class-schedules/clear", (long? user_id, HttpContext ctx) =>

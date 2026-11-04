@@ -271,6 +271,12 @@ export const api = {
     request(`/class-schedules/${id}`, {
       method: "DELETE",
     }),
+  deleteClassScheduleByCourse: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/class-schedules/by-course${qs ? `?${qs}` : ""}`, {
+      method: "DELETE",
+    });
+  },
   clearClassSchedules: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/class-schedules/clear${qs ? `?${qs}` : ""}`, {

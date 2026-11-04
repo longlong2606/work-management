@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../services/api";
 import { SHIFTS } from "../constants/shifts";
 import {
@@ -10,7 +10,15 @@ import {
   Trash2,
   Calendar,
   RefreshCw,
-  User
+  User,
+  Plus,
+  Clock,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  Sparkles,
+  Info
 } from "lucide-react";
 
 const GREENWICH_COURSES = {
@@ -43,6 +51,15 @@ const GREENWICH_COURSES = {
   COMP1921: "Các chủ đề nâng cao trong KH dữ liệu & AI (Advanced Topics in Data Science and AI)"
 };
 
+const DAY_OPTIONS = [
+  { day: 1, label: "Thứ 2", short: "T2" },
+  { day: 2, label: "Thứ 3", short: "T3" },
+  { day: 3, label: "Thứ 4", short: "T4" },
+  { day: 4, label: "Thứ 5", short: "T5" },
+  { day: 5, label: "Thứ 6", short: "T6" },
+  { day: 6, label: "Thứ 7", short: "T7" },
+];
+
 export function ClassScheduleModal({
   isOpen,
   onClose,
@@ -53,7 +70,7 @@ export function ClassScheduleModal({
   showToast
 }) {
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader" || currentUser?.role === "manager" || Boolean(currentUser?.username && currentUser.username.toLowerCase().includes("leader")) || Boolean(currentUser?.can_manage_schedule);
-  const [activeTab, setActiveTab] = useState("import"); // 'import' | 'list'
+  const [activeTab, setActiveTab] = useState("import"); // 'import' | 'manual' | 'list'
   const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");
   
   // Import states
@@ -63,10 +80,49 @@ export function ClassScheduleModal({
   const [parsingError, setParsingError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Manual Add states
+  const [manualCode, setManualCode] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualSelectedDays, setManualSelectedDays] = useState([1, 3, 5]); // Default: T2, T4, T6
+  const [manualSelectedShifts, setManualSelectedShifts] = useState([6]); // Default: Ca 6
+  const [manualStartDate, setManualStartDate] = useState("");
+  const [manualEndDate, setManualEndDate] = useState("");
+  const [manualRoom, setManualRoom] = useState("");
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+
   // List states
   const [savedSchedules, setSavedSchedules] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listFilterUser, setListFilterUser] = useState(currentUser?.id || "");
+  const [expandedCourseKey, setExpandedCourseKey] = useState(null);
+  const [viewMode, setViewMode] = useState("grouped"); // 'grouped' | 'flat'
+
+  // Format YYYY-MM-DD
+  const fmtDate = (d) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // Compute default start/end dates
+  const defaultDates = useMemo(() => {
+    const baseMonday = (weekDays && weekDays.length > 0 && weekDays[0]?.dateStr)
+      ? new Date(weekDays[0].dateStr + "T00:00:00")
+      : (() => {
+          const now = new Date();
+          const curDay = now.getDay();
+          const diffToMonday = (curDay === 0 ? -6 : 1) - curDay;
+          const mon = new Date(now);
+          mon.setDate(now.getDate() + diffToMonday);
+          return mon;
+        })();
+
+    const sStr = fmtDate(baseMonday);
+    const end8Weeks = new Date(baseMonday.getTime() + 8 * 7 * 86400000 - 86400000);
+    const eStr = fmtDate(end8Weeks);
+    return { start: sStr, end: eStr, baseMonday };
+  }, [weekDays]);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -74,6 +130,11 @@ export function ClassScheduleModal({
       setListFilterUser(currentUser.id);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!manualStartDate) setManualStartDate(defaultDates.start);
+    if (!manualEndDate) setManualEndDate(defaultDates.end);
+  }, [defaultDates, manualStartDate, manualEndDate]);
 
   // Fetch saved schedules when switching to 'list' tab
   const fetchSavedSchedules = async (uid) => {
@@ -98,7 +159,7 @@ export function ClassScheduleModal({
     }
   }, [isOpen, activeTab, listFilterUser]);
 
-  // Standard RFC-compliant CSV line parser that respects quotes and delimiters
+  // Standard RFC-compliant CSV line parser
   const splitCsvLine = (line, delimiter = ",") => {
     const result = [];
     let cur = "";
@@ -124,12 +185,6 @@ export function ClassScheduleModal({
   };
 
   // Map shift number or text to contiguous shift periods
-  // e.g. "1,2,3" -> [{ startId: 1, endId: 3, startTime: "08:00", endTime: "12:40", shiftLabel: "Ca 1 - Ca 3 (08:00 - 12:40)" }]
-  // e.g. "5,6,7,8" -> [{ startId: 5, endId: 8, startTime: "14:45", endTime: "20:25", shiftLabel: "Ca 5 - Ca 8 (14:45 - 20:25)" }]
-  // e.g. "5,7,8,9" -> [
-  //   { startId: 5, endId: 5, startTime: "14:45", endTime: "16:15", shiftLabel: "Ca 5 (14:45 - 16:15)" },
-  //   { startId: 7, endId: 9, startTime: "18:20", endTime: "22:00", shiftLabel: "Ca 7 - Ca 9 (18:20 - 22:00)" }
-  // ]
   const parseShiftPeriods = (shiftVal) => {
     if (!shiftVal) return [];
     const str = shiftVal.toString().trim();
@@ -139,7 +194,6 @@ export function ClassScheduleModal({
     const nums = Array.from(new Set(rawNums.map((n) => parseInt(n, 10)).filter((n) => n >= 1 && n <= 9))).sort((a, b) => a - b);
     if (nums.length === 0) return [];
 
-    // Group contiguous numbers
     const groups = [];
     let currentGroup = [nums[0]];
     for (let i = 1; i < nums.length; i++) {
@@ -186,6 +240,87 @@ export function ClassScheduleModal({
     return overlapping;
   };
 
+  // Parse days of week string e.g. "2,4,6" or "T2,T4,T6" or "Mon,Wed,Fri" -> [1, 3, 5]
+  const parseDaysOfWeek = (rawStr) => {
+    if (!rawStr) return [];
+    const s = rawStr.toString().toLowerCase().trim();
+    if (s === "all" || s === "tat_ca" || s === "tất cả" || s === "hàng ngày" || s === "hang ngay" || s === "daily") {
+      return [1, 2, 3, 4, 5, 6]; // T2 -> T7
+    }
+
+    const tokens = s.split(/[,;\/\s\-_]+/).map((t) => t.trim()).filter(Boolean);
+    const result = new Set();
+
+    tokens.forEach((t) => {
+      if (t === "2" || t === "t2" || t === "thu2" || t === "thứ 2" || t === "thu 2" || t === "mon" || t === "monday") {
+        result.add(1);
+      } else if (t === "3" || t === "t3" || t === "thu3" || t === "thứ 3" || t === "thu 3" || t === "tue" || t === "tuesday") {
+        result.add(2);
+      } else if (t === "4" || t === "t4" || t === "thu4" || t === "thứ 4" || t === "thu 4" || t === "wed" || t === "wednesday") {
+        result.add(3);
+      } else if (t === "5" || t === "t5" || t === "thu5" || t === "thứ 5" || t === "thu 5" || t === "thu" || t === "thursday") {
+        result.add(4);
+      } else if (t === "6" || t === "t6" || t === "thu6" || t === "thứ 6" || t === "thu 6" || t === "fri" || t === "friday") {
+        result.add(5);
+      } else if (t === "7" || t === "t7" || t === "thu7" || t === "thứ 7" || t === "thu 7" || t === "sat" || t === "saturday") {
+        result.add(6);
+      } else if (t === "8" || t === "cn" || t === "chunhat" || t === "chủ nhật" || t === "chu nhat" || t === "sun" || t === "sunday") {
+        result.add(0);
+      }
+    });
+
+    return Array.from(result).sort();
+  };
+
+  const normalizeDate = (rawStr) => {
+    if (!rawStr) return "";
+    let s = rawStr.toString().trim().split(" ")[0].trim();
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+      const [y, m, d] = s.split("-");
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)) {
+      const [y, m, d] = s.split("/");
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    if (s.includes("/")) {
+      const segs = s.split("/");
+      if (segs.length === 3) {
+        let y = segs[2].trim();
+        if (y.length === 2) y = "20" + y;
+        const p1 = parseInt(segs[0], 10);
+        const p2 = parseInt(segs[1], 10);
+        let m, d;
+        if (p1 > 12) {
+          d = String(p1).padStart(2, "0");
+          m = String(p2).padStart(2, "0");
+        } else if (p2 > 12) {
+          m = String(p1).padStart(2, "0");
+          d = String(p2).padStart(2, "0");
+        } else {
+          const curM = new Date().getMonth() + 1;
+          if (p1 === curM && p2 !== curM) {
+            m = String(p1).padStart(2, "0");
+            d = String(p2).padStart(2, "0");
+          } else {
+            d = String(p1).padStart(2, "0");
+            m = String(p2).padStart(2, "0");
+          }
+        }
+        return `${y}-${m}-${d}`;
+      }
+    }
+    if (s.includes(".")) {
+      const segs = s.split(".");
+      if (segs.length === 3) {
+        let y = segs[2].trim();
+        if (y.length === 2) y = "20" + y;
+        return `${y}-${segs[1].trim().padStart(2, "0")}-${segs[0].trim().padStart(2, "0")}`;
+      }
+    }
+    return s;
+  };
+
   // Parse CSV content
   const handleParseCsv = (content, name = "") => {
     setParsingError("");
@@ -208,16 +343,15 @@ export function ClassScheduleModal({
       return;
     }
 
-    // Split headers
     const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
     const rawHeaders = splitCsvLine(lines[0], delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
 
-    // Normalize header mapping: supports course_code, class_name, start_date, end_date, shift, room
     const colIndex = {
       course_code: rawHeaders.findIndex((h) => h === "course_code" || h.includes("code") || h.includes("mã môn") || h.includes("subject")),
       class_name: rawHeaders.findIndex((h) => h === "class_name" || h.includes("class") || h.includes("name") || h.includes("tên môn") || h.includes("môn học")),
       start_date: rawHeaders.findIndex((h) => h === "start_date" || h.includes("start_date") || h.includes("start date") || h.includes("ngày bắt đầu") || h.includes("ngay bat dau") || h.includes("work_date") || h.includes("work date") || h === "date" || h === "ngày"),
       end_date: rawHeaders.findIndex((h) => h === "end_date" || h.includes("end_date") || h.includes("end date") || h.includes("ngày kết thúc") || h.includes("ngay ket thuc")),
+      day_of_week: rawHeaders.findIndex((h) => h === "day_of_week" || h === "days_of_week" || h === "days" || h === "day" || h.includes("thứ") || h.includes("thu") || h.includes("day of week") || h.includes("days of week")),
       shift: rawHeaders.findIndex((h) => h === "shift" || h.includes("shift") || h.includes("ca") || h.includes("slot") || h.includes("buổi")),
       start_time: rawHeaders.findIndex((h) => h.includes("start_time") || h.includes("giờ bắt đầu") || h.includes("from")),
       end_time: rawHeaders.findIndex((h) => h.includes("end_time") || h.includes("giờ kết thúc") || h.includes("to")),
@@ -225,65 +359,10 @@ export function ClassScheduleModal({
     };
 
     if (colIndex.start_date === -1 || (colIndex.course_code === -1 && colIndex.class_name === -1) || (colIndex.shift === -1 && colIndex.start_time === -1)) {
-      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code, class_name, start_date, end_date, shift, room.");
+      setParsingError("Cột tiêu đề không hợp lệ! File cần có các cột: course_code, class_name, start_date, end_date, shift, room (và tùy chọn day_of_week).");
       setParsedRows([]);
       return;
     }
-
-    const normalizeDate = (rawStr) => {
-      if (!rawStr) return "";
-      let s = rawStr.toString().trim().split(" ")[0].trim();
-      // YYYY-MM-DD
-      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
-        const [y, m, d] = s.split("-");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-      }
-      // YYYY/MM/DD
-      if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)) {
-        const [y, m, d] = s.split("/");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-      }
-      // Contains / (DD/MM/YYYY or MM/DD/YYYY)
-      if (s.includes("/")) {
-        const segs = s.split("/");
-        if (segs.length === 3) {
-          let y = segs[2].trim();
-          if (y.length === 2) y = "20" + y;
-          const p1 = parseInt(segs[0], 10);
-          const p2 = parseInt(segs[1], 10);
-          let m, d;
-          if (p1 > 12) {
-            d = String(p1).padStart(2, "0");
-            m = String(p2).padStart(2, "0");
-          } else if (p2 > 12) {
-            m = String(p1).padStart(2, "0");
-            d = String(p2).padStart(2, "0");
-          } else {
-            // Both <= 12: Check if p1 or p2 matches current month (e.g. October = 10)
-            const curM = new Date().getMonth() + 1;
-            if (p1 === curM && p2 !== curM) {
-              m = String(p1).padStart(2, "0");
-              d = String(p2).padStart(2, "0");
-            } else {
-              // Default to DD/MM/YYYY
-              d = String(p1).padStart(2, "0");
-              m = String(p2).padStart(2, "0");
-            }
-          }
-          return `${y}-${m}-${d}`;
-        }
-      }
-      // Contains . (DD.MM.YYYY)
-      if (s.includes(".")) {
-        const segs = s.split(".");
-        if (segs.length === 3) {
-          let y = segs[2].trim();
-          if (y.length === 2) y = "20" + y;
-          return `${y}-${segs[1].trim().padStart(2, "0")}-${segs[0].trim().padStart(2, "0")}`;
-        }
-      }
-      return s;
-    };
 
     const parsed = [];
     for (let i = 1; i < lines.length; i++) {
@@ -291,7 +370,6 @@ export function ClassScheduleModal({
       if (!line) continue;
       let parts = splitCsvLine(line, delimiter);
 
-      // Intelligent reconstruction if unquoted shift cell had commas (e.g. 5,6,7,8 or 1,2,3)
       if (parts.length > rawHeaders.length && colIndex.shift !== -1) {
         const extraCount = parts.length - rawHeaders.length;
         const shiftParts = parts.slice(colIndex.shift, colIndex.shift + extraCount + 1);
@@ -306,6 +384,7 @@ export function ClassScheduleModal({
       let className = colIndex.class_name !== -1 ? (parts[colIndex.class_name] || "") : "";
       let startDateRaw = colIndex.start_date !== -1 ? (parts[colIndex.start_date] || "") : "";
       let endDateRaw = colIndex.end_date !== -1 ? (parts[colIndex.end_date] || "") : "";
+      let dayOfWeekRaw = colIndex.day_of_week !== -1 ? (parts[colIndex.day_of_week] || "") : "";
       let shiftVal = colIndex.shift !== -1 ? (parts[colIndex.shift] || "") : "";
       let startTime = colIndex.start_time !== -1 ? (parts[colIndex.start_time] || "") : "";
       let endTime = colIndex.end_time !== -1 ? (parts[colIndex.end_time] || "") : "";
@@ -334,7 +413,7 @@ export function ClassScheduleModal({
         }];
       }
 
-      // Fallback smart lookup from GREENWICH_COURSES
+      // Smart lookup from GREENWICH_COURSES
       if (courseCode && !className && GREENWICH_COURSES[courseCode.toUpperCase()]) {
         className = GREENWICH_COURSES[courseCode.toUpperCase()];
       } else if (!courseCode && className) {
@@ -346,26 +425,36 @@ export function ClassScheduleModal({
       const sDateStr = normalizeDate(startDateRaw);
       const eDateStr = normalizeDate(endDateRaw) || sDateStr;
 
+      // Intelligent Date Expansion across weeks
       let dateList = [];
-      if (!eDateStr || eDateStr === sDateStr) {
-        if (sDateStr) dateList.push(sDateStr);
-      } else {
-        const sD = new Date(sDateStr + "T00:00:00");
-        const eD = new Date(eDateStr + "T00:00:00");
-        if (!isNaN(sD.getTime()) && !isNaN(eD.getTime()) && eD >= sD) {
-          const diffDays = Math.round((eD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24));
-          const stepDays = diffDays >= 7 ? 7 : 1;
+      const sD = new Date(sDateStr + "T00:00:00");
+      const eD = new Date(eDateStr + "T00:00:00");
+
+      if (!isNaN(sD.getTime()) && !isNaN(eD.getTime()) && eD >= sD) {
+        let targetDays = parseDaysOfWeek(dayOfWeekRaw);
+        if (targetDays.length === 0) {
+          if (sDateStr === eDateStr) {
+            dateList.push(sDateStr);
+          } else {
+            // Default: repeat on the same day of week as start_date
+            targetDays = [sD.getDay()];
+          }
+        }
+
+        if (targetDays.length > 0) {
           const cur = new Date(sD);
           while (cur <= eD) {
-            const yyyy = cur.getFullYear();
-            const mm = String(cur.getMonth() + 1).padStart(2, "0");
-            const dd = String(cur.getDate()).padStart(2, "0");
-            dateList.push(`${yyyy}-${mm}-${dd}`);
-            cur.setDate(cur.getDate() + stepDays);
+            if (targetDays.includes(cur.getDay())) {
+              const yyyy = cur.getFullYear();
+              const mm = String(cur.getMonth() + 1).padStart(2, "0");
+              const dd = String(cur.getDate()).padStart(2, "0");
+              dateList.push(`${yyyy}-${mm}-${dd}`);
+            }
+            cur.setDate(cur.getDate() + 1);
           }
-        } else {
-          if (sDateStr) dateList.push(sDateStr);
         }
+      } else if (sDateStr) {
+        dateList.push(sDateStr);
       }
 
       if (dateList.length === 0 && sDateStr) {
@@ -415,41 +504,31 @@ export function ClassScheduleModal({
     reader.readAsText(uploadedFile);
   };
 
-  // Download template CSV
+  // Download template CSV with recurring weeks and day_of_week column
   const handleDownloadTemplate = () => {
-    const csvHeader = "course_code,class_name,start_date,end_date,shift,room\n";
-    // Tự động tạo mẫu ngày theo tuần làm việc hiện tại đang xem trên màn hình
-    const days = (weekDays && weekDays.length >= 5)
-      ? weekDays.slice(0, 5).map((d) => d.dateStr)
-      : (() => {
-          const now = new Date();
-          const curDay = now.getDay();
-          const diffToMonday = (curDay === 0 ? -6 : 1) - curDay;
-          const mon = new Date(now);
-          mon.setDate(now.getDate() + diffToMonday);
-          const fmtDate = (d) => {
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            const dd = String(d.getDate()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd}`;
-          };
-          return [0, 1, 2, 3, 4].map((i) => fmtDate(new Date(mon.getTime() + i * 86400000)));
-        })();
+    const csvHeader = "course_code,class_name,start_date,end_date,day_of_week,shift,room\n";
+    const dStart = defaultDates.start;
+    const dEnd = defaultDates.end;
 
-    const [d1, d2, d3, d4, d5] = days;
+    const sampleRows = [
+      `COMP1752,Lập trình hướng đối tượng,${dStart},${dEnd},"2,4,6","1,2,3",Room 302`,
+      `COMP1841,Lập trình Web 1,${dStart},${dEnd},"3,5","6",Room 401`,
+      `MATH1179,Toán cho Khoa học máy tính,${dStart},${dEnd},"2,4","4,5",Room 405`,
+      `COMP1843,Nguyên lý Bảo mật,${dStart},${dEnd},"6","7,8",Room 201`,
+      `COMP1807,Quản lý dự án SCRUM,${dStart},${dEnd},"7","1,2",Room 102`,
+    ].join("\n") + "\n";
 
-    const sampleRow = `COMP1752,Lập trình hướng đối tượng,${d1},${d1},"1,2,3",Room 302\nCOMP1841,Lập trình Web 1,${d2},${d2},"4,5,6",Room 401\nMATH1179,Toán cho Khoa học máy tính,${d3},${d3},3,Room 405\nCOMP1843,Nguyên lý Bảo mật,${d4},${d4},"1,2",Room 201\nCOMP1807,Quản lý dự án SCRUM,${d5},${d5},"5,6",Room 102\n`;
-    const blob = new Blob(["\uFEFF" + csvHeader + sampleRow], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csvHeader + sampleRows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Mau_Thoi_Khoa_Bieu_Greenwich_${d1}.csv`);
+    link.setAttribute("download", `Mau_Thoi_Khoa_Bieu_DaTuan_${dStart}_den_${dEnd}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Submit valid rows
+  // Submit parsed CSV rows
   const handleConfirmImport = async () => {
     const validEntries = parsedRows
       .filter((r) => r.isValid)
@@ -476,7 +555,7 @@ export function ClassScheduleModal({
       });
 
       const earliestDate = validEntries[0]?.work_date;
-      const successMsg = res.message || `Đã nhập thành công ${validEntries.length} buổi học và tự động trừ KPI cho các ca trực trùng!`;
+      const successMsg = res.message || `Đã nhập thành công ${validEntries.length} buổi học và tự động trừ KPI cho các ca trực trùng trên toàn bộ các tuần!`;
       if (showToast) {
         showToast(successMsg, "success");
       } else {
@@ -487,7 +566,7 @@ export function ClassScheduleModal({
       setFileName("");
       await api.syncClassScheduleKpi().catch(() => {});
       if (onSuccess) await onSuccess(earliestDate);
-      onClose(); // Đóng modal để người dùng thấy trực tiếp lịch và KPI đã được trừ ngay lập tức
+      onClose();
     } catch (err) {
       alert("Lỗi khi import thời khóa biểu: " + err.message);
     } finally {
@@ -495,20 +574,127 @@ export function ClassScheduleModal({
     }
   };
 
+  // Manual Add Schedule Handler
+  const handleSaveManualSchedule = async (e) => {
+    e.preventDefault();
+    if (!manualCode.trim() && !manualName.trim()) {
+      alert("Vui lòng nhập Mã môn học hoặc Tên môn học!");
+      return;
+    }
+    if (manualSelectedDays.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 Thứ trong tuần!");
+      return;
+    }
+    if (manualSelectedShifts.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 Ca học!");
+      return;
+    }
+    if (!manualStartDate || !manualEndDate) {
+      alert("Vui lòng chọn Ngày bắt đầu và Ngày kết thúc!");
+      return;
+    }
+
+    const sD = new Date(manualStartDate + "T00:00:00");
+    const eD = new Date(manualEndDate + "T00:00:00");
+    if (eD < sD) {
+      alert("Ngày kết thúc phải sau hoặc bằng Ngày bắt đầu!");
+      return;
+    }
+
+    // Generate entries
+    const dates = [];
+    const cur = new Date(sD);
+    while (cur <= eD) {
+      if (manualSelectedDays.includes(cur.getDay())) {
+        dates.push(fmtDate(cur));
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (dates.length === 0) {
+      alert("Không tìm thấy ngày nào khớp với các Thứ đã chọn trong khoảng thời gian này!");
+      return;
+    }
+
+    const finalClassName = manualName.trim() || manualCode.trim();
+    const finalCourseCode = manualCode.trim() || Object.keys(GREENWICH_COURSES).find((k) => GREENWICH_COURSES[k] === finalClassName) || "";
+
+    const entries = [];
+    dates.forEach((dStr) => {
+      manualSelectedShifts.forEach((shiftId) => {
+        const sObj = SHIFTS.find((s) => s.id === shiftId);
+        if (sObj) {
+          entries.push({
+            course_code: finalCourseCode,
+            class_name: finalClassName,
+            work_date: dStr,
+            start_time: sObj.startTime,
+            end_time: sObj.endTime,
+            room: manualRoom.trim(),
+          });
+        }
+      });
+    });
+
+    try {
+      setIsSubmittingManual(true);
+      const chosenUserId = targetUserId ? parseInt(targetUserId) : currentUser.id;
+      const res = await api.importClassSchedules({
+        target_user_id: chosenUserId,
+        entries,
+      });
+
+      const successMsg = res.message || `Đã thêm thành công ${entries.length} buổi học cho toàn bộ các tuần và tự động trừ KPI!`;
+      if (showToast) {
+        showToast(successMsg, "success");
+      } else {
+        alert(successMsg);
+      }
+      await api.syncClassScheduleKpi().catch(() => {});
+      if (onSuccess) await onSuccess(manualStartDate);
+      onClose();
+    } catch (err) {
+      alert("Lỗi khi thêm thời khóa biểu: " + err.message);
+    } finally {
+      setIsSubmittingManual(false);
+    }
+  };
+
   // Delete single schedule
   const handleDeleteSchedule = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa buổi học này không?\n\nCác ca trực bị trừ KPI do buổi học này sẽ được tự động khôi phục có mặt và cộng lại giờ KPI!")) return;
+    if (!window.confirm("Bạn có chắc muốn xóa buổi học này không?\n\nCa trực bị trừ KPI do buổi học này sẽ được tự động khôi phục có mặt và cộng lại giờ KPI!")) return;
     try {
       const res = await api.deleteClassSchedule(id);
       await api.syncClassScheduleKpi().catch(() => {});
       const msg = res.message || "Đã xóa buổi học và tự động cộng lại giờ KPI thành công!";
-      if (showToast) {
-        showToast(msg, "success");
-      }
+      if (showToast) showToast(msg, "success");
       fetchSavedSchedules(listFilterUser);
       if (onSuccess) await onSuccess();
     } catch (err) {
       alert("Lỗi khi xóa buổi học: " + err.message);
+    }
+  };
+
+  // Delete entire course across all weeks
+  const handleDeleteCourse = async (group) => {
+    const confirmMsg = `Bạn có chắc muốn XÓA TOÀN BỘ ${group.sessions.length} buổi học của môn:\n"${group.course_code ? group.course_code + ' - ' : ''}${group.class_name}"?\n\nTất cả các ca trực bị trừ KPI do môn này trong toàn bộ các tuần sẽ được tự động khôi phục có mặt và cộng lại đủ giờ KPI!`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const params = {
+        user_id: listFilterUser && listFilterUser !== "all" ? listFilterUser : targetUserId,
+      };
+      if (group.course_code) params.course_code = group.course_code;
+      if (group.class_name) params.class_name = group.class_name;
+
+      const res = await api.deleteClassScheduleByCourse(params);
+      await api.syncClassScheduleKpi().catch(() => {});
+      const msg = res.message || `Đã xóa toàn bộ ${group.sessions.length} buổi học và khôi phục KPI thành công!`;
+      if (showToast) showToast(msg, "success");
+      fetchSavedSchedules(listFilterUser);
+      if (onSuccess) await onSuccess();
+    } catch (err) {
+      alert("Lỗi khi xóa môn học: " + err.message);
     }
   };
 
@@ -524,22 +710,90 @@ export function ClassScheduleModal({
       await api.syncClassScheduleKpi().catch(() => {});
 
       const msg = res.message || "Đã xóa toàn bộ thời khóa biểu và khôi phục lại đủ giờ KPI thành công!";
-      if (showToast) {
-        showToast(msg, "success");
-      } else {
-        alert(msg);
-      }
+      if (showToast) showToast(msg, "success");
       fetchSavedSchedules(listFilterUser);
       if (onSuccess) await onSuccess();
-      onClose(); // Tự động đóng modal để người dùng thấy trực tiếp trên giao diện KPI đã được cộng lại
+      onClose();
     } catch (err) {
       alert("Lỗi khi xóa thời khóa biểu: " + err.message);
     }
   };
 
+  // Grouped saved schedules by course & shift
+  const groupedCourses = useMemo(() => {
+    const map = {};
+    savedSchedules.forEach((item) => {
+      const key = `${item.course_code || ""}_${item.class_name}_${item.start_time}_${item.end_time}`;
+      if (!map[key]) {
+        map[key] = {
+          key,
+          course_code: item.course_code,
+          class_name: item.class_name,
+          start_time: item.start_time,
+          end_time: item.end_time,
+          room: item.room,
+          sessions: [],
+          dates: [],
+          daysOfWeek: new Set(),
+        };
+      }
+      map[key].sessions.push(item);
+      map[key].dates.push(item.work_date);
+      const d = new Date(item.work_date + "T00:00:00");
+      if (!isNaN(d.getTime())) {
+        map[key].daysOfWeek.add(d.getDay());
+      }
+    });
+
+    return Object.values(map).map((group) => {
+      const sortedDates = group.dates.sort();
+      const minDate = sortedDates[0] || "";
+      const maxDate = sortedDates[sortedDates.length - 1] || "";
+      const dayNames = Array.from(group.daysOfWeek)
+        .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+        .map((d) => (d === 0 ? "Chủ nhật" : `Thứ ${d + 1}`))
+        .join(", ");
+
+      const matchingShift = SHIFTS.find((s) => s.startTime === group.start_time && s.endTime === group.end_time);
+
+      return {
+        ...group,
+        minDate,
+        maxDate,
+        dayNames: dayNames || "Theo lịch",
+        shiftLabel: matchingShift ? `Ca ${matchingShift.id} (${matchingShift.label})` : `${group.start_time} - ${group.end_time}`
+      };
+    });
+  }, [savedSchedules]);
+
+  // Calculations for preview
   const validCount = parsedRows.filter((r) => r.isValid).length;
   const invalidCount = parsedRows.filter((r) => !r.isValid).length;
   const overlapCount = parsedRows.filter((r) => r.isValid && r.overlappingShifts.length > 0).length;
+
+  // Manual duration quick set
+  const setManualWeeks = (numWeeks) => {
+    if (!manualStartDate) return;
+    const sD = new Date(manualStartDate + "T00:00:00");
+    if (isNaN(sD.getTime())) return;
+    const targetEnd = new Date(sD.getTime() + numWeeks * 7 * 86400000 - 86400000);
+    setManualEndDate(fmtDate(targetEnd));
+  };
+
+  // Manual live calculation
+  const manualPreviewCount = useMemo(() => {
+    if (!manualStartDate || !manualEndDate || manualSelectedDays.length === 0 || manualSelectedShifts.length === 0) return 0;
+    const sD = new Date(manualStartDate + "T00:00:00");
+    const eD = new Date(manualEndDate + "T00:00:00");
+    if (isNaN(sD.getTime()) || isNaN(eD.getTime()) || eD < sD) return 0;
+    let daysCount = 0;
+    const cur = new Date(sD);
+    while (cur <= eD) {
+      if (manualSelectedDays.includes(cur.getDay())) daysCount++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return daysCount * manualSelectedShifts.length;
+  }, [manualStartDate, manualEndDate, manualSelectedDays, manualSelectedShifts]);
 
   if (!isOpen) return null;
 
@@ -548,9 +802,9 @@ export function ClassScheduleModal({
       <div
         className="modal-content"
         style={{
-          maxWidth: 920,
+          maxWidth: 960,
           width: "95%",
-          maxHeight: "90vh",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           borderRadius: 20,
@@ -588,10 +842,10 @@ export function ClassScheduleModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#ffffff" }}>
-                Thời Khóa Biểu & Lịch Học Cá Nhân (Class Schedule)
+                Thời Khóa Biểu & Lịch Học Lặp Tuần (Class Schedule)
               </h3>
-              <p style={{ margin: 0, fontSize: 12, opacity: 0.85, marginTop: 2 }}>
-                Nhập lịch học chính khóa từ file CSV/Excel. Hệ thống sẽ tự động phát hiện ca trực trùng lịch, đánh vắng và trừ giờ KPI (81h) tương ứng.
+              <p style={{ margin: 0, fontSize: 12, opacity: 0.9, marginTop: 2 }}>
+                Tự động lặp lại theo tuần cho toàn bộ học kỳ (start_date → end_date) và tự động đánh vắng, trừ KPI (20h/tuần) cho các ca trực trùng lịch.
               </p>
             </div>
           </div>
@@ -621,15 +875,17 @@ export function ClassScheduleModal({
             borderBottom: "1px solid #e2e8f0",
             background: "#f8fafc",
             padding: "0 24px",
+            gap: 8,
+            overflowX: "auto",
           }}
         >
           <button
             onClick={() => setActiveTab("import")}
             style={{
-              padding: "14px 20px",
+              padding: "14px 16px",
               border: "none",
               background: "none",
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: 700,
               cursor: "pointer",
               display: "flex",
@@ -637,18 +893,39 @@ export function ClassScheduleModal({
               gap: 8,
               color: activeTab === "import" ? "#2563eb" : "#64748b",
               borderBottom: activeTab === "import" ? "3px solid #2563eb" : "3px solid transparent",
+              whiteSpace: "nowrap"
             }}
           >
-            <Upload size={16} /> <span>Import Thời Khóa Biểu (Excel/CSV)</span>
+            <Upload size={16} /> <span>Import File CSV / Excel Đa Tuần</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("manual")}
+            style={{
+              padding: "14px 16px",
+              border: "none",
+              background: "none",
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              color: activeTab === "manual" ? "#2563eb" : "#64748b",
+              borderBottom: activeTab === "manual" ? "3px solid #2563eb" : "3px solid transparent",
+              whiteSpace: "nowrap"
+            }}
+          >
+            <Plus size={16} /> <span>Thêm Nhanh Lịch Học (Thủ công)</span>
           </button>
 
           <button
             onClick={() => setActiveTab("list")}
             style={{
-              padding: "14px 20px",
+              padding: "14px 16px",
               border: "none",
               background: "none",
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: 700,
               cursor: "pointer",
               display: "flex",
@@ -656,6 +933,7 @@ export function ClassScheduleModal({
               gap: 8,
               color: activeTab === "list" ? "#2563eb" : "#64748b",
               borderBottom: activeTab === "list" ? "3px solid #2563eb" : "3px solid transparent",
+              whiteSpace: "nowrap"
             }}
           >
             <Calendar size={16} /> <span>Thời Khóa Biểu Đã Lưu ({savedSchedules.length})</span>
@@ -664,82 +942,82 @@ export function ClassScheduleModal({
 
         {/* Content Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          
+          {/* Member Selector for Admin/Leader */}
+          {isAdmin && allMembers.length > 0 && activeTab !== "list" && (
+            <div
+              style={{
+                background: "#f0f7ff",
+                border: "1.5px solid #bfdbfe",
+                borderRadius: 12,
+                padding: "10px 16px",
+                marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <User size={18} color="#2563eb" />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1e3a8a" }}>
+                    Nhân sự áp dụng Thời Khóa Biểu:
+                  </div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>
+                    Hệ thống sẽ đối chiếu và tự động trừ KPI cho nhân sự được chọn này trên tất cả các tuần
+                  </div>
+                </div>
+              </div>
+              <select
+                value={targetUserId}
+                onChange={(e) => {
+                  const uid = e.target.value;
+                  setTargetUserId(uid);
+                  setListFilterUser(uid);
+                }}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: 8,
+                  border: "1.5px solid #93c5fd",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#1e3a8a",
+                  minWidth: 240,
+                  background: "#ffffff",
+                  cursor: "pointer",
+                }}
+              >
+                {allMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name || m.username} (@{m.username}) {m.role === "admin" ? "[Quản lý]" : m.role === "leader" ? "[Leader]" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* TAB 1: IMPORT CSV */}
           {activeTab === "import" && (
             <div>
-              
-
-              {/* Member Selector for Admin/Leader */}
-              {isAdmin && allMembers.length > 0 && (
-                <div
-                  style={{
-                    background: "#f0f7ff",
-                    border: "1.5px solid #bfdbfe",
-                    borderRadius: 12,
-                    padding: "12px 16px",
-                    marginBottom: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 12,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <User size={20} color="#2563eb" />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#1e3a8a" }}>
-                        Nhân sự áp dụng Thời Khóa Biểu:
-                      </div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>
-                        Hệ thống sẽ đối chiếu và tự động trừ KPI cho nhân sự được chọn này
-                      </div>
-                    </div>
-                  </div>
-                  <select
-                    value={targetUserId}
-                    onChange={(e) => {
-                      const uid = e.target.value;
-                      setTargetUserId(uid);
-                      setListFilterUser(uid);
-                    }}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 8,
-                      border: "1.5px solid #93c5fd",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: "#1e3a8a",
-                      minWidth: 260,
-                      background: "#ffffff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {allMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name || m.username} (@{m.username}) {m.role === "admin" ? "[Quản lý]" : m.role === "leader" ? "[Leader]" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Upload Dropzone / Actions */}
+              {/* Upload Dropzone */}
               <div
                 style={{
                   border: "2px dashed #93c5fd",
                   borderRadius: 14,
-                  padding: "24px 20px",
+                  padding: "20px 20px",
                   textAlign: "center",
                   background: "#eff6ff",
                   marginBottom: 16,
                 }}
               >
-                <Upload size={36} color="#2563eb" style={{ marginBottom: 8 }} />
+                <Upload size={32} color="#2563eb" style={{ marginBottom: 6 }} />
                 <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1e3a8a" }}>
-                  Tải lên File Thời Khóa Biểu (Excel .xlsx hoặc .csv)
+                  Tải lên File Thời Khóa Biểu (Excel / CSV)
                 </h4>
-                <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 16px" }}>
-                  Cấu trúc file gồm 6 cột: <code>course_code</code>, <code>class_name</code>, <code>start_date</code>, <code>end_date</code>, <strong><code>shift</code> (1, 2, 3... hoặc Ca 1, Ca 2)</strong>, <code>room</code>
+                <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 12px" }}>
+                  Hỗ trợ các cột: <code>course_code</code>, <code>class_name</code>, <code>start_date</code>, <code>end_date</code>, <strong><code>day_of_week</code> (vd: 2,4,6 hoặc T2,T4,T6)</strong>, <strong><code>shift</code> (1, 2, 6... hoặc Ca 6)</strong>, <code>room</code>
                 </p>
 
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -747,7 +1025,7 @@ export function ClassScheduleModal({
                     className="btn btn-primary btn-sm"
                     style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "8px 16px" }}
                   >
-                    <Upload size={15} /> <span>Chọn File Từ Máy</span>
+                    <Upload size={15} /> <span>Chọn File CSV Từ Máy</span>
                     <input
                       type="file"
                       accept=".csv,text/csv,text/plain"
@@ -761,17 +1039,36 @@ export function ClassScheduleModal({
                     className="btn btn-secondary btn-sm"
                     style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px" }}
                   >
-                    <Download size={15} /> <span>Tải Mẫu CSV Greenwich</span>
+                    <Download size={15} /> <span>Tải Mẫu CSV Đa Tuần (Mẫu Chuẩn)</span>
                   </button>
-
-
                 </div>
 
                 {fileName && (
-                  <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: "#2563eb" }}>
+                  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: "#2563eb" }}>
                     📄 Đã tải: {fileName}
                   </div>
                 )}
+              </div>
+
+              {/* Informative Note */}
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 12,
+                  color: "#166534",
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Sparkles size={16} color="#16a34a" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>Cơ chế tự động áp dụng qua các tuần tiếp theo (Phương án 2):</strong> Bạn chỉ cần nhập <code>start_date</code> (ngày bắt đầu kỳ) và <code>end_date</code> (ngày kết thúc kỳ) cùng cột <code>day_of_week</code> (ví dụ: <code>2,4,6</code>). Hệ thống sẽ tự động nhân bản lịch học cho tất cả các tuần tiếp theo và giữ nguyên trạng thái vắng, trừ KPI cho các tuần đó!
+                </div>
               </div>
 
               {parsingError && (
@@ -785,10 +1082,10 @@ export function ClassScheduleModal({
                 <div>
                   {overlapCount > 0 && (
                     <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#c2410c", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>⚡ Phát hiện <strong>{overlapCount}</strong> ca trực trùng lịch học. Khi xác nhận import, hệ thống sẽ tự động chuyển sang <strong>Vắng mặt</strong> và <strong>trừ giờ KPI</strong> tương ứng.</span>
+                      <span>⚡ Phát hiện <strong>{overlapCount}</strong> ca trực trùng lịch học trên các tuần. Khi xác nhận import, hệ thống sẽ tự động chuyển sang <strong>Vắng mặt</strong> và <strong>trừ giờ KPI</strong> tương ứng cho toàn bộ các tuần!</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                       <span>Tổng: <strong>{parsedRows.length}</strong> buổi học</span>
                       <span style={{ color: "#16a34a" }}>• Hợp lệ: <strong>{validCount}</strong></span>
@@ -803,7 +1100,7 @@ export function ClassScheduleModal({
                       style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
                     >
                       <CheckCircle2 size={16} />
-                      <span>{isSubmitting ? "Đang lưu..." : `Xác Nhận Import (${validCount} buổi)`}</span>
+                      <span>{isSubmitting ? "Đang lưu..." : `Xác Nhận Import (${validCount} buổi vào các tuần)`}</span>
                     </button>
                   </div>
 
@@ -875,6 +1172,290 @@ export function ClassScheduleModal({
             </div>
           )}
 
+          {/* TAB 2: MANUAL ADD (THÊM NHANH THỦ CÔNG) */}
+          {activeTab === "manual" && (
+            <form onSubmit={handleSaveManualSchedule}>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginBottom: 16 }}>
+                
+                {/* Row 1: Course Code & Name */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                      Mã môn học (Course Code):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: COMP1752, COMP1841..."
+                      value={manualCode}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        setManualCode(val);
+                        if (GREENWICH_COURSES[val] && !manualName) {
+                          setManualName(GREENWICH_COURSES[val]);
+                        }
+                      }}
+                      className="form-control"
+                      style={{ fontSize: 13, fontWeight: 600 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                      Tên môn học (Class Name):
+                    </label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="text"
+                        placeholder="VD: Lập trình Web 1, Lập trình hướng đối tượng..."
+                        value={manualName}
+                        onChange={(e) => setManualName(e.target.value)}
+                        className="form-control"
+                        style={{ fontSize: 13 }}
+                        required
+                      />
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setManualCode(e.target.value);
+                            setManualName(GREENWICH_COURSES[e.target.value] || "");
+                          }
+                        }}
+                        style={{ maxWidth: 140, fontSize: 12, borderRadius: 8, border: "1px solid #cbd5e1" }}
+                      >
+                        <option value="">-- Môn mẫu --</option>
+                        {Object.entries(GREENWICH_COURSES).map(([code, name]) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Days of week selector (T2, T4, T6...) */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Thứ học trong tuần (Chọn các thứ học cố định hàng tuần):
+                  </label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {DAY_OPTIONS.map((item) => {
+                      const isSelected = manualSelectedDays.includes(item.day);
+                      return (
+                        <button
+                          key={item.day}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setManualSelectedDays(manualSelectedDays.filter((d) => d !== item.day));
+                            } else {
+                              setManualSelectedDays([...manualSelectedDays, item.day].sort());
+                            }
+                          }}
+                          style={{
+                            padding: "8px 16px",
+                            borderRadius: 10,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            border: isSelected ? "2px solid #2563eb" : "1.5px solid #cbd5e1",
+                            background: isSelected ? "#eff6ff" : "#ffffff",
+                            color: isSelected ? "#1d4ed8" : "#475569",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6
+                          }}
+                        >
+                          <span>{item.label}</span>
+                          {isSelected && <CheckCircle2 size={15} color="#2563eb" />}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setManualSelectedDays([1, 3, 5])}
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: 12, padding: "6px 10px" }}
+                      title="Chọn nhanh Thứ 2, 4, 6"
+                    >
+                      ⚡ 2, 4, 6
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualSelectedDays([2, 4])}
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: 12, padding: "6px 10px" }}
+                      title="Chọn nhanh Thứ 3, 5"
+                    >
+                      ⚡ 3, 5
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 3: Shift selector (Ca 1 -> Ca 9) */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Ca học (Chọn các ca trực bị trùng lịch học):
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(135px, 1fr))", gap: 8 }}>
+                    {SHIFTS.map((s) => {
+                      const isSelected = manualSelectedShifts.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setManualSelectedShifts(manualSelectedShifts.filter((id) => id !== s.id));
+                            } else {
+                              setManualSelectedShifts([...manualSelectedShifts, s.id].sort((a, b) => a - b));
+                            }
+                          }}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 10,
+                            textAlign: "center",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            border: isSelected ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                            background: isSelected ? "#eff6ff" : "#ffffff",
+                            color: isSelected ? "#1d4ed8" : "#334155",
+                          }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 800 }}>Ca {s.id}</div>
+                          <div style={{ fontSize: 11, color: isSelected ? "#2563eb" : "#64748b" }}>{s.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Row 4: Date Range & Quick Range Buttons */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label style={{ fontSize: 12.5, fontWeight: 700, color: "#334155", margin: 0 }}>
+                      Khoảng thời gian áp dụng (Start Date → End Date):
+                    </label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <span style={{ fontSize: 11.5, color: "#64748b", alignSelf: "center" }}>Chọn nhanh:</span>
+                      <button
+                        type="button"
+                        onClick={() => setManualWeeks(4)}
+                        className="btn btn-sm btn-secondary"
+                        style={{ fontSize: 11.5, padding: "2px 8px" }}
+                      >
+                        +4 tuần
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManualWeeks(8)}
+                        className="btn btn-sm btn-secondary"
+                        style={{ fontSize: 11.5, padding: "2px 8px", fontWeight: 700, color: "#2563eb" }}
+                      >
+                        +8 tuần (Nửa kỳ)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManualWeeks(12)}
+                        className="btn btn-sm btn-secondary"
+                        style={{ fontSize: 11.5, padding: "2px 8px" }}
+                      >
+                        +12 tuần (Cả kỳ)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Từ ngày (Bắt đầu):</div>
+                      <input
+                        type="date"
+                        value={manualStartDate}
+                        onChange={(e) => setManualStartDate(e.target.value)}
+                        className="form-control"
+                        style={{ fontSize: 13 }}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Đến ngày (Kết thúc):</div>
+                      <input
+                        type="date"
+                        value={manualEndDate}
+                        onChange={(e) => setManualEndDate(e.target.value)}
+                        className="form-control"
+                        style={{ fontSize: 13 }}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Phòng học (Tùy chọn):</div>
+                      <input
+                        type="text"
+                        placeholder="VD: Room 302, Lab 4..."
+                        value={manualRoom}
+                        onChange={(e) => setManualRoom(e.target.value)}
+                        className="form-control"
+                        style={{ fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real-time Summary Box */}
+                <div
+                  style={{
+                    background: "#ecfdf5",
+                    border: "1.5px solid #a7f3d0",
+                    borderRadius: 10,
+                    padding: "12px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Sparkles size={20} color="#059669" />
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#065f46" }}>
+                        ⚡ Sẽ tự động tạo {manualPreviewCount} buổi học trên toàn bộ các tuần
+                      </div>
+                      <div style={{ fontSize: 12, color: "#047857" }}>
+                        Vào các ngày: {manualSelectedDays.map((d) => (d === 0 ? "CN" : `Thứ ${d + 1}`)).join(", ") || "(Chưa chọn)"} • {manualSelectedShifts.map((id) => `Ca ${id}`).join(", ") || "(Chưa chọn ca)"}
+                        {manualStartDate && manualEndDate ? ` • Từ ${manualStartDate} đến ${manualEndDate}` : ""}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingManual || manualPreviewCount === 0}
+                    className="btn btn-primary"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontWeight: 800,
+                      padding: "9px 20px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{isSubmittingManual ? "Đang lưu..." : `Lưu Lịch Học (${manualPreviewCount} buổi)`}</span>
+                  </button>
+                </div>
+
+              </div>
+            </form>
+          )}
+
+          {/* TAB 3: LIST SAVED SCHEDULES */}
           {activeTab === "list" && (
             <div>
               <div
@@ -910,7 +1491,44 @@ export function ClassScheduleModal({
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", background: "#f1f5f9", borderRadius: 8, padding: 2 }}>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("grouped")}
+                      style={{
+                        border: "none",
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: viewMode === "grouped" ? "#ffffff" : "transparent",
+                        color: viewMode === "grouped" ? "#2563eb" : "#64748b",
+                        boxShadow: viewMode === "grouped" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
+                      }}
+                    >
+                      Gom nhóm môn ({groupedCourses.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("flat")}
+                      style={{
+                        border: "none",
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: viewMode === "flat" ? "#ffffff" : "transparent",
+                        color: viewMode === "flat" ? "#2563eb" : "#64748b",
+                        boxShadow: viewMode === "flat" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
+                      }}
+                    >
+                      Tất cả buổi ({savedSchedules.length})
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => fetchSavedSchedules(listFilterUser)}
                     className="btn btn-secondary btn-sm"
@@ -948,44 +1566,186 @@ export function ClassScheduleModal({
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#334155" }}>
                     Chưa có lịch học nào được lưu
                   </p>
-                  <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                    Hãy chuyển sang tab "Import Thời Khóa Biểu" để tải lên file thời khóa biểu từ trường.
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                    Chuyển sang tab <strong>Thêm Nhanh Lịch Học</strong> hoặc <strong>Import File CSV</strong> để bắt đầu thiết lập.
                   </p>
                 </div>
+              ) : viewMode === "grouped" ? (
+                /* Grouped Course Cards */
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {groupedCourses.map((group) => {
+                    const isExpanded = expandedCourseKey === group.key;
+                    return (
+                      <div
+                        key={group.key}
+                        style={{
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 12,
+                          background: "#ffffff",
+                          overflow: "hidden",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "14px 18px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "#f8fafc",
+                            borderBottom: isExpanded ? "1px solid #e2e8f0" : "none",
+                            flexWrap: "wrap",
+                            gap: 10,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 10,
+                                background: "#eff6ff",
+                                border: "1px solid #bfdbfe",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#2563eb",
+                              }}
+                            >
+                              <BookOpen size={20} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1e293b" }}>
+                                {group.course_code ? `${group.course_code} - ` : ""}{group.class_name}
+                              </div>
+                              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 700, color: "#2563eb" }}>📅 {group.dayNames}</span>
+                                <span>•</span>
+                                <span style={{ fontWeight: 700, color: "#7c3aed" }}>⏰ {group.shiftLabel}</span>
+                                {group.room && (
+                                  <>
+                                    <span>•</span>
+                                    <span>🏫 {group.room}</span>
+                                  </>
+                                )}
+                                <span>•</span>
+                                <span style={{ fontWeight: 700, color: "#059669" }}>
+                                  {group.sessions.length} buổi ({group.minDate} → {group.maxDate})
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedCourseKey(isExpanded ? null : group.key)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12 }}
+                            >
+                              <span>{isExpanded ? "Ẩn ngày" : `Xem ${group.sessions.length} ngày`}</span>
+                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCourse(group)}
+                              className="btn btn-sm"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                background: "#fef2f2",
+                                color: "#dc2626",
+                                border: "1px solid #fecaca",
+                              }}
+                              title="Xóa toàn bộ các buổi của môn này và khôi phục KPI cho tất cả các tuần"
+                            >
+                              <Trash2 size={13} />
+                              <span>Xóa Môn Này</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded details list of dates */}
+                        {isExpanded && (
+                          <div style={{ padding: "12px 18px", background: "#ffffff", maxHeight: 220, overflowY: "auto" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
+                              {group.sessions.map((s) => (
+                                <div
+                                  key={s.id}
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "6px 10px",
+                                    background: "#f8fafc",
+                                    borderRadius: 8,
+                                    border: "1px solid #e2e8f0",
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  <div>
+                                    <span style={{ fontWeight: 700, color: "#1e293b" }}>{s.work_date}</span>
+                                    <span style={{ color: "#64748b", marginLeft: 6 }}>({s.start_time} - {s.end_time})</span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteSchedule(s.id)}
+                                    style={{
+                                      border: "none",
+                                      background: "none",
+                                      color: "#ef4444",
+                                      cursor: "pointer",
+                                      padding: 2,
+                                    }}
+                                    title="Xóa buổi này"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
-                    <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                /* Flat Schedule Table */
+                <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", maxHeight: 380, overflowY: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, textAlign: "left" }}>
+                    <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 1 }}>
                       <tr>
-                        <th style={{ padding: "10px 14px" }}>Môn Học</th>
-                        <th style={{ padding: "10px 14px" }}>Sinh Viên / Nhân Sự</th>
-                        <th style={{ padding: "10px 14px" }}>Ngày Học</th>
-                        <th style={{ padding: "10px 14px" }}>Khung Giờ</th>
-                        <th style={{ padding: "10px 14px" }}>Phòng</th>
-                        <th style={{ padding: "10px 14px", textAlign: "right" }}>Thao Tác</th>
+                        <th style={{ padding: "10px 12px" }}>Mã / Tên Môn Học</th>
+                        <th style={{ padding: "10px 12px" }}>Ngày Học</th>
+                        <th style={{ padding: "10px 12px" }}>Thời Gian</th>
+                        <th style={{ padding: "10px 12px" }}>Phòng</th>
+                        <th style={{ padding: "10px 12px", textAlign: "right" }}>Thao Tác</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {savedSchedules.map((item) => (
-                        <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "10px 14px" }}>
-                            <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                              {item.course_code ? `${item.course_code} - ` : ""}
-                              {item.class_name}
-                            </div>
+                      {savedSchedules.map((s) => (
+                        <tr key={s.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "8px 12px" }}>
+                            <div style={{ fontWeight: 700, color: "#1e293b" }}>{s.course_code || "N/A"}</div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>{s.class_name}</div>
                           </td>
-                          <td style={{ padding: "10px 14px", color: "#475569" }}>{item.user_name}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 600 }}>{item.work_date}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 700, color: "#2563eb" }}>
-                            {item.start_time} - {item.end_time}
+                          <td style={{ padding: "8px 12px", fontWeight: 600 }}>{s.work_date}</td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <span style={{ fontWeight: 700, color: "#2563eb", background: "#eff6ff", border: "1px solid #bfdbfe", padding: "2px 8px", borderRadius: 6, fontSize: 11.5 }}>
+                              {s.start_time} - {s.end_time}
+                            </span>
                           </td>
-                          <td style={{ padding: "10px 14px" }}>{item.room || "-"}</td>
-                          <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                          <td style={{ padding: "8px 12px" }}>{s.room || "-"}</td>
+                          <td style={{ padding: "8px 12px", textAlign: "right" }}>
                             <button
-                              onClick={() => handleDeleteSchedule(item.id)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: "4px 8px", color: "#dc2626" }}
-                              title="Xóa buổi học này"
+                              onClick={() => handleDeleteSchedule(s.id)}
+                              className="btn btn-sm"
+                              style={{ color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "4px 8px" }}
+                              title="Xóa buổi này và khôi phục KPI"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -998,7 +1758,9 @@ export function ClassScheduleModal({
               )}
             </div>
           )}
+
         </div>
+
       </div>
     </div>
   );
