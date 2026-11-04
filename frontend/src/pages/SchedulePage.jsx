@@ -1902,43 +1902,44 @@ export function SchedulePage() {
                                 : `Bấm để xem danh sách ${slotTotal} thành viên & điểm danh`
                             }
                           >
-                            {/* Dòng 1: Đội ngũ & Nút thao tác nhanh */}
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <div
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: isTargetAbsent ? "#dc2626" : "#1e293b",
-                                  }}
-                                >
-                                  <Users
-                                    size={13}
-                                    color={isTargetAbsent ? "#dc2626" : "#2563eb"}
-                                  />
-                                  <span>{slotTotal > 0 ? `${presentCount} người` : "Điểm danh"}</span>
-                                  {filterUserId === "all" && absentCount > 0 && (
-                                    <span
-                                      style={{
-                                        fontSize: 9.5,
-                                        color: "#64748b",
-                                        background: "#f1f5f9",
-                                        border: "1px solid #e2e8f0",
-                                        padding: "1px 4px",
-                                        borderRadius: 4,
-                                        fontWeight: 600,
-                                        marginLeft: 2,
-                                      }}
-                                    >
-                                      ({absentCount} vắng)
-                                    </span>
-                                  )}
-                                </div>
-
-                                {null /* Không hiển thị badge vắng trên ô lịch — chỉ hiện trong popup */}
+                            {/* Dòng 1: Đội ngũ & Nút thao tác nhanh (luôn ghi ngang cố định, nút hover nổi tuyệt đối không chiếm diện tích) */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 22, position: "relative", width: "100%" }}>
+                              <div
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4.5,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: isTargetAbsent ? "#dc2626" : "#1e293b",
+                                  whiteSpace: "nowrap",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Users
+                                  size={13}
+                                  color={isTargetAbsent ? "#dc2626" : "#2563eb"}
+                                  style={{ flexShrink: 0 }}
+                                />
+                                <span style={{ whiteSpace: "nowrap" }}>{slotTotal > 0 ? `${presentCount} người` : "Điểm danh"}</span>
+                                {filterUserId === "all" && absentCount > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 9.5,
+                                      color: isTargetAbsent ? "#b91c1c" : "#64748b",
+                                      background: isTargetAbsent ? "#fee2e2" : "#f1f5f9",
+                                      border: `1px solid ${isTargetAbsent ? "#fca5a5" : "#e2e8f0"}`,
+                                      padding: "1px 5px",
+                                      borderRadius: 4,
+                                      fontWeight: 600,
+                                      whiteSpace: "nowrap",
+                                      flexShrink: 0,
+                                    }}
+                                    title={`Có ${absentCount} người vắng mặt trong ca này`}
+                                  >
+                                    ({absentCount} vắng)
+                                  </span>
+                                )}
                               </div>
 
                               {/* Hover Quick Actions */}
