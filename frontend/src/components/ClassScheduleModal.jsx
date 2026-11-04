@@ -11,14 +11,10 @@ import {
   Calendar,
   RefreshCw,
   User,
-  Plus,
-  Clock,
   BookOpen,
   ChevronDown,
   ChevronUp,
-  AlertTriangle,
-  Sparkles,
-  Info
+  Sparkles
 } from "lucide-react";
 
 const GREENWICH_COURSES = {
@@ -51,15 +47,6 @@ const GREENWICH_COURSES = {
   COMP1921: "Các chủ đề nâng cao trong KH dữ liệu & AI (Advanced Topics in Data Science and AI)"
 };
 
-const DAY_OPTIONS = [
-  { day: 1, label: "Thứ 2", short: "T2" },
-  { day: 2, label: "Thứ 3", short: "T3" },
-  { day: 3, label: "Thứ 4", short: "T4" },
-  { day: 4, label: "Thứ 5", short: "T5" },
-  { day: 5, label: "Thứ 6", short: "T6" },
-  { day: 6, label: "Thứ 7", short: "T7" },
-];
-
 export function ClassScheduleModal({
   isOpen,
   onClose,
@@ -70,7 +57,7 @@ export function ClassScheduleModal({
   showToast
 }) {
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader" || currentUser?.role === "manager" || Boolean(currentUser?.username && currentUser.username.toLowerCase().includes("leader")) || Boolean(currentUser?.can_manage_schedule);
-  const [activeTab, setActiveTab] = useState("import"); // 'import' | 'manual' | 'list'
+  const [activeTab, setActiveTab] = useState("import"); // 'import' | 'list'
   const [targetUserId, setTargetUserId] = useState(currentUser?.id || "");
   
   // Import states
@@ -79,16 +66,6 @@ export function ClassScheduleModal({
   const [parsedRows, setParsedRows] = useState([]);
   const [parsingError, setParsingError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Manual Add states
-  const [manualCode, setManualCode] = useState("");
-  const [manualName, setManualName] = useState("");
-  const [manualSelectedDays, setManualSelectedDays] = useState([1, 3, 5]); // Default: T2, T4, T6
-  const [manualSelectedShifts, setManualSelectedShifts] = useState([6]); // Default: Ca 6
-  const [manualStartDate, setManualStartDate] = useState("");
-  const [manualEndDate, setManualEndDate] = useState("");
-  const [manualRoom, setManualRoom] = useState("");
-  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
   // List states
   const [savedSchedules, setSavedSchedules] = useState([]);
@@ -130,11 +107,6 @@ export function ClassScheduleModal({
       setListFilterUser(currentUser.id);
     }
   }, [currentUser]);
-
-  useEffect(() => {
-    if (!manualStartDate) setManualStartDate(defaultDates.start);
-    if (!manualEndDate) setManualEndDate(defaultDates.end);
-  }, [defaultDates, manualStartDate, manualEndDate]);
 
   // Fetch saved schedules when switching to 'list' tab
   const fetchSavedSchedules = async (uid) => {
@@ -574,92 +546,6 @@ export function ClassScheduleModal({
     }
   };
 
-  // Manual Add Schedule Handler
-  const handleSaveManualSchedule = async (e) => {
-    e.preventDefault();
-    if (!manualCode.trim() && !manualName.trim()) {
-      alert("Vui lòng nhập Mã môn học hoặc Tên môn học!");
-      return;
-    }
-    if (manualSelectedDays.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 Thứ trong tuần!");
-      return;
-    }
-    if (manualSelectedShifts.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 Ca học!");
-      return;
-    }
-    if (!manualStartDate || !manualEndDate) {
-      alert("Vui lòng chọn Ngày bắt đầu và Ngày kết thúc!");
-      return;
-    }
-
-    const sD = new Date(manualStartDate + "T00:00:00");
-    const eD = new Date(manualEndDate + "T00:00:00");
-    if (eD < sD) {
-      alert("Ngày kết thúc phải sau hoặc bằng Ngày bắt đầu!");
-      return;
-    }
-
-    // Generate entries
-    const dates = [];
-    const cur = new Date(sD);
-    while (cur <= eD) {
-      if (manualSelectedDays.includes(cur.getDay())) {
-        dates.push(fmtDate(cur));
-      }
-      cur.setDate(cur.getDate() + 1);
-    }
-
-    if (dates.length === 0) {
-      alert("Không tìm thấy ngày nào khớp với các Thứ đã chọn trong khoảng thời gian này!");
-      return;
-    }
-
-    const finalClassName = manualName.trim() || manualCode.trim();
-    const finalCourseCode = manualCode.trim() || Object.keys(GREENWICH_COURSES).find((k) => GREENWICH_COURSES[k] === finalClassName) || "";
-
-    const entries = [];
-    dates.forEach((dStr) => {
-      manualSelectedShifts.forEach((shiftId) => {
-        const sObj = SHIFTS.find((s) => s.id === shiftId);
-        if (sObj) {
-          entries.push({
-            course_code: finalCourseCode,
-            class_name: finalClassName,
-            work_date: dStr,
-            start_time: sObj.startTime,
-            end_time: sObj.endTime,
-            room: manualRoom.trim(),
-          });
-        }
-      });
-    });
-
-    try {
-      setIsSubmittingManual(true);
-      const chosenUserId = targetUserId ? parseInt(targetUserId) : currentUser.id;
-      const res = await api.importClassSchedules({
-        target_user_id: chosenUserId,
-        entries,
-      });
-
-      const successMsg = res.message || `Đã thêm thành công ${entries.length} buổi học cho toàn bộ các tuần và tự động trừ KPI!`;
-      if (showToast) {
-        showToast(successMsg, "success");
-      } else {
-        alert(successMsg);
-      }
-      await api.syncClassScheduleKpi().catch(() => {});
-      if (onSuccess) await onSuccess(manualStartDate);
-      onClose();
-    } catch (err) {
-      alert("Lỗi khi thêm thời khóa biểu: " + err.message);
-    } finally {
-      setIsSubmittingManual(false);
-    }
-  };
-
   // Delete single schedule
   const handleDeleteSchedule = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa buổi học này không?\n\nCa trực bị trừ KPI do buổi học này sẽ được tự động khôi phục có mặt và cộng lại giờ KPI!")) return;
@@ -771,30 +657,6 @@ export function ClassScheduleModal({
   const invalidCount = parsedRows.filter((r) => !r.isValid).length;
   const overlapCount = parsedRows.filter((r) => r.isValid && r.overlappingShifts.length > 0).length;
 
-  // Manual duration quick set
-  const setManualWeeks = (numWeeks) => {
-    if (!manualStartDate) return;
-    const sD = new Date(manualStartDate + "T00:00:00");
-    if (isNaN(sD.getTime())) return;
-    const targetEnd = new Date(sD.getTime() + numWeeks * 7 * 86400000 - 86400000);
-    setManualEndDate(fmtDate(targetEnd));
-  };
-
-  // Manual live calculation
-  const manualPreviewCount = useMemo(() => {
-    if (!manualStartDate || !manualEndDate || manualSelectedDays.length === 0 || manualSelectedShifts.length === 0) return 0;
-    const sD = new Date(manualStartDate + "T00:00:00");
-    const eD = new Date(manualEndDate + "T00:00:00");
-    if (isNaN(sD.getTime()) || isNaN(eD.getTime()) || eD < sD) return 0;
-    let daysCount = 0;
-    const cur = new Date(sD);
-    while (cur <= eD) {
-      if (manualSelectedDays.includes(cur.getDay())) daysCount++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return daysCount * manualSelectedShifts.length;
-  }, [manualStartDate, manualEndDate, manualSelectedDays, manualSelectedShifts]);
-
   if (!isOpen) return null;
 
   return (
@@ -868,7 +730,7 @@ export function ClassScheduleModal({
           </button>
         </div>
 
-        {/* Tab Controls */}
+        {/* Tab Controls (Only 2 tabs: Import CSV & Saved Schedules) */}
         <div
           style={{
             display: "flex",
@@ -882,10 +744,10 @@ export function ClassScheduleModal({
           <button
             onClick={() => setActiveTab("import")}
             style={{
-              padding: "14px 16px",
+              padding: "14px 20px",
               border: "none",
               background: "none",
-              fontSize: 13.5,
+              fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",
               display: "flex",
@@ -900,32 +762,12 @@ export function ClassScheduleModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("manual")}
-            style={{
-              padding: "14px 16px",
-              border: "none",
-              background: "none",
-              fontSize: 13.5,
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              color: activeTab === "manual" ? "#2563eb" : "#64748b",
-              borderBottom: activeTab === "manual" ? "3px solid #2563eb" : "3px solid transparent",
-              whiteSpace: "nowrap"
-            }}
-          >
-            <Plus size={16} /> <span>Thêm Nhanh Lịch Học (Thủ công)</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab("list")}
             style={{
-              padding: "14px 16px",
+              padding: "14px 20px",
               border: "none",
               background: "none",
-              fontSize: 13.5,
+              fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",
               display: "flex",
@@ -1067,7 +909,7 @@ export function ClassScheduleModal({
               >
                 <Sparkles size={16} color="#16a34a" style={{ flexShrink: 0 }} />
                 <div>
-                  <strong>Cơ chế tự động áp dụng qua các tuần tiếp theo (Phương án 2):</strong> Bạn chỉ cần nhập <code>start_date</code> (ngày bắt đầu kỳ) và <code>end_date</code> (ngày kết thúc kỳ) cùng cột <code>day_of_week</code> (ví dụ: <code>2,4,6</code>). Hệ thống sẽ tự động nhân bản lịch học cho tất cả các tuần tiếp theo và giữ nguyên trạng thái vắng, trừ KPI cho các tuần đó!
+                  <strong>Cơ chế tự động áp dụng qua các tuần tiếp theo:</strong> Bạn chỉ cần nhập <code>start_date</code> (ngày bắt đầu kỳ) và <code>end_date</code> (ngày kết thúc kỳ) cùng cột <code>day_of_week</code> (ví dụ: <code>2,4,6</code>). Hệ thống sẽ tự động nhân bản lịch học cho tất cả các tuần tiếp theo và giữ nguyên trạng thái vắng, trừ KPI cho các tuần đó!
                 </div>
               </div>
 
@@ -1104,7 +946,7 @@ export function ClassScheduleModal({
                     </button>
                   </div>
 
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
+                  <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", maxHeight: 340, overflowY: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, textAlign: "left" }}>
                       <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 1 }}>
                         <tr>
@@ -1172,290 +1014,7 @@ export function ClassScheduleModal({
             </div>
           )}
 
-          {/* TAB 2: MANUAL ADD (THÊM NHANH THỦ CÔNG) */}
-          {activeTab === "manual" && (
-            <form onSubmit={handleSaveManualSchedule}>
-              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginBottom: 16 }}>
-                
-                {/* Row 1: Course Code & Name */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 16 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                      Mã môn học (Course Code):
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="VD: COMP1752, COMP1841..."
-                      value={manualCode}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        setManualCode(val);
-                        if (GREENWICH_COURSES[val] && !manualName) {
-                          setManualName(GREENWICH_COURSES[val]);
-                        }
-                      }}
-                      className="form-control"
-                      style={{ fontSize: 13, fontWeight: 600 }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                      Tên môn học (Class Name):
-                    </label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input
-                        type="text"
-                        placeholder="VD: Lập trình Web 1, Lập trình hướng đối tượng..."
-                        value={manualName}
-                        onChange={(e) => setManualName(e.target.value)}
-                        className="form-control"
-                        style={{ fontSize: 13 }}
-                        required
-                      />
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            setManualCode(e.target.value);
-                            setManualName(GREENWICH_COURSES[e.target.value] || "");
-                          }
-                        }}
-                        style={{ maxWidth: 140, fontSize: 12, borderRadius: 8, border: "1px solid #cbd5e1" }}
-                      >
-                        <option value="">-- Môn mẫu --</option>
-                        {Object.entries(GREENWICH_COURSES).map(([code, name]) => (
-                          <option key={code} value={code}>
-                            {code}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 2: Days of week selector (T2, T4, T6...) */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-                    Thứ học trong tuần (Chọn các thứ học cố định hàng tuần):
-                  </label>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {DAY_OPTIONS.map((item) => {
-                      const isSelected = manualSelectedDays.includes(item.day);
-                      return (
-                        <button
-                          key={item.day}
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setManualSelectedDays(manualSelectedDays.filter((d) => d !== item.day));
-                            } else {
-                              setManualSelectedDays([...manualSelectedDays, item.day].sort());
-                            }
-                          }}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: 10,
-                            fontSize: 13,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            border: isSelected ? "2px solid #2563eb" : "1.5px solid #cbd5e1",
-                            background: isSelected ? "#eff6ff" : "#ffffff",
-                            color: isSelected ? "#1d4ed8" : "#475569",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6
-                          }}
-                        >
-                          <span>{item.label}</span>
-                          {isSelected && <CheckCircle2 size={15} color="#2563eb" />}
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      type="button"
-                      onClick={() => setManualSelectedDays([1, 3, 5])}
-                      className="btn btn-sm btn-secondary"
-                      style={{ fontSize: 12, padding: "6px 10px" }}
-                      title="Chọn nhanh Thứ 2, 4, 6"
-                    >
-                      ⚡ 2, 4, 6
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setManualSelectedDays([2, 4])}
-                      className="btn btn-sm btn-secondary"
-                      style={{ fontSize: 12, padding: "6px 10px" }}
-                      title="Chọn nhanh Thứ 3, 5"
-                    >
-                      ⚡ 3, 5
-                    </button>
-                  </div>
-                </div>
-
-                {/* Row 3: Shift selector (Ca 1 -> Ca 9) */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-                    Ca học (Chọn các ca trực bị trùng lịch học):
-                  </label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(135px, 1fr))", gap: 8 }}>
-                    {SHIFTS.map((s) => {
-                      const isSelected = manualSelectedShifts.includes(s.id);
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setManualSelectedShifts(manualSelectedShifts.filter((id) => id !== s.id));
-                            } else {
-                              setManualSelectedShifts([...manualSelectedShifts, s.id].sort((a, b) => a - b));
-                            }
-                          }}
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: 10,
-                            textAlign: "center",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            border: isSelected ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                            background: isSelected ? "#eff6ff" : "#ffffff",
-                            color: isSelected ? "#1d4ed8" : "#334155",
-                          }}
-                        >
-                          <div style={{ fontSize: 13, fontWeight: 800 }}>Ca {s.id}</div>
-                          <div style={{ fontSize: 11, color: isSelected ? "#2563eb" : "#64748b" }}>{s.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Row 4: Date Range & Quick Range Buttons */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <label style={{ fontSize: 12.5, fontWeight: 700, color: "#334155", margin: 0 }}>
-                      Khoảng thời gian áp dụng (Start Date → End Date):
-                    </label>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <span style={{ fontSize: 11.5, color: "#64748b", alignSelf: "center" }}>Chọn nhanh:</span>
-                      <button
-                        type="button"
-                        onClick={() => setManualWeeks(4)}
-                        className="btn btn-sm btn-secondary"
-                        style={{ fontSize: 11.5, padding: "2px 8px" }}
-                      >
-                        +4 tuần
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setManualWeeks(8)}
-                        className="btn btn-sm btn-secondary"
-                        style={{ fontSize: 11.5, padding: "2px 8px", fontWeight: 700, color: "#2563eb" }}
-                      >
-                        +8 tuần (Nửa kỳ)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setManualWeeks(12)}
-                        className="btn btn-sm btn-secondary"
-                        style={{ fontSize: 11.5, padding: "2px 8px" }}
-                      >
-                        +12 tuần (Cả kỳ)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Từ ngày (Bắt đầu):</div>
-                      <input
-                        type="date"
-                        value={manualStartDate}
-                        onChange={(e) => setManualStartDate(e.target.value)}
-                        className="form-control"
-                        style={{ fontSize: 13 }}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Đến ngày (Kết thúc):</div>
-                      <input
-                        type="date"
-                        value={manualEndDate}
-                        onChange={(e) => setManualEndDate(e.target.value)}
-                        className="form-control"
-                        style={{ fontSize: 13 }}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>Phòng học (Tùy chọn):</div>
-                      <input
-                        type="text"
-                        placeholder="VD: Room 302, Lab 4..."
-                        value={manualRoom}
-                        onChange={(e) => setManualRoom(e.target.value)}
-                        className="form-control"
-                        style={{ fontSize: 13 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Real-time Summary Box */}
-                <div
-                  style={{
-                    background: "#ecfdf5",
-                    border: "1.5px solid #a7f3d0",
-                    borderRadius: 10,
-                    padding: "12px 16px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 12,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Sparkles size={20} color="#059669" />
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#065f46" }}>
-                        ⚡ Sẽ tự động tạo {manualPreviewCount} buổi học trên toàn bộ các tuần
-                      </div>
-                      <div style={{ fontSize: 12, color: "#047857" }}>
-                        Vào các ngày: {manualSelectedDays.map((d) => (d === 0 ? "CN" : `Thứ ${d + 1}`)).join(", ") || "(Chưa chọn)"} • {manualSelectedShifts.map((id) => `Ca ${id}`).join(", ") || "(Chưa chọn ca)"}
-                        {manualStartDate && manualEndDate ? ` • Từ ${manualStartDate} đến ${manualEndDate}` : ""}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmittingManual || manualPreviewCount === 0}
-                    className="btn btn-primary"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontWeight: 800,
-                      padding: "9px 20px",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>{isSubmittingManual ? "Đang lưu..." : `Lưu Lịch Học (${manualPreviewCount} buổi)`}</span>
-                  </button>
-                </div>
-
-              </div>
-            </form>
-          )}
-
-          {/* TAB 3: LIST SAVED SCHEDULES */}
+          {/* TAB 2: LIST SAVED SCHEDULES */}
           {activeTab === "list" && (
             <div>
               <div
@@ -1567,7 +1126,7 @@ export function ClassScheduleModal({
                     Chưa có lịch học nào được lưu
                   </p>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-                    Chuyển sang tab <strong>Thêm Nhanh Lịch Học</strong> hoặc <strong>Import File CSV</strong> để bắt đầu thiết lập.
+                    Chuyển sang tab <strong>Import File CSV / Excel Đa Tuần</strong> để tải lên file thời khóa biểu.
                   </p>
                 </div>
               ) : viewMode === "grouped" ? (
