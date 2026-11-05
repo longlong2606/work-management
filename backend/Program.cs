@@ -1625,6 +1625,28 @@ app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext 
     return Results.Ok(new { message = "Cập nhật thông tin nhân sự thành công!" });
 });
 
+app.MapDelete("/api/users/{id:long}", (long id, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
+
+    using var conn = Database.GetConnection();
+    var user = conn.QueryFirstOrDefault<dynamic>("SELECT id, role, username FROM users WHERE id = @id", new { id });
+    if (user == null) return Results.NotFound(new { detail = "Không tìm thấy người dùng!" });
+    if ((string)user.role == "admin" || (string)user.username == "admin")
+        return Results.BadRequest(new { detail = "Không thể xóa tài khoản Quản trị viên (Admin)!" });
+
+    conn.Execute("DELETE FROM shift_registrations WHERE user_id = @id", new { id });
+    conn.Execute("DELETE FROM competency_evaluations WHERE user_id = @id", new { id });
+    conn.Execute("DELETE FROM class_schedules WHERE user_id = @id", new { id });
+    conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @id", new { id });
+    conn.Execute("DELETE FROM notifications WHERE target_user_id = @id OR sender_id = @id", new { id });
+    conn.Execute("DELETE FROM cp_transactions WHERE user_id = @id", new { id });
+    conn.Execute("DELETE FROM users WHERE id = @id", new { id });
+
+    return Results.Ok(new { message = "Xóa người dùng thành công!" });
+});
+
 
 // ================= COMPETENCY EVALUATIONS =================
 app.MapGet("/api/competencies", (HttpContext ctx) =>

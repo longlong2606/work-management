@@ -23,9 +23,9 @@ export const DEFAULT_SHIFTS = [
 export const MOCK_FALLBACK = {
   shifts: DEFAULT_SHIFTS,
   registrations: [
-    { id: 101, shift_id: 1, full_name: "Nguyễn Văn An", username: "an.nv", phone: "0981234567", attendance_status: "present" },
-    { id: 102, shift_id: 1, full_name: "Trần Thị Bình", username: "binh.tt", phone: "0987654321", attendance_status: "present" },
-    { id: 103, shift_id: 2, full_name: "Lê Văn Cường", username: "cuong.lv", phone: "0912345678", attendance_status: "present" },
+    { id: 101, shift_id: 1, full_name: "Nguyễn Vũ Hoàng Long", username: "longhvn", phone: "0387006433", attendance_status: "present" },
+    { id: 102, shift_id: 1, full_name: "Anh Huy", username: "ahuy03", phone: "0398356653", attendance_status: "present" },
+    { id: 103, shift_id: 2, full_name: "Phan Công Danh", username: "danhpc04", phone: "0912345678", attendance_status: "present" },
     { id: 104, shift_id: 2, full_name: "Phạm Minh Đức", username: "duc.pm", phone: "0934567890", attendance_status: "absent", absence_reason: "Báo ốm sốt xuất huyết" },
     { id: 105, shift_id: 3, full_name: "Hoàng Thị Em", username: "em.ht", phone: "0978901234", attendance_status: "present" },
     { id: 106, shift_id: 3, full_name: "Vũ Quang Hải", username: "hai.vq", phone: "0965432109", attendance_status: "present" },

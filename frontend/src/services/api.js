@@ -105,6 +105,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(userData),
     }),
+  deleteUser: (userId) =>
+    request(`/users/${userId}`, {
+      method: "DELETE",
+    }),
 
   // Roles Management
   getRoles: () => request(`/roles?_t=${Date.now()}`),

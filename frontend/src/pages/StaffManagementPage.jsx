@@ -236,6 +236,24 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   };
 
   // 3. Edit User Modal
+  const handleDeleteUser = async (u) => {
+    if (!canManageStaff) return;
+    if (u.role === "admin" || u.username === "admin") {
+      showToastMsg("Không thể xóa tài khoản Quản trị viên (Admin)!", "danger");
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn nhân sự "${u.full_name || u.username}" khỏi hệ thống không?`)) {
+      return;
+    }
+    try {
+      const res = await api.deleteUser(u.id);
+      showToastMsg(res.message || "Xóa nhân sự thành công!");
+      loadAllData();
+    } catch (err) {
+      showToastMsg(err.message || "Xóa nhân sự thất bại!", "danger");
+    }
+  };
+
   const handleOpenEdit = (u) => {
     if (!canManageStaff) return;
     setEditUser(u);
@@ -564,6 +582,26 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                               >
                                 <Edit3 size={13} /> Sửa
                               </button>
+                              {u.role !== "admin" && (
+                                <button
+                                  onClick={() => handleDeleteUser(u)}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: "#dc2626",
+                                    background: "#fef2f2",
+                                    border: "1px solid #fecaca",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4
+                                  }}
+                                  title={`Xóa vĩnh viễn nhân sự ${u.full_name}`}
+                                >
+                                  <Trash2 size={13} /> Xóa
+                                </button>
+                              )}
                             </div>
                           </td>
                         )}

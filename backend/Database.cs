@@ -477,13 +477,13 @@ public static class Database
             var defaultDepts = new[]
             {
                 new { name = "Tổ Trực Vận Hành", code = "VAN_HANH", desc = "Chịu trách nhiệm trực giám sát và vận hành thiết bị phòng máy", mgr = "Quản Lý Vận Hành", color = "#2563eb" },
-                new { name = "Tổ Trực Kỹ Thuật", code = "KY_THUAT", desc = "Xử lý sự cố phần cứng, mạng và bảo trì định kỳ", mgr = "Nguyễn Văn Cường", color = "#059669" },
-                new { name = "Tổ Dịch Vụ Sinh Viên", code = "DICH_VU", desc = "Hỗ trợ sinh viên mượn trả phòng máy và giải đáp thắc mắc", mgr = "Trần Thị Bình", color = "#0891b2" },
-                new { name = "Hỗ Trợ Kỹ Thuật", code = "HO_TRO", desc = "Hỗ trợ kỹ thuật ứng cứu nhanh và trực hotline", mgr = "Lê Văn An", color = "#d97706" },
+                new { name = "Tổ Trực Kỹ Thuật", code = "KY_THUAT", desc = "Xử lý sự cố phần cứng, mạng và bảo trì định kỳ", mgr = "Quản Lý Vận Hành", color = "#059669" },
+                new { name = "Tổ Dịch Vụ Sinh Viên", code = "DICH_VU", desc = "Hỗ trợ sinh viên mượn trả phòng máy và giải đáp thắc mắc", mgr = "Quản Lý Vận Hành", color = "#0891b2" },
+                new { name = "Hỗ Trợ Kỹ Thuật", code = "HO_TRO", desc = "Hỗ trợ kỹ thuật ứng cứu nhanh và trực hotline", mgr = "Quản Lý Vận Hành", color = "#d97706" },
                 new { name = "Kỹ Thuật Hạ Tầng", code = "HA_TANG", desc = "Quản lý hệ thống máy chủ, lưu điện UPS và điều hòa phòng server", mgr = "Quản Lý Vận Hành", color = "#7c3aed" },
                 new { name = "Vận Hành Mạng", code = "MANG_NOC", desc = "Giám sát băng thông và an ninh mạng nội bộ", mgr = "Quản Lý Vận Hành", color = "#0284c7" },
                 new { name = "Chăm Sóc Khách Hàng", code = "CSKH", desc = "Tiếp nhận phản hồi và đánh giá chất lượng dịch vụ phòng máy", mgr = "Quản Lý Vận Hành", color = "#ec4899" },
-                new { name = "Giám Sát Ca Đêm", code = "CA_DEM", desc = "Trực ca đêm và tuần tra an toàn thiết bị phòng máy", mgr = "Lê Văn An", color = "#f59e0b" },
+                new { name = "Giám Sát Ca Đêm", code = "CA_DEM", desc = "Trực ca đêm và tuần tra an toàn thiết bị phòng máy", mgr = "Quản Lý Vận Hành", color = "#f59e0b" },
                 new { name = "Ban Quản Trị", code = "BAN_QT", desc = "Ban quản lý và điều hành chung hệ thống Lab", mgr = "Quản Lý Vận Hành", color = "#6366f1" }
             };
             foreach (var d in defaultDepts)
@@ -526,13 +526,46 @@ public static class Database
                         description = EXCLUDED.description", s);
             }
 
-            // 2. Synchronize initial standard users
+            // 2.0 Cleanup test users (Trần Thị Bình, Nguyễn Văn Cường, test, nv_an, etc.)
+            try
+            {
+                var testUsernames = new[] { "nv_an", "nv_binh", "nv_cuong", "test" };
+                foreach (var tu in testUsernames)
+                {
+                    var uids = conn.Query<long>("SELECT id FROM users WHERE username = @tu OR LOWER(full_name) = @tu", new { tu }).ToList();
+                    foreach (var uid in uids)
+                    {
+                        conn.Execute("DELETE FROM shift_registrations WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM competency_evaluations WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM notifications WHERE target_user_id = @uid OR sender_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM cp_transactions WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM users WHERE id = @uid", new { uid });
+                    }
+                }
+                var testNames = new[] { "Trần Thị Bình", "Nguyễn Văn Cường", "test", "Nguyễn Văn An" };
+                foreach (var fn in testNames)
+                {
+                    var uids = conn.Query<long>("SELECT id FROM users WHERE full_name = @fn", new { fn }).ToList();
+                    foreach (var uid in uids)
+                    {
+                        conn.Execute("DELETE FROM shift_registrations WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM competency_evaluations WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM class_schedules WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM notifications WHERE target_user_id = @uid OR sender_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM cp_transactions WHERE user_id = @uid", new { uid });
+                        conn.Execute("DELETE FROM users WHERE id = @uid", new { uid });
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Synchronize initial standard users (Chỉ tạo Admin mặc định nếu chưa có)
             var defaultUsers = new[]
             {
-                new { u = "admin", p = HashPassword("admin123"), fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" },
-                new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", r = "leader", d = "Tổ Trực Kỹ Thuật" },
-                new { u = "nv_binh", p = HashPassword("123456"), fn = "Trần Thị Bình", e = "binh.tran@company.com", ph = "0912345678", r = "contributor", d = "Tổ Dịch Vụ Sinh Viên" },
-                new { u = "nv_cuong", p = HashPassword("123456"), fn = "Nguyễn Văn Cường", e = "cuong.nguyen@company.com", ph = "0934567890", r = "contributor", d = "Tổ Trực Vận Hành" }
+                new { u = "admin", p = HashPassword("admin123"), fn = "Quản Lý Vận Hành", e = "admin@company.com", ph = "0901234567", r = "admin", d = "Ban Quản Trị" }
             };
 
             foreach (var u in defaultUsers)
@@ -540,36 +573,10 @@ public static class Database
                 conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, @r, @d) ON CONFLICT (username) DO NOTHING", u);
             }
 
-            var userCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
-            if (userCount <= 4)
-            {
-                conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type) VALUES (0, 1, @title, @msg, 'general')",
-                    new { title = "Chào mừng đến với Cổng Quản Lý Ca Làm Việc", msg = "Hệ thống đã sẵn sàng vận hành. Quản lý có thể thêm nhân sự tại mục Quản lý nhân viên và xếp lịch trực." });
-            }
-
             // 2.1 Always ensure accounts named leader have role 'leader'
             try
             {
                 conn.Execute("UPDATE users SET role = 'leader' WHERE LOWER(username) LIKE '%leader%' AND role != 'admin'");
-                var leaderCount = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM users WHERE role = 'leader'");
-                if (leaderCount == 0)
-                {
-                    int updated = conn.Execute("UPDATE users SET role = 'leader' WHERE username = 'nv_an'");
-                    if (updated == 0)
-                    {
-                        var firstStaff = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE role != 'admin' ORDER BY id ASC LIMIT 1");
-                        if (firstStaff != null)
-                        {
-                            long sid = Convert.ToInt64(firstStaff.id);
-                            conn.Execute("UPDATE users SET role = 'leader' WHERE id = @sid", new { sid });
-                        }
-                        else
-                        {
-                            conn.Execute("INSERT INTO users (username, password_hash, full_name, email, phone, role, department) VALUES (@u, @p, @fn, @e, @ph, 'leader', @d) ON CONFLICT (username) DO NOTHING",
-                                new { u = "nv_an", p = HashPassword("123456"), fn = "Nguyễn Văn An", e = "an.nguyen@company.com", ph = "0987654321", d = "Tổ Trực Kỹ Thuật" });
-                        }
-                    }
-                }
             }
             catch { }
 
@@ -587,45 +594,8 @@ public static class Database
             conn.Execute("INSERT INTO system_settings (key, value) VALUES ('app_url', 'https://dev-wms.codeforfun.id.vn') ON CONFLICT (key) DO NOTHING");
             conn.Execute("UPDATE system_settings SET value = 'https://dev-wms.codeforfun.id.vn' WHERE key = 'app_url' AND (value IS NULL OR value = '')");
 
-            // 4. Default weekly schedule registrations
-            var regCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM shift_registrations");
-            if (regCount == 0)
-            {
-                var adminUser = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE username = 'admin'");
-                var staffAn = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE username = 'nv_an'");
-                var staffBinh = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE username = 'nv_binh'");
-                var staffCuong = conn.QueryFirstOrDefault<dynamic>("SELECT id FROM users WHERE username = 'nv_cuong'");
-
-                if (adminUser != null && staffAn != null)
-                {
-                    long uidAdmin = Convert.ToInt64(adminUser.id);
-                    long uidAn = Convert.ToInt64(staffAn.id);
-                    long uidBinh = staffBinh != null ? Convert.ToInt64(staffBinh.id) : uidAn;
-                    long uidCuong = staffCuong != null ? Convert.ToInt64(staffCuong.id) : uidAn;
-
-                    var sampleRegs = new[]
-                    {
-                        new { uid = uidAn, sid = 1, dt = "2026-09-21", note = "Đăng ký ca trực", att = "present" },
-                        new { uid = uidBinh, sid = 2, dt = "2026-09-21", note = "Đăng ký ca trực", att = "present" },
-                        new { uid = uidAdmin, sid = 3, dt = "2026-09-22", note = "Trực giám sát vận hành", att = "present" },
-                        new { uid = uidAn, sid = 1, dt = "2026-09-22", note = "Quản lý đã phê duyệt nghỉ phép", att = "absent" },
-                        new { uid = uidCuong, sid = 4, dt = "2026-09-22", note = "Hỗ trợ kỹ thuật", att = "present" },
-                        new { uid = uidAn, sid = 2, dt = "2026-09-23", note = "Trực ca sáng 2", att = "present" },
-                        new { uid = uidAdmin, sid = 1, dt = "2026-09-23", note = "Quản lý ca sáng", att = "present" },
-                        new { uid = uidBinh, sid = 5, dt = "2026-09-24", note = "Hỗ trợ sinh viên", att = "present" },
-                        new { uid = uidCuong, sid = 7, dt = "2026-09-25", note = "Trực ca tối", att = "present" },
-                        new { uid = uidAn, sid = 9, dt = "2026-09-26", note = "Trực ca đêm", att = "present" }
-                    };
-
-                    foreach (var r in sampleRegs)
-                    {
-                        conn.Execute(@"
-                            INSERT INTO shift_registrations (user_id, shift_id, work_date, note, status, attendance_status) 
-                            VALUES (@uid, @sid, @dt, @note, 'registered', @att) 
-                            ON CONFLICT (user_id, shift_id, work_date) DO NOTHING", r);
-                    }
-                }
-            }
+            // 4. Default weekly schedule registrations (Khởi đầu sạch không tạo dữ liệu mẫu ca trực)
+            // Lịch trực sẽ được nhân sự và quản lý đăng ký thực tế trên hệ thống.
 
         }
     }

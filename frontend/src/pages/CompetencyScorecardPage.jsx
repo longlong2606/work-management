@@ -30,6 +30,14 @@ export function CompetencyScorecardPage() {
   const auth = useAuth();
   const canEvaluate = Boolean(auth?.canEvaluate);
 
+  // Danh sách tài khoản mẫu/test cần loại bỏ
+  const isTestUser = (u) => {
+    const un = (u.username || "").toLowerCase();
+    const fn = (u.full_name || u.name || "").toLowerCase();
+    return ["nv_an", "nv_binh", "nv_cuong", "test"].includes(un) ||
+           ["trần thị bình", "nguyễn văn cường", "test", "nguyễn văn an"].includes(fn);
+  };
+
   // Helper chuyển đổi User thực tế từ Backend Database sang Member đánh giá
   const mapUserToMember = (u) => {
     let scores = {};
@@ -84,7 +92,7 @@ export function CompetencyScorecardPage() {
     try {
       const saved = localStorage.getItem("lab_competency_members");
       const list = saved ? JSON.parse(saved) : INITIAL_MEMBERS;
-      const nonAdmin = Array.isArray(list) ? list.filter((m) => m.role !== "admin" && m.role !== "Quản trị viên (Admin)" && m.roleLevel !== "admin") : INITIAL_MEMBERS;
+      const nonAdmin = Array.isArray(list) ? list.filter((m) => m.role !== "admin" && m.role !== "Quản trị viên (Admin)" && m.roleLevel !== "admin" && !isTestUser(m)) : INITIAL_MEMBERS.filter((m) => !isTestUser(m));
       return nonAdmin.length > 0 ? nonAdmin : INITIAL_MEMBERS;
     } catch {
       return INITIAL_MEMBERS;
@@ -106,7 +114,7 @@ export function CompetencyScorecardPage() {
       try {
         const res = await api.getCompetencies();
         if (Array.isArray(res) && res.length > 0) {
-          const nonAdmin = res.filter((u) => u.role !== "admin" && u.username !== "admin");
+          const nonAdmin = res.filter((u) => u.role !== "admin" && u.username !== "admin" && !isTestUser(u));
           const targetList = nonAdmin.length > 0 ? nonAdmin : res.filter((u) => u.role !== "admin");
           const mapped = targetList.map(mapUserToMember);
           setMembers(mapped);
