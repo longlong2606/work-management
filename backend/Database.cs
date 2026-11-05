@@ -253,6 +253,19 @@ public static class Database
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS subtask_comments (
+                id {pk},
+                subtask_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (subtask_id) REFERENCES subtasks(id) ON DELETE CASCADE,
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_subtask_comments_subtask ON subtask_comments (subtask_id);
+
             CREATE TABLE IF NOT EXISTS cp_transactions (
                 id {pk},
                 user_id INTEGER NOT NULL,

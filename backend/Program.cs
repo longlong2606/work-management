@@ -194,6 +194,7 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
 
     var subtaskIds = subtasksRaw.Select(s => Convert.ToInt64(s.id)).ToList();
     var assigneesDict = new Dictionary<long, List<dynamic>>();
+    var commentsCountDict = new Dictionary<long, int>();
     if (subtaskIds.Any())
     {
         string ids = string.Join(",", subtaskIds);
@@ -217,6 +218,17 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
                 contribution_pct = pct
             });
         }
+
+        try
+        {
+            var commentCounts = conn.Query<(long subtask_id, int count)>($@"
+                SELECT subtask_id, COUNT(1) AS count 
+                FROM subtask_comments 
+                WHERE subtask_id IN ({ids}) 
+                GROUP BY subtask_id").ToList();
+            foreach (var c in commentCounts) commentsCountDict[c.subtask_id] = c.count;
+        }
+        catch { }
     }
 
     var subtasks = subtasksRaw.Select(s => new
@@ -238,6 +250,7 @@ app.MapGet("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
         updated_at = (string?)s.updated_at?.ToString(),
         cp_points = Convert.ToInt32(s.cp_points),
         quality_multiplier = Convert.ToDouble(s.quality_multiplier),
+        comments_count = commentsCountDict.ContainsKey(Convert.ToInt64(s.id)) ? commentsCountDict[Convert.ToInt64(s.id)] : 0,
         assignees = assigneesDict.ContainsKey(Convert.ToInt64(s.id)) ? assigneesDict[Convert.ToInt64(s.id)] : new List<dynamic>()
     }).ToList();
 
@@ -1187,6 +1200,122 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
         tx.Rollback();
         return Results.Problem(detail: "Lỗi khi xóa mục checklist: " + ex.Message, statusCode: 500);
     }
+});
+
+// ================= SUBTASK PRIVATE COMMENTS =================
+app.MapGet("/api/subtasks/{subtaskId:long}/comments", (long subtaskId, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.task_id, s.title, t.title AS task_title, t.leader_id, t.created_by
+        FROM subtasks s
+        JOIN tasks t ON s.task_id = t.id
+        WHERE s.id = @subtaskId", new { subtaskId });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
+
+    long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
+
+    bool isAdmin = currentUser.role == "admin";
+    bool isLeader = (leaderId.HasValue && leaderId.Value == currentUser.id) || (createdBy.HasValue && createdBy.Value == currentUser.id);
+    bool isAssignee = conn.ExecuteScalar<int>(
+        "SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @subtaskId AND user_id = @userId",
+        new { subtaskId, userId = currentUser.id }) > 0;
+
+    if (!isAdmin && !isLeader && !isAssignee)
+    {
+        return Results.Json(new { detail = "Bạn không có quyền xem trao đổi của mục việc này! Chỉ Người phụ trách và Người được giao việc mới có quyền." }, statusCode: 403);
+    }
+
+    var comments = conn.Query<dynamic>(@"
+        SELECT c.id, c.subtask_id, c.task_id, c.user_id, c.content, c.created_at,
+               u.username, u.full_name, u.role
+        FROM subtask_comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.subtask_id = @subtaskId
+        ORDER BY c.created_at ASC, c.id ASC", new { subtaskId }).ToList();
+
+    return Results.Ok(comments);
+});
+
+app.MapPost("/api/subtasks/{subtaskId:long}/comments", (long subtaskId, AddSubtaskCommentRequest req, HttpContext ctx) =>
+{
+    var currentUser = AuthService.GetCurrentUser(ctx);
+    if (currentUser == null) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(req.content))
+    {
+        return Results.BadRequest(new { detail = "Nội dung trao đổi không được để trống!" });
+    }
+
+    using var conn = Database.GetConnection();
+    var subtask = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT s.id, s.task_id, s.title, t.title AS task_title, t.leader_id, t.created_by
+        FROM subtasks s
+        JOIN tasks t ON s.task_id = t.id
+        WHERE s.id = @subtaskId", new { subtaskId });
+
+    if (subtask == null) return Results.NotFound(new { detail = "Mục việc không tồn tại!" });
+
+    long taskId = Convert.ToInt64(subtask.task_id);
+    string subtaskTitle = (string)subtask.title;
+    string taskTitle = (string)subtask.task_title;
+    long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
+    long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
+
+    bool isAdmin = currentUser.role == "admin";
+    bool isLeader = (leaderId.HasValue && leaderId.Value == currentUser.id) || (createdBy.HasValue && createdBy.Value == currentUser.id);
+    var assignees = conn.Query<long>(
+        "SELECT user_id FROM subtask_assignees WHERE subtask_id = @subtaskId", new { subtaskId }).ToList();
+    bool isAssignee = assignees.Contains(currentUser.id);
+
+    if (!isAdmin && !isLeader && !isAssignee)
+    {
+        return Results.Json(new { detail = "Bạn không có quyền gửi trao đổi trong mục việc này!" }, statusCode: 403);
+    }
+
+    long newId;
+    if (Database.IsPostgres)
+    {
+        newId = conn.ExecuteScalar<long>(@"
+            INSERT INTO subtask_comments (subtask_id, task_id, user_id, content, created_at)
+            VALUES (@subtaskId, @taskId, @userId, @content, CURRENT_TIMESTAMP)
+            RETURNING id",
+            new { subtaskId, taskId, userId = currentUser.id, content = req.content.Trim() });
+    }
+    else
+    {
+        conn.Execute(@"
+            INSERT INTO subtask_comments (subtask_id, task_id, user_id, content, created_at)
+            VALUES (@subtaskId, @taskId, @userId, @content, CURRENT_TIMESTAMP)",
+            new { subtaskId, taskId, userId = currentUser.id, content = req.content.Trim() });
+        newId = conn.ExecuteScalar<long>("SELECT last_insert_rowid()");
+    }
+
+    // Trigger email notification
+    EmailService.SendSubtaskCommentNotification(
+        taskId,
+        subtaskId,
+        subtaskTitle,
+        taskTitle,
+        currentUser.id,
+        currentUser.full_name ?? currentUser.username,
+        req.content.Trim(),
+        leaderId,
+        assignees);
+
+    var createdComment = conn.QueryFirstOrDefault<dynamic>(@"
+        SELECT c.id, c.subtask_id, c.task_id, c.user_id, c.content, c.created_at,
+               u.username, u.full_name, u.role
+        FROM subtask_comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.id = @newId", new { newId });
+
+    return Results.Ok(createdComment);
 });
 
 // ===== CP LEADERBOARD & STATS ENDPOINTS =====

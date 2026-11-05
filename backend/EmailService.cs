@@ -467,6 +467,77 @@ public static class EmailService
         });
     }
 
+    public static void SendSubtaskCommentNotification(
+        long taskId,
+        long subtaskId,
+        string subtaskTitle,
+        string taskTitle,
+        long senderUserId,
+        string senderName,
+        string commentContent,
+        long? leaderId,
+        IEnumerable<long> assigneeIds)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                using var conn = Database.GetConnection();
+                var appUrl = GetAppUrl(conn);
+
+                var recipientIds = new List<long>();
+                if (leaderId.HasValue && leaderId.Value != senderUserId)
+                {
+                    recipientIds.Add(leaderId.Value);
+                }
+                foreach (var aId in assigneeIds)
+                {
+                    if (aId != senderUserId && !recipientIds.Contains(aId))
+                    {
+                        recipientIds.Add(aId);
+                    }
+                }
+
+                if (!recipientIds.Any()) return;
+
+                string idsStr = string.Join(",", recipientIds);
+                var users = conn.Query<dynamic>($"SELECT id, full_name, email FROM users WHERE id IN ({idsStr})");
+
+                foreach (var u in users)
+                {
+                    string email = u.email ?? "";
+                    string fullName = u.full_name ?? "";
+                    if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) continue;
+
+                    var subject = $"[WorkShiftPro] Trao đổi mới trong mục việc: {subtaskTitle}";
+                    var taskLink = $"{appUrl}/#tasks?taskId={taskId}";
+                    var html = $@"
+                    <div style=""font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;"">
+                        <h2 style=""color: #2563eb; margin-top: 0;"">💬 Trao Đổi Mới Trong Mục Việc</h2>
+                        <p>Xin chào <strong>{fullName}</strong>,</p>
+                        <p><strong>{senderName}</strong> vừa gửi trao đổi trong mục việc: <strong>{subtaskTitle}</strong> (thuộc nhiệm vụ: <em>{taskTitle}</em>):</p>
+                        <div style=""background: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-style: italic; color: #1e293b;"">
+                            ""{WebUtility.HtmlEncode(commentContent)}""
+                        </div>
+                        <p style=""margin-top: 20px;"">
+                            <a href=""{taskLink}"" style=""background: #2563eb; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;"">
+                                👉 Xem Chi Tiết & Phản Hồi
+                            </a>
+                        </p>
+                        <hr style=""margin-top: 24px; border: none; border-top: 1px solid #e2e8f0;"" />
+                        <p style=""font-size: 11px; color: #94a3b8;"">Kênh trao đổi riêng tư giữa Người phụ trách nhiệm vụ và Người thực hiện mục việc.</p>
+                    </div>";
+
+                    SendRealEmail(email, fullName, subject, html);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Lỗi gửi email trao đổi subtask: {ex.Message}");
+            }
+        });
+    }
+
     public static (bool success, string status, string? error) SendRealEmail(string recipientEmail, string recipientName, string subject, string htmlBody)
     {
         var (host, port, user, password, fromName) = GetSmtpConfig();

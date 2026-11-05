@@ -482,6 +482,13 @@ export const api = {
     request(`/subtasks/${id}`, {
       method: "DELETE",
     }),
+  // Subtask Private Comments
+  getSubtaskComments: (subtaskId) => request(`/subtasks/${subtaskId}/comments?_t=${Date.now()}`),
+  addSubtaskComment: (subtaskId, content) =>
+    request(`/subtasks/${subtaskId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
 
   // Competency Evaluations
   getCompetencies: () => request("/competencies"),

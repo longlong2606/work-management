@@ -21,7 +21,9 @@ import {
   PauseCircle,
   PlayCircle,
   Edit3,
-  Mail
+  Mail,
+  MessageSquare,
+  Lock
 } from "lucide-react";
 
 function formatDeadline(deadlineStr) {
@@ -63,6 +65,57 @@ export function TasksPage() {
   // Modals
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskDetail, setTaskDetail] = useState(null);
+
+  // Subtask private comments state
+  const [activeCommentSubtaskId, setActiveCommentSubtaskId] = useState(null);
+  const [subtaskComments, setSubtaskComments] = useState({});
+  const [loadingComments, setLoadingComments] = useState({});
+  const [commentInputs, setCommentInputs] = useState({});
+  const [sendingComment, setSendingComment] = useState({});
+
+  const toggleSubtaskComments = async (subtaskId) => {
+    if (activeCommentSubtaskId === subtaskId) {
+      setActiveCommentSubtaskId(null);
+      return;
+    }
+    setActiveCommentSubtaskId(subtaskId);
+    if (!subtaskComments[subtaskId]) {
+      try {
+        setLoadingComments(prev => ({ ...prev, [subtaskId]: true }));
+        const data = await api.getSubtaskComments(subtaskId);
+        setSubtaskComments(prev => ({ ...prev, [subtaskId]: data || [] }));
+      } catch (err) {
+        showToast(err.message || "Không thể tải trao đổi của mục việc!", "danger");
+      } finally {
+        setLoadingComments(prev => ({ ...prev, [subtaskId]: false }));
+      }
+    }
+  };
+
+  const handleSendComment = async (subtaskId) => {
+    const text = (commentInputs[subtaskId] || "").trim();
+    if (!text) return;
+    try {
+      setSendingComment(prev => ({ ...prev, [subtaskId]: true }));
+      const newComment = await api.addSubtaskComment(subtaskId, text);
+      setSubtaskComments(prev => ({
+        ...prev,
+        [subtaskId]: [...(prev[subtaskId] || []), newComment]
+      }));
+      setCommentInputs(prev => ({ ...prev, [subtaskId]: "" }));
+      if (taskDetail?.subtasks) {
+        setTaskDetail(prev => ({
+          ...prev,
+          subtasks: prev.subtasks.map(s => s.id === subtaskId ? { ...s, comments_count: (s.comments_count || 0) + 1 } : s)
+        }));
+      }
+      showToast("Đã gửi trao đổi thành công!");
+    } catch (err) {
+      showToast(err.message || "Gửi trao đổi thất bại!", "danger");
+    } finally {
+      setSendingComment(prev => ({ ...prev, [subtaskId]: false }));
+    }
+  };
   const [detailLoading, setDetailLoading] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showAddSubtaskModal, setShowAddSubtaskModal] = useState(false);
@@ -1476,6 +1529,7 @@ export function TasksPage() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {subtasks.map((sub, idx) => {
                           const isAssignedToMe = sub.assignees?.some((a) => Number(a.user_id) === Number(user?.id));
+                          const canViewComments = isAdmin || isTaskLeader || isAssignedToMe;
 
                           let statusBadge = { label: "Đang làm", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
                           if (sub.status === "PENDING") {
@@ -1685,6 +1739,34 @@ export function TasksPage() {
                                           <span>Hạn: {sub.due_at}</span>
                                         </div>
                                       )}
+
+                                      {canViewComments && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleSubtaskComments(sub.id);
+                                          }}
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 4.5,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: activeCommentSubtaskId === sub.id ? "#1d4ed8" : "#475569",
+                                            background: activeCommentSubtaskId === sub.id ? "#eff6ff" : "#f8fafc",
+                                            border: `1px solid ${activeCommentSubtaskId === sub.id ? "#bfdbfe" : "#cbd5e1"}`,
+                                            padding: "2px 8px",
+                                            borderRadius: 5,
+                                            cursor: "pointer",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                          title="Kênh trao đổi riêng giữa Người phụ trách và Người thực hiện mục việc này"
+                                        >
+                                          <MessageSquare size={12} color={activeCommentSubtaskId === sub.id ? "#2563eb" : "#64748b"} />
+                                          <span>Trao đổi{sub.comments_count > 0 ? ` (${sub.comments_count})` : ""}</span>
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -1884,6 +1966,131 @@ export function TasksPage() {
                                 </div>
                                 )}
                               </div>
+
+                              {/* KHUNG TRAO ĐỔI RIÊNG TƯ THEO MỤC VIỆC (SUBTASK) */}
+                              {activeCommentSubtaskId === sub.id && canViewComments && (
+                                <div
+                                  style={{
+                                    marginTop: 12,
+                                    paddingTop: 12,
+                                    borderTop: "1px dashed #cbd5e1",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 10,
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 700, color: "#1e40af" }}>
+                                      <Lock size={12} color="#2563eb" />
+                                      <span>🔒 Kênh trao đổi riêng: Người phụ trách & Người thực hiện</span>
+                                    </div>
+                                    <span style={{ fontSize: 10.5, color: "#64748b", fontStyle: "italic" }}>
+                                      Chỉ người phụ trách nhiệm vụ và người được giao mục việc mới thấy nội dung này
+                                    </span>
+                                  </div>
+
+                                  {/* Danh sách tin nhắn trao đổi */}
+                                  <div
+                                    style={{
+                                      maxHeight: 220,
+                                      overflowY: "auto",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 8,
+                                      padding: "10px",
+                                      background: "#f8fafc",
+                                      borderRadius: 8,
+                                      border: "1px solid #f1f5f9",
+                                    }}
+                                  >
+                                    {loadingComments[sub.id] ? (
+                                      <div style={{ textAlign: "center", padding: "14px", color: "#94a3b8", fontSize: 12 }}>
+                                        Đang tải các trao đổi...
+                                      </div>
+                                    ) : (subtaskComments[sub.id] || []).length === 0 ? (
+                                      <div style={{ textAlign: "center", padding: "16px 12px", color: "#64748b", fontSize: 12, fontStyle: "italic" }}>
+                                        💬 Chưa có trao đổi nào. Người thực hiện có thể đặt câu hỏi hoặc trao đổi làm rõ yêu cầu với Trưởng nhóm tại đây.
+                                      </div>
+                                    ) : (
+                                      subtaskComments[sub.id].map((c) => {
+                                        const isMyComment = Number(c.user_id) === Number(user?.id);
+                                        return (
+                                          <div
+                                            key={c.id}
+                                            style={{
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              alignItems: isMyComment ? "flex-end" : "flex-start",
+                                              gap: 3,
+                                            }}
+                                          >
+                                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "#64748b" }}>
+                                              <strong style={{ color: isMyComment ? "#1d4ed8" : "#334155" }}>
+                                                {c.full_name || c.username} {isMyComment ? "(Tôi)" : ""}
+                                              </strong>
+                                              <span>• {c.created_at ? new Date(c.created_at).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }) : ""}</span>
+                                            </div>
+                                            <div
+                                              style={{
+                                                maxWidth: "85%",
+                                                padding: "8px 13px",
+                                                borderRadius: 10,
+                                                fontSize: 12,
+                                                lineHeight: 1.5,
+                                                background: isMyComment ? "#2563eb" : "#ffffff",
+                                                color: isMyComment ? "#ffffff" : "#1e293b",
+                                                border: isMyComment ? "none" : "1px solid #e2e8f0",
+                                                boxShadow: isMyComment ? "0 1px 2px rgba(37,99,235,0.2)" : "0 1px 2px rgba(0,0,0,0.03)",
+                                                whiteSpace: "pre-wrap",
+                                                wordBreak: "break-word",
+                                              }}
+                                            >
+                                              {c.content}
+                                            </div>
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+
+                                  {/* Ô nhập tin nhắn */}
+                                  <div style={{ display: "flex", gap: 6 }}>
+                                    <input
+                                      type="text"
+                                      className="form-input"
+                                      placeholder="Nhập câu hỏi hoặc trao đổi cho mục việc này... (Enter để gửi)"
+                                      value={commentInputs[sub.id] || ""}
+                                      onChange={(e) => setCommentInputs((prev) => ({ ...prev, [sub.id]: e.target.value }))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                          e.preventDefault();
+                                          handleSendComment(sub.id);
+                                        }
+                                      }}
+                                      disabled={sendingComment[sub.id]}
+                                      style={{ flex: 1, fontSize: 12, padding: "7px 12px" }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSendComment(sub.id)}
+                                      disabled={sendingComment[sub.id] || !(commentInputs[sub.id] || "").trim()}
+                                      className="btn btn-primary"
+                                      style={{
+                                        padding: "7px 15px",
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                      }}
+                                    >
+                                      <Send size={12} />
+                                      <span>{sendingComment[sub.id] ? "Đang gửi..." : "Gửi"}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
