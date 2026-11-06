@@ -1220,15 +1220,13 @@ app.MapGet("/api/subtasks/{subtaskId:long}/comments", (long subtaskId, HttpConte
     long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
 
-    bool isAdmin = currentUser.role == "admin";
-    bool isLeader = (leaderId.HasValue && leaderId.Value == currentUser.id) || (createdBy.HasValue && createdBy.Value == currentUser.id);
     bool isAssignee = conn.ExecuteScalar<int>(
         "SELECT COUNT(1) FROM subtask_assignees WHERE subtask_id = @subtaskId AND user_id = @userId",
         new { subtaskId, userId = currentUser.id }) > 0;
 
-    if (!isAdmin && !isLeader && !isAssignee)
+    if (!isAssignee)
     {
-        return Results.Json(new { detail = "Bạn không có quyền xem trao đổi của mục việc này! Chỉ Người phụ trách và Người được giao việc mới có quyền." }, statusCode: 403);
+        return Results.Json(new { detail = "Bạn không được giao mục việc này nên không có quyền xem trao đổi!" }, statusCode: 403);
     }
 
     var comments = conn.Query<dynamic>(@"
@@ -1267,15 +1265,13 @@ app.MapPost("/api/subtasks/{subtaskId:long}/comments", (long subtaskId, AddSubta
     long? leaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
     long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
 
-    bool isAdmin = currentUser.role == "admin";
-    bool isLeader = (leaderId.HasValue && leaderId.Value == currentUser.id) || (createdBy.HasValue && createdBy.Value == currentUser.id);
     var assignees = conn.Query<long>(
         "SELECT user_id FROM subtask_assignees WHERE subtask_id = @subtaskId", new { subtaskId }).ToList();
     bool isAssignee = assignees.Contains(currentUser.id);
 
-    if (!isAdmin && !isLeader && !isAssignee)
+    if (!isAssignee)
     {
-        return Results.Json(new { detail = "Bạn không có quyền gửi trao đổi trong mục việc này!" }, statusCode: 403);
+        return Results.Json(new { detail = "Bạn không được giao mục việc này nên không có quyền gửi trao đổi!" }, statusCode: 403);
     }
 
     long newId;

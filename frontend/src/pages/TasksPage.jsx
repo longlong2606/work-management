@@ -1529,7 +1529,7 @@ export function TasksPage() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {subtasks.map((sub, idx) => {
                           const isAssignedToMe = sub.assignees?.some((a) => Number(a.user_id) === Number(user?.id));
-                          const canViewComments = isAdmin || isTaskLeader || isAssignedToMe;
+                          const canViewComments = isAssignedToMe;
 
                           let statusBadge = { label: "Đang làm", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
                           if (sub.status === "PENDING") {
@@ -1761,7 +1761,7 @@ export function TasksPage() {
                                             cursor: "pointer",
                                             transition: "all 0.15s ease",
                                           }}
-                                          title="Kênh trao đổi riêng giữa Người phụ trách và Người thực hiện mục việc này"
+                                          title="Kênh trao đổi riêng: Dành riêng cho thành viên được giao mục việc này"
                                         >
                                           <MessageSquare size={12} color={activeCommentSubtaskId === sub.id ? "#2563eb" : "#64748b"} />
                                           <span>Trao đổi{sub.comments_count > 0 ? ` (${sub.comments_count})` : ""}</span>
@@ -1983,10 +1983,10 @@ export function TasksPage() {
                                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 700, color: "#1e40af" }}>
                                       <Lock size={12} color="#2563eb" />
-                                      <span>🔒 Kênh trao đổi riêng: Người phụ trách & Người thực hiện</span>
+                                      <span>🔒 Kênh trao đổi riêng: Dành cho thành viên được giao mục việc</span>
                                     </div>
                                     <span style={{ fontSize: 10.5, color: "#64748b", fontStyle: "italic" }}>
-                                      Chỉ người phụ trách nhiệm vụ và người được giao mục việc mới thấy nội dung này
+                                      Chỉ thành viên được giao mục việc này mới thấy và trao đổi nội dung tại đây
                                     </span>
                                   </div>
 
@@ -2010,7 +2010,7 @@ export function TasksPage() {
                                       </div>
                                     ) : (subtaskComments[sub.id] || []).length === 0 ? (
                                       <div style={{ textAlign: "center", padding: "16px 12px", color: "#64748b", fontSize: 12, fontStyle: "italic" }}>
-                                        💬 Chưa có trao đổi nào. Người thực hiện có thể đặt câu hỏi hoặc trao đổi làm rõ yêu cầu với Trưởng nhóm tại đây.
+                                        💬 Chưa có trao đổi nào. Người thực hiện có thể ghi chú, đặt câu hỏi hoặc trao đổi làm rõ tại đây.
                                       </div>
                                     ) : (
                                       subtaskComments[sub.id].map((c) => {
