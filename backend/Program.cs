@@ -1753,23 +1753,51 @@ app.MapPut("/api/users/{id:long}", (long id, UpdateUserRequest req, HttpContext 
 app.MapDelete("/api/users/{id:long}", (long id, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
-    if (currentUser == null || currentUser.role != "admin") return Results.StatusCode(403);
+    if (currentUser == null || currentUser.role != "admin") 
+        return Results.Json(new { detail = "Chỉ Quản trị viên (Admin) mới có quyền xóa tài khoản nhân sự!" }, statusCode: 403);
+
+    if (id == currentUser.id)
+        return Results.BadRequest(new { detail = "Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập!" });
 
     using var conn = Database.GetConnection();
-    var user = conn.QueryFirstOrDefault<dynamic>("SELECT id, role, username FROM users WHERE id = @id", new { id });
-    if (user == null) return Results.NotFound(new { detail = "Không tìm thấy người dùng!" });
-    if ((string)user.role == "admin" || (string)user.username == "admin")
-        return Results.BadRequest(new { detail = "Không thể xóa tài khoản Quản trị viên (Admin)!" });
+    var user = conn.QueryFirstOrDefault<dynamic>("SELECT id, role, username, full_name FROM users WHERE id = @id", new { id });
+    if (user == null) return Results.NotFound(new { detail = "Không tìm thấy tài khoản nhân sự này!" });
 
-    conn.Execute("DELETE FROM shift_registrations WHERE user_id = @id", new { id });
-    conn.Execute("DELETE FROM competency_evaluations WHERE user_id = @id", new { id });
-    conn.Execute("DELETE FROM class_schedules WHERE user_id = @id", new { id });
-    conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @id", new { id });
-    conn.Execute("DELETE FROM notifications WHERE target_user_id = @id OR sender_id = @id", new { id });
-    conn.Execute("DELETE FROM cp_transactions WHERE user_id = @id", new { id });
-    conn.Execute("DELETE FROM users WHERE id = @id", new { id });
+    string uname = (string)(user.username ?? "");
+    if (uname == "admin" || id == 1)
+        return Results.BadRequest(new { detail = "Không thể xóa tài khoản Quản trị viên gốc (admin) của hệ thống!" });
 
-    return Results.Ok(new { message = "Xóa người dùng thành công!" });
+    using var tx = conn.BeginTransaction();
+    try
+    {
+        // 1. Reassign any tasks where this user is leader or creator to current admin to prevent foreign key errors
+        conn.Execute("UPDATE tasks SET leader_id = @adminId WHERE leader_id = @id", new { adminId = currentUser.id, id }, tx);
+        conn.Execute("UPDATE tasks SET created_by = @adminId WHERE created_by = @id", new { adminId = currentUser.id, id }, tx);
+        conn.Execute("UPDATE subtasks SET created_by = @adminId WHERE created_by = @id", new { adminId = currentUser.id, id }, tx);
+
+        // 2. Clean dependent records
+        conn.Execute("DELETE FROM subtask_comments WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM shift_registrations WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM shift_history WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM shift_notes WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM competency_evaluations WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM class_schedules WHERE user_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM notifications WHERE target_user_id = @id OR sender_id = @id", new { id }, tx);
+        conn.Execute("DELETE FROM cp_transactions WHERE user_id = @id", new { id }, tx);
+        try { conn.Execute("DELETE FROM feedback WHERE user_id = @id", new { id }, tx); } catch { }
+
+        // 3. Delete user
+        conn.Execute("DELETE FROM users WHERE id = @id", new { id }, tx);
+        tx.Commit();
+
+        return Results.Ok(new { message = $"Đã xóa vĩnh viễn tài khoản {user.full_name ?? uname} khỏi hệ thống thành công!" });
+    }
+    catch (Exception ex)
+    {
+        tx.Rollback();
+        return Results.Problem(detail: "Lỗi khi xóa tài khoản: " + ex.Message, statusCode: 500);
+    }
 });
 
 

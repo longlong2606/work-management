@@ -93,6 +93,11 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
   const [editStatus, setEditStatus] = useState("active");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  // Delete User Modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetUserId, setDeleteTargetUserId] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
   // Department Modal states
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
@@ -237,20 +242,29 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
 
   // 3. Edit User Modal
   const handleDeleteUser = async (u) => {
-    if (!canManageStaff) return;
-    if (u.role === "admin" || u.username === "admin") {
-      showToastMsg("Không thể xóa tài khoản Quản trị viên (Admin)!", "danger");
+    if (!canManageStaff || !u) return;
+    if (Number(u.id) === Number(user?.id)) {
+      showToastMsg("Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập!", "danger");
       return;
     }
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn nhân sự "${u.full_name || u.username}" khỏi hệ thống không?`)) {
+    if (u.username === "admin" || Number(u.id) === 1) {
+      showToastMsg("Không thể xóa tài khoản Quản trị viên gốc (admin) của hệ thống!", "danger");
+      return;
+    }
+    if (!window.confirm(`⚠️ CẢNH BÁO QUẢN TRỊ VIÊN:\n\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${u.full_name || u.username}" (@${u.username}) khỏi hệ thống không?\n\nToàn bộ dữ liệu ca trực, lịch học, điểm năng lực và phân công nhiệm vụ của nhân sự này sẽ được xóa hoặc chuyển giao.`)) {
       return;
     }
     try {
+      setDeleteSubmitting(true);
       const res = await api.deleteUser(u.id);
-      showToastMsg(res.message || "Xóa nhân sự thành công!");
+      showToastMsg(res.message || "Xóa tài khoản nhân sự thành công!");
+      if (editUser && Number(editUser.id) === Number(u.id)) setEditUser(null);
+      if (showDeleteModal) setShowDeleteModal(false);
       loadAllData();
     } catch (err) {
       showToastMsg(err.message || "Xóa nhân sự thất bại!", "danger");
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -359,13 +373,39 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
             </div>
           )}
           {canManageStaff && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-              style={{ boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)", display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <UserPlus size={16} /> Cấp Tài Khoản Mới
-            </button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  setDeleteTargetUserId("");
+                  setShowDeleteModal(true);
+                }}
+                className="btn btn-secondary"
+                style={{
+                  background: "#fff1f2",
+                  color: "#dc2626",
+                  border: "1px solid #fecaca",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+                title="Xóa tài khoản nhân sự khỏi hệ thống (Dành cho Quản trị viên)"
+              >
+                <Trash2 size={16} /> Xóa Tài Khoản
+              </button>
+
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="btn btn-primary"
+                style={{ boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <UserPlus size={16} /> Cấp Tài Khoản Mới
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -582,7 +622,7 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                               >
                                 <Edit3 size={13} /> Sửa
                               </button>
-                              {u.role !== "admin" && (
+                              {Number(u.id) !== Number(user?.id) && u.username !== "admin" && Number(u.id) !== 1 && (
                                 <button
                                   onClick={() => handleDeleteUser(u)}
                                   className="btn btn-secondary btn-sm"
@@ -986,6 +1026,57 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
                 </div>
               </div>
 
+              {Number(editUser.id) !== Number(user?.id) && editUser.username !== "admin" && Number(editUser.id) !== 1 && (
+                <div
+                  style={{
+                    marginBottom: 20,
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    background: "#fff1f2",
+                    border: "1px dashed #fca5a5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#991b1b" }}>
+                      🗑️ Vùng nguy hiểm: Xóa tài khoản
+                    </div>
+                    <div style={{ fontSize: 11, color: "#b91c1c" }}>
+                      Xóa vĩnh viễn tài khoản @{editUser.username} và toàn bộ dữ liệu ca trực liên quan.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = editUser;
+                      handleDeleteUser(target);
+                    }}
+                    disabled={deleteSubmitting}
+                    className="btn btn-sm"
+                    style={{
+                      background: "#dc2626",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Trash2 size={13} />
+                    <span>{deleteSubmitting ? "Đang xóa..." : "Xóa tài khoản này"}</span>
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
                 <button
                   type="button"
@@ -1009,7 +1100,182 @@ export function StaffManagementPage({ onNavigateToCompetency }) {
         </div>
       )}
 
+      {/* ======================================================== */}
+      {/* MODAL 4: XÓA TÀI KHOẢN NHÂN SỰ (DÀNH CHO ADMIN)          */}
+      {/* ======================================================== */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: "26px", maxWidth: 540 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: "#fee2e2",
+                  color: "#dc2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#991b1b" }}>
+                    Xóa Tài Khoản Nhân Sự
+                  </h3>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+                    Tính năng quản trị: Xóa nhân sự vĩnh viễn khỏi hệ thống
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowDeleteModal(false)} style={{ border: "none", background: "none", cursor: "pointer" }}>
+                <X size={20} color="#94a3b8" />
+              </button>
+            </div>
 
+            <div style={{
+              padding: "12px 14px",
+              borderRadius: 8,
+              background: "#fff1f2",
+              border: "1px solid #fecaca",
+              fontSize: 12,
+              color: "#991b1b",
+              marginBottom: 18,
+              lineHeight: 1.5,
+            }}>
+              ⚠️ <strong>Cảnh báo quan trọng:</strong> Hành động này sẽ <strong>xóa vĩnh viễn</strong> tài khoản nhân sự được chọn khỏi hệ thống. Toàn bộ lịch trực, lịch học, điểm năng lực và các phân công liên quan sẽ được xóa hoặc chuyển giao cho Quản trị viên.
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label">Chọn tài khoản nhân sự cần xóa: *</label>
+              <select
+                className="form-input"
+                value={deleteTargetUserId}
+                onChange={(e) => setDeleteTargetUserId(e.target.value)}
+                style={{ height: 42, fontSize: 13 }}
+              >
+                <option value="">-- Chọn nhân sự từ danh sách ({users.filter((u) => Number(u.id) !== Number(user?.id) && u.username !== "admin" && Number(u.id) !== 1).length} người) --</option>
+                {users
+                  .filter((u) => Number(u.id) !== Number(user?.id) && u.username !== "admin" && Number(u.id) !== 1)
+                  .map((u) => {
+                    const roleName = roleMap[u.role]?.display_name || u.role;
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name} (@{u.username}) • {roleName} {u.phone ? `• SĐT: ${u.phone}` : ""}
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+
+            {/* Selected User Preview Card */}
+            {(() => {
+              const selectedU = users.find((u) => String(u.id) === String(deleteTargetUserId));
+              if (!selectedU) return null;
+              const roleObj = roleMap[selectedU.role] || { display_name: selectedU.role, color: "#64748b" };
+              return (
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 10,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    marginBottom: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
+                          background: `${roleObj.color}20`,
+                          color: roleObj.color,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 800,
+                          fontSize: 14,
+                        }}
+                      >
+                        {selectedU.full_name?.charAt(0) || selectedU.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: 14, color: "#0f172a" }}>{selectedU.full_name}</strong>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>@{selectedU.username}</div>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: `${roleObj.color}15`,
+                        color: roleObj.color,
+                        border: `1px solid ${roleObj.color}35`,
+                      }}
+                    >
+                      {roleObj.display_name}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#475569", display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+                    <div>📧 Email: <strong>{selectedU.email || "Chưa cập nhật"}</strong></div>
+                    <div>📞 Số điện thoại: <strong>{selectedU.phone || "Chưa cập nhật"}</strong></div>
+                    <div>🏢 Tổ trực: <strong>{selectedU.department || "Tổ Trực Vận Hành"}</strong></div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="btn btn-secondary"
+                disabled={deleteSubmitting}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = users.find((u) => String(u.id) === String(deleteTargetUserId));
+                  if (!target) {
+                    showToastMsg("Vui lòng chọn nhân sự cần xóa!", "danger");
+                    return;
+                  }
+                  handleDeleteUser(target);
+                }}
+                disabled={!deleteTargetUserId || deleteSubmitting}
+                className="btn"
+                style={{
+                  background: deleteTargetUserId ? "#dc2626" : "#fca5a5",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: deleteTargetUserId ? "pointer" : "not-allowed",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={15} />
+                <span>{deleteSubmitting ? "Đang xóa..." : "Xác Nhận Xóa Vĩnh Viễn"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
     </div>
