@@ -183,11 +183,6 @@ export function RosterDetailModal({ shift, dateStr, members, events, onClose }) 
                             >
                               Vắng mặt
                             </span>
-                            {m.absence_reason && (
-                              <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>
-                                Lý do: {m.absence_reason}
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span

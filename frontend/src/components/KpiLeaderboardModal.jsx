@@ -739,9 +739,9 @@ export function KpiLeaderboardModal({
                                       {sh.isPending && "🟡 Chờ duyệt vắng"}
                                       {!sh.isAbsent && !sh.isPending && "✅ Có mặt"}
                                     </div>
-                                    {(sh.absence_reason || sh.time_note) && (
+                                    {((!sh.isAbsent && sh.absence_reason) || sh.time_note) && (
                                       <div style={{ fontSize: 8, color: "#64748b", fontStyle: "italic", marginTop: 1, wordBreak: "break-word" }}>
-                                        💬 {sh.absence_reason || sh.time_note}
+                                        💬 {(!sh.isAbsent ? sh.absence_reason : "") || sh.time_note}
                                       </div>
                                     )}
                                   </div>

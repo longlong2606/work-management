@@ -1985,7 +1985,7 @@ export function SchedulePage() {
                                             color: isClassConflict ? "#6d28d9" : "#991b1b",
                                             whiteSpace: "nowrap",
                                           }}
-                                          title={targetRegInSlot?.absence_reason ? `Lý do: ${targetRegInSlot.absence_reason}` : "Đã trừ KPI ca này"}
+                                          title="Vắng mặt (Đã trừ KPI ca này)"
                                         >
                                           {isClassConflict ? `🎓 Trùng TKB (${shiftDurLabel})` : `🔴 Đã nghỉ (${shiftDurLabel})`}
                                         </span>
@@ -2098,8 +2098,8 @@ export function SchedulePage() {
                                     }}
                                   >
                                     <span>🔴 {a.full_name || a.username}</span>
-                                    <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>
-                                      {a.absence_reason || "Vắng mặt"}
+                                    <span style={{ fontSize: 9, fontStyle: "italic", opacity: 0.85 }}>
+                                      Vắng mặt
                                     </span>
                                   </div>
                                 ))}
@@ -2505,7 +2505,7 @@ export function SchedulePage() {
                             gap: 4,
                           }}
                         >
-                          🔴 {a.full_name || a.username} vắng: "{a.absence_reason || "Đã duyệt nghỉ"}"
+                          🔴 {a.full_name || a.username} (Vắng mặt)
                         </span>
                       ))}
                       {pendingInShift.map((p) => (
@@ -2633,16 +2633,16 @@ export function SchedulePage() {
                         Ngày làm: <strong>{shift.work_date}</strong> • Ghi chú:{" "}
                         {shift.note || "Không có"}
                       </div>
-                      {(isAbsent || isPending) && shift.absence_reason && (
+                      {isPending && shift.absence_reason && (
                         <div
                           style={{
                             fontSize: 12,
-                            color: isAbsent ? "#991b1b" : "#b45309",
+                            color: "#b45309",
                             fontStyle: "italic",
                             marginTop: 3,
                           }}
                         >
-                          Lý do xin vắng: "{shift.absence_reason}"
+                          Lý do xin vắng (Chờ duyệt): "{shift.absence_reason}"
                         </div>
                       )}
                     </div>
@@ -3030,10 +3030,10 @@ export function SchedulePage() {
                             </div>
                             <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
                               {m.department || "Tổ Trực Kỹ Thuật"} • {m.phone || m.email || "0364560410"}
-                              {!isTkb && m.absence_reason && (
-                                <div style={{ color: "#dc2626", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                                  ⚠️ <span>Lý do vắng: {m.absence_reason}</span>
-                                </div>
+                              {isAbsent && m.approved_by_name && (
+                                <span style={{ marginLeft: 6, color: "#b91c1c", fontWeight: 600 }}>
+                                  • Đã duyệt bởi: <strong>{m.approved_by_name}</strong>
+                                </span>
                               )}
                               {!isTkb && m.time_note && (!m.absence_reason || !m.absence_reason.includes(m.time_note)) && (
                                 <div style={{ color: "#d97706", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
@@ -3268,28 +3268,7 @@ export function SchedulePage() {
                         </div>
                       )}
 
-                      {/* Display Approved Absence Reason Box in Red */}
-                      {isAbsent && m.absence_reason && (
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: "8px 12px",
-                            borderRadius: 6,
-                            background: "#ffffff",
-                            border: "1px dashed #ef4444",
-                            borderLeft: "4px solid #ef4444",
-                            fontSize: 12,
-                            color: "#991b1b",
-                          }}
-                        >
-                          <strong>📝 Lý do vắng:</strong> "{m.absence_reason}"
-                          {m.approved_by_name && (
-                            <span style={{ marginLeft: 8, color: "#64748b", fontWeight: 600 }}>
-                              • Đã duyệt bởi: <strong>{m.approved_by_name}</strong>
-                            </span>
-                          )}
-                        </div>
-                      )}
+
                     </div>
                   );
                 })}
