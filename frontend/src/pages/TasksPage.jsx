@@ -1049,31 +1049,6 @@ export function TasksPage() {
                 </h2>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                {canEditTask(taskDetail?.task || selectedTask) && (taskDetail?.task || selectedTask)?.status !== "FINISHED" && (
-                  <button
-                    onClick={() => setEditingTask(taskDetail?.task || selectedTask)}
-                    className="task-header-edit-btn"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: "#eff6ff",
-                      color: "#1d4ed8",
-                      border: "1px solid #bfdbfe",
-                      padding: "7px 14px",
-                      borderRadius: 8,
-                      fontSize: 12.5,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      transition: "all 0.15s ease",
-                    }}
-                    title="Chỉnh sửa thông tin nhiệm vụ lớn"
-                  >
-                    <Edit3 size={14} style={{ flexShrink: 0 }} />
-                    <span className="task-header-edit-text">Chỉnh Sửa Nhiệm Vụ</span>
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     setSelectedTask(null);

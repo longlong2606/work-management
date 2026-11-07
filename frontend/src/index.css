@@ -1421,12 +1421,6 @@ div[style*="overflow-x: auto"] {
     padding: 12px 14px !important;
     gap: 8px !important;
   }
-  .task-header-edit-text {
-    display: none !important;
-  }
-  .task-header-edit-btn {
-    padding: 6px 9px !important;
-  }
   .task-detail-card,
   .task-detail-subtask-card {
     padding: 14px !important;
