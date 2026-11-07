@@ -193,8 +193,15 @@ public static class AuthService
 
                 if (user != null && user.status == "active")
                 {
-                    user.can_manage_staff = (user.role == "admin");
-                    if (user.role == "admin" || user.role == "leader" || user.role == "manager" || (user.username != null && user.username.ToLower().Contains("leader")))
+                    if (user.role == "admin" || user.id == 1)
+                    {
+                        user.can_manage_staff = true;
+                        user.can_manage_schedule = true;
+                        user.can_manage_tasks = true;
+                        user.can_evaluate = true;
+                        user.can_manage_cp = true;
+                    }
+                    else if (user.role == "leader" || user.role == "manager" || (user.username != null && user.username.ToLower().Contains("leader")))
                     {
                         user.can_manage_schedule = true;
                     }

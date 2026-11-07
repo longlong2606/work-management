@@ -38,6 +38,26 @@ export function CompetencyScorecardPage() {
            ["trần thị bình", "nguyễn văn cường", "test", "nguyễn văn an"].includes(fn);
   };
 
+  // Lọc bỏ hoàn toàn tài khoản Quản trị viên (Admin) và dữ liệu mẫu khỏi bảng đánh giá năng lực
+  const isNonAdminUser = (u) => {
+    if (!u) return false;
+    const role = (u.role || "").toLowerCase();
+    const roleLevel = (u.roleLevel || "").toLowerCase();
+    const username = (u.username || "").toLowerCase();
+    const id = String(u.id || u.userId || "");
+    const name = (u.name || u.full_name || "").toLowerCase();
+    return (
+      role !== "admin" &&
+      !role.includes("quản trị") &&
+      roleLevel !== "admin" &&
+      roleLevel !== "quản trị" &&
+      username !== "admin" &&
+      id !== "1" &&
+      !name.includes("quản trị") &&
+      !isTestUser(u)
+    );
+  };
+
   // Helper chuyển đổi User thực tế từ Backend Database sang Member đánh giá
   const mapUserToMember = (u) => {
     let scores = {};
@@ -92,10 +112,10 @@ export function CompetencyScorecardPage() {
     try {
       const saved = localStorage.getItem("lab_competency_members");
       const list = saved ? JSON.parse(saved) : INITIAL_MEMBERS;
-      const nonAdmin = Array.isArray(list) ? list.filter((m) => m.role !== "admin" && m.role !== "Quản trị viên (Admin)" && m.roleLevel !== "admin" && !isTestUser(m)) : INITIAL_MEMBERS.filter((m) => !isTestUser(m));
-      return nonAdmin.length > 0 ? nonAdmin : INITIAL_MEMBERS;
+      const filtered = Array.isArray(list) ? list.filter(isNonAdminUser) : INITIAL_MEMBERS.filter(isNonAdminUser);
+      return filtered.length > 0 ? filtered : INITIAL_MEMBERS.filter(isNonAdminUser);
     } catch {
-      return INITIAL_MEMBERS;
+      return INITIAL_MEMBERS.filter(isNonAdminUser);
     }
   });
 
@@ -114,15 +134,14 @@ export function CompetencyScorecardPage() {
       try {
         const res = await api.getCompetencies();
         if (Array.isArray(res) && res.length > 0) {
-          const nonAdmin = res.filter((u) => u.role !== "admin" && u.username !== "admin" && !isTestUser(u));
-          const targetList = nonAdmin.length > 0 ? nonAdmin : res.filter((u) => u.role !== "admin");
-          const mapped = targetList.map(mapUserToMember);
+          const nonAdmin = res.filter(isNonAdminUser);
+          const mapped = nonAdmin.map(mapUserToMember);
           setMembers(mapped);
           try {
             localStorage.setItem("lab_competency_members", JSON.stringify(mapped));
           } catch {}
 
-          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev && m.role !== "admin") ? prev : mapped[0]?.id));
+          setSelectedMemberId((prev) => (mapped.some((m) => m.id === prev && isNonAdminUser(m)) ? prev : mapped[0]?.id));
           setCompareMemberId((prev) => (mapped.some((m) => m.id === prev) ? prev : (mapped[1] ? mapped[1].id : mapped[0]?.id)));
         }
       } catch (err) {
@@ -450,6 +469,22 @@ export function CompetencyScorecardPage() {
             <p style={{ margin: 0, fontSize: 12.5, color: "#cbd5e1", maxWidth: 680 }}>
               Biểu đồ tam giác phản ánh 3 trụ cột năng lực: <strong>Quản Lý Dự Án & Đối Ngoại</strong> (Đỉnh trên), <strong>Kỹ Thuật & Hệ Thống</strong> (Góc phải) và <strong>Research & AI</strong> (Góc trái).
             </p>
+            <div style={{ marginTop: 6 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: "#93c5fd",
+                  background: "rgba(37, 99, 235, 0.25)",
+                  padding: "3px 10px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(147, 197, 253, 0.3)",
+                }}
+              >
+                ℹ️ Áp dụng đánh giá năng lực cho các Trưởng nhóm và Thành viên (Không áp dụng đánh giá cho Quản trị viên)
+              </span>
+            </div>
           </div>
 
           {/* Quick Action Buttons */}
@@ -489,7 +524,7 @@ export function CompetencyScorecardPage() {
                   color: "#94a3b8",
                   border: "1px dashed rgba(255, 255, 255, 0.2)"
                 }}
-                title="Chỉ Quản lý (Admin, Core, Leader) và Contributor mới có quyền chấm điểm đánh giá"
+                title="Chỉ Quản trị viên (Admin) và Trưởng nhóm (Leader) mới có quyền chấm điểm đánh giá"
               >
                 <Sliders size={14} />
                 Chế độ chỉ xem

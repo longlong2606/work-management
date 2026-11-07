@@ -1819,7 +1819,7 @@ app.MapGet("/api/competencies", (HttpContext ctx) =>
         FROM users u
         LEFT JOIN roles r ON r.id = u.role
         LEFT JOIN competency_evaluations ce ON ce.user_id = u.id
-        WHERE u.status = 'active' AND u.role != 'admin'
+        WHERE u.status = 'active' AND LOWER(u.role) != 'admin' AND LOWER(u.username) != 'admin' AND u.id != 1
         ORDER BY CASE WHEN u.role IN ('core', 'leader') THEN 0 ELSE 1 END, u.id ASC");
     return Results.Ok(list);
 });
@@ -1833,9 +1833,9 @@ app.MapPut("/api/competencies/{userId:long}", (long userId, UpdateCompetencyRequ
         return Results.Json(new { detail = "Bạn không có quyền đánh giá hoặc chỉnh sửa điểm năng lực!" }, statusCode: 403);
 
     using var conn = Database.GetConnection();
-    var targetUser = conn.QueryFirstOrDefault<dynamic>("SELECT id, role FROM users WHERE id = @userId", new { userId });
+    var targetUser = conn.QueryFirstOrDefault<dynamic>("SELECT id, role, username FROM users WHERE id = @userId", new { userId });
     if (targetUser == null) return Results.NotFound(new { detail = "Không tìm thấy nhân sự!" });
-    if ((string)targetUser.role == "admin")
+    if (((string)targetUser.role)?.ToLower() == "admin" || ((string)targetUser.username)?.ToLower() == "admin" || (long)targetUser.id == 1)
         return Results.BadRequest(new { detail = "Không áp dụng đánh giá năng lực hay tính điểm cho tài khoản Quản trị viên (Admin)!" });
 
     conn.Execute(@"
