@@ -4260,6 +4260,7 @@ function EditTaskCpModal({ isOpen, onClose, task, currentAllocatedCp = 0, onSucc
 
 /* ================= MODAL: EDIT ROOT TASK (CHỈNH SỬA NHIỆM VỤ LỚN) ================= */
 function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocatedCp = 0, onSuccess }) {
+  const { user: currentUser } = useAuth();
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
   const [taskType, setTaskType] = useState(task?.task_type || "RESEARCH");
@@ -4340,10 +4341,10 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
         leader_id: leaderId ? parseInt(leaderId) : task.leader_id,
         total_cp: Math.max(0, parseInt(totalCp) || 0),
       });
-      const leaderChanged = Number(leaderId) !== Number(task.leader_id);
-      const newLeader = leaderMembers.find((m) => Number(m.id) === Number(leaderId));
-      if (leaderChanged && newLeader) {
-        onSuccess(`Đã cập nhật nhiệm vụ & gửi email thông báo cho Trưởng nhóm mới: ${newLeader.full_name} (${newLeader.email || 'chưa có email'})!`);
+      const isAssignedToOther = Number(leaderId) !== Number(currentUser?.id);
+      const targetLeader = leaderMembers.find((m) => Number(m.id) === Number(leaderId));
+      if (isAssignedToOther && targetLeader) {
+        onSuccess(`Đã cập nhật nhiệm vụ & gửi email cho ${targetLeader.full_name} (${targetLeader.email || 'chưa có email'}) kèm email xác nhận đến hòm thư của bạn!`);
       } else {
         onSuccess("Đã cập nhật thông tin nhiệm vụ thành công!");
       }
@@ -4569,6 +4570,28 @@ function EditTaskModal({ isOpen, onClose, task, allMembers = [], currentAllocate
                   <small style={{ color: "#ef4444", fontSize: 11.5, marginTop: 4, display: "block" }}>
                     ⚠️ Hệ thống chưa có thành viên nào mang vai trò Leader. Vui lòng phân quyền vai trò Trưởng nhóm (Leader) trong trang Quản lý Nhân sự.
                   </small>
+                )}
+                {Number(leaderId) !== Number(currentUser?.id) && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: "#1d4ed8",
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <Mail size={15} style={{ flexShrink: 0, color: "#2563eb" }} />
+                    <span>
+                      Khi lưu thay đổi, hệ thống sẽ tự động gửi email cho Trưởng nhóm được giao và <strong>gửi một email xác nhận đến hòm thư của bạn ({currentUser?.email || "email tài khoản"})</strong>.
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

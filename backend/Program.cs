@@ -319,7 +319,8 @@ app.MapPost("/api/tasks", (CreateTaskRequest req, HttpContext ctx) =>
             req.deadline.Trim(),
             totalCp,
             req.location?.Trim(),
-            currentUser.full_name);
+            currentUser.full_name,
+            currentUser.id);
 
         return Results.Ok(new { message = "Đã khởi tạo nhiệm vụ thành công!", task_id = taskId });
     }
@@ -385,18 +386,27 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
         {
             conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
                 new { uid = targetLeaderId, senderId = currentUser.id, title = "Chuyển giao quyền phụ trách nhiệm vụ", msg = $"Bạn vừa được chỉ định làm Trưởng nhóm phụ trách nhiệm vụ \"{req.title.Trim()}\".", taskId = id });
-
-            EmailService.SendTaskAssignedNotification(
-                id,
-                targetLeaderId,
-                req.title.Trim(),
-                string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
-                req.description?.Trim(),
-                string.IsNullOrWhiteSpace(req.deadline) ? "" : req.deadline.Trim(),
-                totalCp,
-                req.location?.Trim(),
-                currentUser.full_name);
         }
+        else if (targetLeaderId != currentUser.id)
+        {
+            conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                new { uid = targetLeaderId, senderId = currentUser.id, title = "Cập nhật thông tin nhiệm vụ", msg = $"Nhiệm vụ \"{req.title.Trim()}\" do bạn phụ trách vừa được {currentUser.full_name} cập nhật.", taskId = id });
+        }
+
+        // Gửi email thông báo cập nhật nhiệm vụ lớn:
+        // Gửi cho Trưởng nhóm (người khác) VÀ gửi mail xác nhận cho người chỉnh sửa ("trong phần chỉnh sửa lớn khi tôi chỉnh sửa xong cho người khác cũng sẽ gửi mail cho tôi")
+        EmailService.SendTaskUpdatedNotification(
+            id,
+            targetLeaderId,
+            currentUser.id,
+            req.title.Trim(),
+            string.IsNullOrWhiteSpace(req.task_type) ? "RESEARCH" : req.task_type.Trim(),
+            req.description?.Trim(),
+            string.IsNullOrWhiteSpace(req.deadline) ? "" : req.deadline.Trim(),
+            totalCp,
+            req.location?.Trim(),
+            currentUser.full_name,
+            leaderChanged);
 
         return Results.Ok(new { message = "Đã cập nhật thông tin nhiệm vụ thành công!" });
     }
