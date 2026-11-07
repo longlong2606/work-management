@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import QRCode from "qrcode";
+import { api } from "../services/api";
 import {
   Smartphone,
   X,
@@ -17,21 +18,36 @@ export function MobileConnectModal({ isOpen, onClose }) {
   // 2 chế độ: "lan" (Cùng Wi-Fi nội bộ) hoặc "tunnel"
   const [connectMode, setConnectMode] = useState("lan");
   
-  // Public Tunnel URL
-  const TUNNEL_URL = "https://visibility-skip-receives-criterion.trycloudflare.com";
+  // Public Tunnel URL & LAN IP chuẩn
+  const DEFAULT_TUNNEL_URL = "https://dev-wms.codeforfun.id.vn";
+  const DEFAULT_LAN_IP = "192.168.1.161";
   
-  // Địa chỉ LAN Wi-Fi thực tế của máy
-  const LAN_IP = "10.25.32.204";
+  const [tunnelUrl, setTunnelUrl] = useState(DEFAULT_TUNNEL_URL);
   const currentHost = typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
     ? window.location.hostname 
-    : LAN_IP;
+    : DEFAULT_LAN_IP;
   const [ipAddress, setIpAddress] = useState(currentHost);
   const [port, setPort] = useState(typeof window !== "undefined" ? (window.location.port || "5173") : "5173");
   
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const activeUrl = connectMode === "tunnel" ? TUNNEL_URL : `http://${ipAddress}:${port}`;
+  // Tự động đồng bộ IP mạng Wi-Fi và Domain Cloudflare thực tế từ Server
+  useEffect(() => {
+    let isMounted = true;
+    api.getNetworkInfo()
+      .then((info) => {
+        if (!isMounted || !info) return;
+        if (info.local_ip) setIpAddress(info.local_ip);
+        if (info.public_url) setTunnelUrl(info.public_url);
+      })
+      .catch((err) => {
+        console.warn("Could not load network info:", err);
+      });
+    return () => { isMounted = false; };
+  }, []);
+
+  const activeUrl = connectMode === "tunnel" ? tunnelUrl : `http://${ipAddress}:${port}`;
 
   useEffect(() => {
     QRCode.toDataURL(activeUrl, {
@@ -208,7 +224,7 @@ export function MobileConnectModal({ isOpen, onClose }) {
             ) : (
               <>
                 <Wifi size={14} color="#2563eb" />
-                <span>Yêu cầu điện thoại kết nối cùng Wi-Fi với máy tính ({LAN_IP})</span>
+                <span>Yêu cầu điện thoại kết nối cùng Wi-Fi với máy tính ({ipAddress})</span>
               </>
             )}
           </div>

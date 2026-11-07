@@ -327,6 +327,7 @@ export const api = {
 
   // SMTP Settings & Test Email
   getSmtpSettings: () => request("/settings/smtp"),
+  getNetworkInfo: () => request("/system/network-info"),
   updateSmtpSettings: (data) =>
     request("/settings/smtp", {
       method: "POST",

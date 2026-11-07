@@ -4723,6 +4723,50 @@ app.MapGet("/api/settings/smtp", (HttpContext ctx) =>
     });
 });
 
+app.MapGet("/api/system/network-info", () =>
+{
+    var localIp = "192.168.1.161";
+    try
+    {
+        using var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Dgram, 0);
+        socket.Connect("8.8.8.8", 65530);
+        var endPoint = socket.LocalEndPoint as System.Net.IPEndPoint;
+        if (endPoint != null)
+        {
+            localIp = endPoint.Address.ToString();
+        }
+    }
+    catch
+    {
+        try
+        {
+            var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(ip))
+                {
+                    localIp = ip.ToString();
+                    break;
+                }
+            }
+        }
+        catch { }
+    }
+
+    using var conn = Database.GetConnection();
+    var publicUrl = conn.QueryFirstOrDefault<string>("SELECT value FROM system_settings WHERE key = 'app_url'") ?? "https://dev-wms.codeforfun.id.vn";
+
+    return Results.Ok(new
+    {
+        local_ip = localIp,
+        backend_port = 8000,
+        frontend_port = 5173,
+        public_url = !string.IsNullOrWhiteSpace(publicUrl) ? publicUrl.TrimEnd('/') : "https://dev-wms.codeforfun.id.vn",
+        lan_url_dev = $"http://{localIp}:5173",
+        lan_url_prod = $"http://{localIp}:8000"
+    });
+});
+
 app.MapPost("/api/settings/smtp", (SmtpSettingsRequest req, HttpContext ctx) =>
 {
     var currentUser = AuthService.GetCurrentUser(ctx);
