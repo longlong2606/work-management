@@ -1788,6 +1788,7 @@ app.MapDelete("/api/users/{id:long}", (long id, HttpContext ctx) =>
         // 2. Clean dependent records
         conn.Execute("DELETE FROM subtask_comments WHERE user_id = @id", new { id }, tx);
         conn.Execute("DELETE FROM subtask_assignees WHERE user_id = @id", new { id }, tx);
+        conn.Execute("UPDATE shift_registrations SET absence_approved_by = NULL WHERE absence_approved_by = @id", new { id }, tx);
         conn.Execute("DELETE FROM shift_registrations WHERE user_id = @id", new { id }, tx);
         conn.Execute("DELETE FROM shift_history WHERE user_id = @id", new { id }, tx);
         conn.Execute("DELETE FROM shift_notes WHERE user_id = @id", new { id }, tx);
@@ -1795,7 +1796,8 @@ app.MapDelete("/api/users/{id:long}", (long id, HttpContext ctx) =>
         conn.Execute("DELETE FROM class_schedules WHERE user_id = @id", new { id }, tx);
         conn.Execute("DELETE FROM notifications WHERE target_user_id = @id OR sender_id = @id", new { id }, tx);
         conn.Execute("DELETE FROM cp_transactions WHERE user_id = @id", new { id }, tx);
-        try { conn.Execute("DELETE FROM feedback WHERE user_id = @id", new { id }, tx); } catch { }
+        conn.Execute("DELETE FROM feedback_likes WHERE user_id = @id OR feedback_id IN (SELECT id FROM feedbacks WHERE user_id = @id)", new { id }, tx);
+        conn.Execute("DELETE FROM feedbacks WHERE user_id = @id", new { id }, tx);
 
         // 3. Delete user
         conn.Execute("DELETE FROM users WHERE id = @id", new { id }, tx);
