@@ -1293,7 +1293,7 @@ export function SchedulePage() {
               title="Tạo sự kiện chung cho cả ngày hoặc cho ca cụ thể"
             >
               <Plus size={16} style={{ flexShrink: 0 }} />
-              <span>+ Thêm Sự Kiện (Ngày / Ca)</span>
+              <span>Thêm Sự Kiện (Ngày / Ca)</span>
             </button>
           )}
 
