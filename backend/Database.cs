@@ -336,6 +336,8 @@ public static class Database
                 id {pk},
                 shift_id INTEGER NOT NULL,
                 work_date TEXT,
+                end_date TEXT,
+                duration_type TEXT DEFAULT 'day',
                 title TEXT NOT NULL,
                 description TEXT,
                 event_type TEXT DEFAULT 'general',
@@ -393,6 +395,8 @@ public static class Database
             EnsureColumn(conn, "shift_events", "repeat_type", "TEXT DEFAULT 'none'");
             EnsureColumn(conn, "shift_events", "repeat_rule", "TEXT");
             EnsureColumn(conn, "shift_events", "repeat_end_date", "TEXT");
+            EnsureColumn(conn, "shift_events", "end_date", "TEXT");
+            EnsureColumn(conn, "shift_events", "duration_type", "TEXT DEFAULT 'day'");
 
             EnsureColumn(conn, "roles", "can_manage_schedule", "INTEGER DEFAULT 0");
             EnsureColumn(conn, "roles", "can_manage_tasks", "INTEGER DEFAULT 0");

@@ -242,7 +242,7 @@ export function RosterDetailModal({ shift, dateStr, members, events, onClose }) 
                       <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>
                         {ev.title}
                       </div>
-                      {ev.repeat_type && ev.repeat_type !== "none" && (
+                      {ev.duration_type === "week" ? (
                         <span
                           style={{
                             fontSize: 11,
@@ -254,9 +254,37 @@ export function RosterDetailModal({ shift, dateStr, members, events, onClose }) 
                             borderRadius: 6,
                           }}
                         >
-                          🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                          🗓️ Trong 1 tuần ({ev.work_date} → {ev.end_date})
                         </span>
-                      )}
+                      ) : ev.duration_type === "month" ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#1d4ed8",
+                            background: "#dbeafe",
+                            border: "1px solid #bfdbfe",
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                          }}
+                        >
+                          📅 Cả tháng ({ev.work_date?.slice(0, 7)})
+                        </span>
+                      ) : ev.repeat_rule ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#6d28d9",
+                            background: "#ede9fe",
+                            border: "1px solid #ddd6fe",
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                          }}
+                        >
+                          {ev.repeat_rule}
+                        </span>
+                      ) : null}
                     </div>
                     {ev.description && (
                       <div style={{ fontSize: 13, color: "#78350f", marginTop: 4 }}>

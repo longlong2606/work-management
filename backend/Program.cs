@@ -1490,12 +1490,14 @@ app.MapGet("/api/tv/today", (string? date) =>
     var regs = conn.Query(regQuery, new { date = targetDate });
 
     var eventQuery = @"
-        SELECT se.id, se.shift_id, se.work_date, se.title, se.description, se.event_type, se.created_at,
+        SELECT se.id, se.shift_id, se.work_date, se.end_date, se.duration_type, se.title, se.description, se.event_type, se.created_at,
                se.recurring_group_id, se.repeat_type, se.repeat_rule, se.repeat_end_date,
                st.name as shift_name, st.label as shift_label, st.start_time, st.end_time
         FROM shift_events se
         LEFT JOIN shift_templates st ON se.shift_id = st.id
-        WHERE se.work_date IS NULL OR se.work_date = @date
+        WHERE (se.work_date IS NULL)
+           OR (se.end_date IS NULL AND se.work_date = @date)
+           OR (se.end_date IS NOT NULL AND se.work_date <= @date AND @date <= se.end_date)
         ORDER BY se.shift_id ASC, se.id ASC";
     var events = conn.Query(eventQuery, new { date = targetDate });
 
@@ -2995,12 +2997,22 @@ app.MapGet("/api/shifts/events", (string? work_date, int? shift_id, string? star
 
     using var conn = Database.GetConnection();
     var query = @"
-        SELECT id, shift_id, work_date, title, description, event_type, recurring_group_id, repeat_type, repeat_rule, repeat_end_date, created_at
+        SELECT id, shift_id, work_date, end_date, duration_type, title, description, event_type, recurring_group_id, repeat_type, repeat_rule, repeat_end_date, created_at
         FROM shift_events
-        WHERE (work_date IS NULL 
-               OR (@date IS NOT NULL AND work_date = @date)
-               OR (@startDate IS NOT NULL AND @endDate IS NOT NULL AND work_date >= @startDate AND work_date <= @endDate)
-               OR (@date IS NULL AND @startDate IS NULL AND @endDate IS NULL))
+        WHERE (
+            -- 1. Nếu không truyền tham số ngày nào -> trả về tất cả
+            (@date IS NULL AND @startDate IS NULL AND @endDate IS NULL)
+            -- 2. Nếu tìm kiếm theo 1 ngày cụ thể (ví dụ: work_date = @date)
+            OR (@date IS NOT NULL AND (
+                (end_date IS NULL AND (work_date IS NULL OR work_date = @date))
+                OR (end_date IS NOT NULL AND work_date <= @date AND @date <= end_date)
+            ))
+            -- 3. Nếu tìm kiếm theo khoảng ngày (ví dụ: xem tuần từ startDate đến endDate)
+            OR (@startDate IS NOT NULL AND @endDate IS NOT NULL AND (
+                (end_date IS NULL AND (work_date IS NULL OR (work_date >= @startDate AND work_date <= @endDate)))
+                OR (end_date IS NOT NULL AND work_date <= @endDate AND end_date >= @startDate)
+            ))
+        )
           AND (@shiftId IS NULL OR shift_id = @shiftId OR shift_id = 0 OR shift_id IS NULL)
         ORDER BY work_date ASC, shift_id ASC, id ASC";
 
@@ -3029,142 +3041,89 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
             ? req.shift_ids
             : new List<int> { req.shift_id ?? 0 };
 
-        var repeatType = (req.repeat_type ?? "none").ToLower().Trim();
-        var datesToCreate = new List<string>();
-        string? recurringGroupId = null;
+        var durationType = (req.duration_type ?? "day").ToLower().Trim();
+        string? startDateStr = req.work_date;
+        string? endDateStr = req.end_date;
         string? repeatRule = null;
-        string? repeatEndDate = req.repeat_end_date;
 
-        DateTime startDate;
-        if (string.IsNullOrWhiteSpace(req.work_date) || !DateTime.TryParse(req.work_date, out startDate))
+        DateTime sDate;
+        if (string.IsNullOrWhiteSpace(startDateStr) || !DateTime.TryParse(startDateStr, out sDate))
         {
-            startDate = DateTime.Today;
+            sDate = DateTime.Today;
+            startDateStr = sDate.ToString("yyyy-MM-dd");
         }
 
-        if (repeatType == "weekly")
+        if (durationType == "week")
         {
-            recurringGroupId = Guid.NewGuid().ToString();
-            
-            DateTime maxEndDate;
-            if (!string.IsNullOrWhiteSpace(req.repeat_end_date) && DateTime.TryParse(req.repeat_end_date, out var parsedEnd))
-            {
-                maxEndDate = parsedEnd;
-            }
-            else
-            {
-                int weeks = req.repeat_count ?? 4;
-                if (weeks < 1) weeks = 1;
-                if (weeks > 52) weeks = 52;
-                maxEndDate = startDate.AddDays(weeks * 7 - 1);
-            }
+            // Sự kiện tổ chức trong 1 tuần (Thứ Hai đến Chủ Nhật)
+            int diff = ((int)sDate.DayOfWeek - 1 + 7) % 7;
+            DateTime monday = sDate.AddDays(-diff);
+            DateTime sunday = monday.AddDays(6);
 
-            var selectedDays = req.repeat_days_of_week != null && req.repeat_days_of_week.Count > 0
-                ? req.repeat_days_of_week
-                : new List<int> { (int)startDate.DayOfWeek };
-
-            var dayNames = new Dictionary<int, string> {
-                { 1, "T2" }, { 2, "T3" }, { 3, "T4" }, { 4, "T5" }, { 5, "T6" }, { 6, "T7" }, { 0, "CN" }
-            };
-            var daysStr = string.Join(", ", selectedDays.OrderBy(d => d == 0 ? 7 : d).Select(d => dayNames.ContainsKey(d) ? dayNames[d] : d.ToString()));
-            repeatRule = $"Hàng tuần ({daysStr})";
-            repeatEndDate = maxEndDate.ToString("yyyy-MM-dd");
-
-            for (var d = startDate; d <= maxEndDate && datesToCreate.Count < 200; d = d.AddDays(1))
-            {
-                if (selectedDays.Contains((int)d.DayOfWeek))
-                {
-                    datesToCreate.Add(d.ToString("yyyy-MM-dd"));
-                }
-            }
-            if (datesToCreate.Count == 0)
-            {
-                datesToCreate.Add(startDate.ToString("yyyy-MM-dd"));
-            }
+            startDateStr = monday.ToString("yyyy-MM-dd");
+            endDateStr = !string.IsNullOrWhiteSpace(req.end_date) && DateTime.TryParse(req.end_date, out var eDate)
+                ? eDate.ToString("yyyy-MM-dd")
+                : sunday.ToString("yyyy-MM-dd");
+            repeatRule = $"Trong 1 tuần ({monday:dd/MM} - {sunday:dd/MM/yyyy})";
         }
-        else if (repeatType == "monthly")
+        else if (durationType == "month")
         {
-            recurringGroupId = Guid.NewGuid().ToString();
-            int months = req.repeat_count ?? 3;
-            if (months < 1) months = 1;
-            if (months > 36) months = 36;
+            // Sự kiện tổ chức cả tháng (Từ ngày 1 đến ngày cuối tháng)
+            DateTime firstDay = new DateTime(sDate.Year, sDate.Month, 1);
+            DateTime lastDay = firstDay.AddMonths(1).AddDays(-1);
 
-            DateTime maxEndDate;
-            if (!string.IsNullOrWhiteSpace(req.repeat_end_date) && DateTime.TryParse(req.repeat_end_date, out var parsedEnd))
-            {
-                maxEndDate = parsedEnd;
-            }
-            else
-            {
-                maxEndDate = startDate.AddMonths(months).AddDays(-1);
-            }
-
-            int targetDay = startDate.Day;
-            repeatRule = $"Hàng tháng (Ngày {targetDay})";
-            repeatEndDate = maxEndDate.ToString("yyyy-MM-dd");
-
-            for (var m = 0; m < 36 && datesToCreate.Count < 100; m++)
-            {
-                var targetMonthDate = startDate.AddMonths(m);
-                int daysInMonth = DateTime.DaysInMonth(targetMonthDate.Year, targetMonthDate.Month);
-                int day = Math.Min(targetDay, daysInMonth);
-                var curDate = new DateTime(targetMonthDate.Year, targetMonthDate.Month, day);
-                if (curDate > maxEndDate) break;
-                datesToCreate.Add(curDate.ToString("yyyy-MM-dd"));
-            }
-            if (datesToCreate.Count == 0)
-            {
-                datesToCreate.Add(startDate.ToString("yyyy-MM-dd"));
-            }
+            startDateStr = firstDay.ToString("yyyy-MM-dd");
+            endDateStr = !string.IsNullOrWhiteSpace(req.end_date) && DateTime.TryParse(req.end_date, out var eDate)
+                ? eDate.ToString("yyyy-MM-dd")
+                : lastDay.ToString("yyyy-MM-dd");
+            repeatRule = $"Cả tháng ({firstDay:MM/yyyy})";
+        }
+        else if (durationType == "custom" && !string.IsNullOrWhiteSpace(endDateStr))
+        {
+            repeatRule = $"Từ {startDateStr} đến {endDateStr}";
         }
         else
         {
-            datesToCreate.Add(startDate.ToString("yyyy-MM-dd"));
-            repeatType = "none";
-            recurringGroupId = null;
-            repeatRule = null;
-            repeatEndDate = null;
+            durationType = "day";
+            endDateStr = null;
+            repeatRule = $"1 ngày ({sDate:dd/MM/yyyy})";
         }
 
         using var tx = conn.BeginTransaction();
         try
         {
-            foreach (var dateStr in datesToCreate)
+            if (targetShifts.Contains(0))
             {
-                if (targetShifts.Contains(0))
+                conn.Execute(@"
+                    INSERT INTO shift_events (shift_id, work_date, end_date, duration_type, title, description, event_type, repeat_rule)
+                    VALUES (0, @work_date, @end_date, @duration_type, @title, @description, @event_type, @repeat_rule);",
+                    new {
+                        work_date = startDateStr,
+                        end_date = endDateStr,
+                        duration_type = durationType,
+                        title = req.title.Trim(),
+                        description = req.description?.Trim(),
+                        event_type = req.event_type ?? "general",
+                        repeat_rule = repeatRule
+                    }, tx);
+            }
+            else
+            {
+                foreach (var sid in targetShifts)
                 {
                     conn.Execute(@"
-                        INSERT INTO shift_events (shift_id, work_date, title, description, event_type, recurring_group_id, repeat_type, repeat_rule, repeat_end_date)
-                        VALUES (0, @work_date, @title, @description, @event_type, @recurring_group_id, @repeat_type, @repeat_rule, @repeat_end_date);",
+                        INSERT INTO shift_events (shift_id, work_date, end_date, duration_type, title, description, event_type, repeat_rule)
+                        VALUES (@sid, @work_date, @end_date, @duration_type, @title, @description, @event_type, @repeat_rule);",
                         new {
-                            work_date = dateStr,
+                            sid,
+                            work_date = startDateStr,
+                            end_date = endDateStr,
+                            duration_type = durationType,
                             title = req.title.Trim(),
                             description = req.description?.Trim(),
                             event_type = req.event_type ?? "general",
-                            recurring_group_id = recurringGroupId,
-                            repeat_type = repeatType,
-                            repeat_rule = repeatRule,
-                            repeat_end_date = repeatEndDate
+                            repeat_rule = repeatRule
                         }, tx);
-                }
-                else
-                {
-                    foreach (var sid in targetShifts)
-                    {
-                        conn.Execute(@"
-                            INSERT INTO shift_events (shift_id, work_date, title, description, event_type, recurring_group_id, repeat_type, repeat_rule, repeat_end_date)
-                            VALUES (@sid, @work_date, @title, @description, @event_type, @recurring_group_id, @repeat_type, @repeat_rule, @repeat_end_date);",
-                            new {
-                                sid,
-                                work_date = dateStr,
-                                title = req.title.Trim(),
-                                description = req.description?.Trim(),
-                                event_type = req.event_type ?? "general",
-                                recurring_group_id = recurringGroupId,
-                                repeat_type = repeatType,
-                                repeat_rule = repeatRule,
-                                repeat_end_date = repeatEndDate
-                            }, tx);
-                    }
                 }
             }
             tx.Commit();
@@ -3176,10 +3135,12 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
         }
 
         string msg;
-        if (repeatType == "weekly")
-            msg = $"Đã tạo chuỗi sự kiện hàng tuần ({datesToCreate.Count} ngày diễn ra) thành công!";
-        else if (repeatType == "monthly")
-            msg = $"Đã tạo chuỗi sự kiện hàng tháng ({datesToCreate.Count} tháng) thành công!";
+        if (durationType == "week")
+            msg = $"Đã tạo sự kiện tổ chức trong 1 tuần ({startDateStr} đến {endDateStr}) thành công!";
+        else if (durationType == "month")
+            msg = $"Đã tạo sự kiện tổ chức cả tháng ({startDateStr} đến {endDateStr}) thành công!";
+        else if (durationType == "custom")
+            msg = $"Đã tạo sự kiện tổ chức từ {startDateStr} đến {endDateStr} thành công!";
         else if (targetShifts.Contains(0))
             msg = "Thêm sự kiện cả ngày thành công!";
         else
@@ -3188,8 +3149,9 @@ app.MapPost("/api/shifts/events", (CreateShiftEventRequest req, HttpContext ctx)
         return Results.Ok(new { 
             success = true, 
             message = msg,
-            created_count = datesToCreate.Count * targetShifts.Count,
-            recurring_group_id = recurringGroupId
+            duration_type = durationType,
+            work_date = startDateStr,
+            end_date = endDateStr
         });
     }
     catch (Exception ex)

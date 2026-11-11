@@ -77,6 +77,29 @@ function getDaysOfWeek(mondayStr) {
   return days;
 }
 
+// Kiểm tra sự kiện có diễn ra vào ngày dateStr hay không (1 ngày, trong 1 tuần, cả tháng)
+function isEventActiveOnDate(e, dateStr) {
+  if (!e) return false;
+  if (!e.work_date) return true;
+  if (e.end_date) {
+    return e.work_date <= dateStr && dateStr <= e.end_date;
+  }
+  return e.work_date === dateStr;
+}
+
+// Kiểm tra sự kiện có hoạt động trong tuần đang xem hay không
+function isEventActiveInWeek(e, weekDays) {
+  if (!e) return false;
+  if (!e.work_date) return true;
+  if (!weekDays || weekDays.length === 0) return true;
+  const startWeek = weekDays[0].dateStr;
+  const endWeek = weekDays[weekDays.length - 1].dateStr;
+  if (e.end_date) {
+    return e.work_date <= endWeek && e.end_date >= startWeek;
+  }
+  return weekDays.some((d) => d.dateStr === e.work_date);
+}
+
 export function SchedulePage() {
   const { user, canManageSchedule, isLeader, isManager } = useAuth();
   const { fetchUnreadCount } = useNotifications();
@@ -219,14 +242,11 @@ export function SchedulePage() {
     selected_shifts: [0], // [0] = cả ngày, hoặc [1, 2, 3], hoặc [7, 8]...
     shift_id: 0,
     work_date: "",
+    end_date: "",
+    duration_type: "day", // "day" (1 ngày) | "week" (Trong 1 tuần) | "month" (Cả tháng) | "custom" (Khoảng ngày)
     title: "",
     description: "",
     event_type: "meeting",
-    repeat_type: "none", // "none" | "weekly" | "monthly"
-    repeat_days_of_week: [], // [1, 3] = Thứ 2, Thứ 4...
-    repeat_duration_type: "count", // "count" | "date"
-    repeat_count: 4,
-    repeat_end_date: "",
   });
 
   // Modal xác nhận xóa sự kiện định kỳ (chỉ xóa buổi này hay toàn bộ chuỗi)
@@ -620,7 +640,7 @@ export function SchedulePage() {
     });
   };
 
-  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo nhiều ca, hỗ trợ lặp hàng tuần/hàng tháng)
+  // Open Create Event Modal (Hỗ trợ cả ngày hoặc theo ca, tổ chức 1 ngày, trong 1 tuần hoặc cả tháng)
   const openCreateEventModal = (shiftId = 0, workDate = "") => {
     const todayStr = formatLocalDate(new Date());
     const initialDate = workDate || todayStr;
@@ -628,59 +648,49 @@ export function SchedulePage() {
       ? [Number(shiftId)]
       : [0];
 
-    const dateObj = parseLocalDate(initialDate);
-    const dow = isNaN(dateObj.getTime()) ? 1 : dateObj.getDay();
-
     setCreateEventModal({
       open: true,
       selected_shifts: initialShifts,
       shift_id: initialShifts[0],
       work_date: initialDate,
+      end_date: "",
+      duration_type: "day",
       title: "",
       description: "",
       event_type: "meeting",
-      repeat_type: "none",
-      repeat_days_of_week: [dow],
-      repeat_duration_type: "count",
-      repeat_count: 4,
-      repeat_end_date: "",
     });
   };
 
-  // Helper tính chuỗi xem trước lịch lặp lại của sự kiện
-  const getRecurringEventPreview = (modal) => {
+  // Helper tính chuỗi xem trước thời lượng diễn ra của sự kiện (1 ngày, trong 1 tuần, cả tháng)
+  const getDurationEventPreview = (modal) => {
     if (!modal.work_date) return null;
     const baseDate = parseLocalDate(modal.work_date);
     if (isNaN(baseDate.getTime())) return null;
 
-    if (modal.repeat_type === "weekly") {
-      const dayNames = { 1: "Thứ 2", 2: "Thứ 3", 3: "Thứ 4", 4: "Thứ 5", 5: "Thứ 6", 6: "Thứ 7", 0: "Chủ nhật" };
-      const selectedDays = (modal.repeat_days_of_week && modal.repeat_days_of_week.length > 0)
-        ? [...modal.repeat_days_of_week].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
-        : [baseDate.getDay()];
-      const daysStr = selectedDays.map((d) => dayNames[d] || d).join(", ");
-      
-      if (modal.repeat_duration_type === "count") {
-        const weeks = Number(modal.repeat_count) || 4;
-        return `Sự kiện sẽ được tạo định kỳ vào ${daysStr} hàng tuần trong ${weeks} tuần tới (bắt đầu từ ${modal.work_date}).`;
-      } else if (modal.repeat_end_date) {
-        return `Sự kiện sẽ lặp lại vào ${daysStr} hàng tuần cho đến ngày ${modal.repeat_end_date}.`;
-      }
-      return `Sự kiện sẽ lặp lại vào ${daysStr} hàng tuần.`;
+    if (modal.duration_type === "week") {
+      const monday = getMonday(modal.work_date);
+      const sun = parseLocalDate(monday);
+      sun.setDate(sun.getDate() + 6);
+      const mStr = formatLocalDate(monday);
+      const sStr = formatLocalDate(sun);
+      return `🗓️ Sự kiện tổ chức trong suốt 1 tuần: Từ Thứ 2 (${mStr.slice(5).replace("-", "/")}) đến Chủ nhật (${sStr.slice(5).replace("-", "/")}/${sun.getFullYear()}).`;
     }
 
-    if (modal.repeat_type === "monthly") {
-      const day = baseDate.getDate();
-      if (modal.repeat_duration_type === "count") {
-        const months = Number(modal.repeat_count) || 3;
-        return `Sự kiện sẽ được tạo định kỳ vào ngày ${day} hàng tháng trong ${months} tháng tới (bắt đầu ${modal.work_date}).`;
-      } else if (modal.repeat_end_date) {
-        return `Sự kiện sẽ lặp lại vào ngày ${day} hàng tháng cho đến ngày ${modal.repeat_end_date}.`;
-      }
-      return `Sự kiện sẽ lặp lại vào ngày ${day} hàng tháng.`;
+    if (modal.duration_type === "month") {
+      const month = baseDate.getMonth() + 1;
+      const year = baseDate.getFullYear();
+      const lastDay = new Date(year, month, 0).getDate();
+      return `📅 Sự kiện tổ chức trong suốt cả Tháng ${month}/${year}: Từ ngày 01/${month < 10 ? '0' + month : month} đến ${lastDay}/${month < 10 ? '0' + month : month}/${year} (${lastDay} ngày).`;
     }
 
-    return null;
+    if (modal.duration_type === "custom") {
+      if (modal.end_date) {
+        return `⏳ Sự kiện tổ chức từ ngày ${modal.work_date} đến ngày ${modal.end_date}.`;
+      }
+      return `⏳ Sự kiện bắt đầu từ ngày ${modal.work_date}.`;
+    }
+
+    return `📌 Sự kiện diễn ra vào ngày ${modal.work_date} (1 ngày duy nhất).`;
   };
 
   // Toggle shift selection for event modal
@@ -715,7 +725,7 @@ export function SchedulePage() {
     }));
   };
 
-  // Handle Create Event Submit (Hỗ trợ tạo nhiều ca cùng lúc hoặc Cả ngày + Lặp định kỳ hàng tuần / hàng tháng)
+  // Handle Create Event Submit (Hỗ trợ 1 ngày, trong 1 tuần, hoặc cả tháng)
   const handleCreateEventSubmit = async (e) => {
     e.preventDefault();
     if (!createEventModal.title.trim()) {
@@ -732,18 +742,36 @@ export function SchedulePage() {
       return;
     }
 
+    let start = createEventModal.work_date || formatLocalDate(new Date());
+    let end = createEventModal.end_date || null;
+
+    if (createEventModal.duration_type === "week") {
+      const mon = getMonday(start);
+      const sun = parseLocalDate(mon);
+      sun.setDate(sun.getDate() + 6);
+      start = formatLocalDate(mon);
+      end = formatLocalDate(sun);
+    } else if (createEventModal.duration_type === "month") {
+      const d = parseLocalDate(start);
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const lastDay = new Date(y, m, 0).getDate();
+      start = `${y}-${String(m).padStart(2, "0")}-01`;
+      end = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    } else if (createEventModal.duration_type === "day") {
+      end = null;
+    }
+
     try {
       const res = await api.createShiftEvent({
         shift_id: shifts.includes(0) ? 0 : shifts[0],
         shift_ids: shifts.includes(0) ? [0] : shifts,
-        work_date: createEventModal.work_date || null,
+        work_date: start,
+        end_date: end,
+        duration_type: createEventModal.duration_type || "day",
         title: createEventModal.title.trim(),
         description: createEventModal.description?.trim() || "",
         event_type: createEventModal.event_type || "general",
-        repeat_type: createEventModal.repeat_type || "none",
-        repeat_days_of_week: createEventModal.repeat_type === "weekly" ? (createEventModal.repeat_days_of_week || []) : null,
-        repeat_count: createEventModal.repeat_duration_type === "count" ? Number(createEventModal.repeat_count || 4) : null,
-        repeat_end_date: createEventModal.repeat_duration_type === "date" ? createEventModal.repeat_end_date : null,
       });
 
       showToast(res.message || "Tạo sự kiện thành công!");
@@ -753,14 +781,11 @@ export function SchedulePage() {
         selected_shifts: [0],
         shift_id: 0,
         work_date: "",
+        end_date: "",
+        duration_type: "day",
         title: "",
         description: "",
         event_type: "meeting",
-        repeat_type: "none",
-        repeat_days_of_week: [],
-        repeat_duration_type: "count",
-        repeat_count: 4,
-        repeat_end_date: "",
       });
       fetchEvents();
       if (eventModal.open) {
@@ -771,42 +796,30 @@ export function SchedulePage() {
     }
   };
 
-  // Handle Delete Event (Hỗ trợ xóa 1 buổi hoặc xóa toàn bộ chuỗi định kỳ)
-  const handleDeleteEvent = async (evOrId, deleteSeries = false, confirmSingleRecurring = false) => {
+  // Handle Delete Event (Xóa sự kiện 1 ngày, trong 1 tuần, hoặc cả tháng)
+  const handleDeleteEvent = async (evOrId) => {
     const eventObj = typeof evOrId === "object" ? evOrId : events.find((e) => e.id === evOrId);
     const eventId = typeof evOrId === "object" ? evOrId.id : evOrId;
 
-    if (!deleteSeries && !confirmSingleRecurring && eventObj?.recurring_group_id) {
-      setDeleteRecurringModal({
-        open: true,
-        event: eventObj,
-      });
-      return;
-    }
+    const label = eventObj?.duration_type === "month"
+      ? "sự kiện cả tháng"
+      : eventObj?.duration_type === "week"
+      ? "sự kiện trong 1 tuần"
+      : "sự kiện";
 
-    if (!deleteSeries && !confirmSingleRecurring && !window.confirm(`Bạn có chắc chắn muốn xóa sự kiện "${eventObj?.title || ''}"?`)) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa ${label} "${eventObj?.title || ''}"?`)) {
       return;
     }
 
     try {
-      const res = await api.deleteShiftEvent(eventId, deleteSeries);
-      showToast(res.message || (deleteSeries ? "Đã xóa toàn bộ chuỗi sự kiện định kỳ!" : "Đã xóa sự kiện thành công!"));
-      if (deleteSeries && eventObj?.recurring_group_id) {
-        setEvents((prev) => prev.filter((ev) => ev.recurring_group_id !== eventObj.recurring_group_id));
-        if (eventModal.open) {
-          setEventModal((prev) => ({
-            ...prev,
-            eventList: prev.eventList.filter((ev) => ev.recurring_group_id !== eventObj.recurring_group_id),
-          }));
-        }
-      } else {
-        setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
-        if (eventModal.open) {
-          setEventModal((prev) => ({
-            ...prev,
-            eventList: prev.eventList.filter((ev) => ev.id !== eventId),
-          }));
-        }
+      const res = await api.deleteShiftEvent(eventId, false);
+      showToast(res.message || "Đã xóa sự kiện thành công!");
+      setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+      if (eventModal.open) {
+        setEventModal((prev) => ({
+          ...prev,
+          eventList: prev.eventList.filter((ev) => ev.id !== eventId),
+        }));
       }
       setDeleteRecurringModal({ open: false, event: null });
     } catch (err) {
@@ -1126,41 +1139,19 @@ export function SchedulePage() {
 
   const totalHours = myActualAssignedHours;
 
-  // Lọc sự kiện theo tuần hiện tại đang xem
+  // Lọc sự kiện theo tuần hiện tại đang xem (hỗ trợ sự kiện 1 ngày, trong 1 tuần, hoặc cả tháng)
   const weekEvents = useMemo(() => {
-    const weekDateStrs = weekDays.map((d) => d.dateStr);
-    return events.filter((e) => !e.work_date || weekDateStrs.includes(e.work_date));
+    return events.filter((e) => isEventActiveInWeek(e, weekDays));
   }, [events, weekDays]);
 
-  // Gom nhóm các chuỗi sự kiện định kỳ
-  const recurringEventGroups = useMemo(() => {
-    const map = new Map();
-    events.forEach((ev) => {
-      if (ev.recurring_group_id) {
-        if (!map.has(ev.recurring_group_id)) {
-          map.set(ev.recurring_group_id, []);
-        }
-        map.get(ev.recurring_group_id).push(ev);
-      }
-    });
-    return Array.from(map.entries()).map(([groupId, groupEvents]) => {
-      const sorted = [...groupEvents].sort((a, b) => (a.work_date || "").localeCompare(b.work_date || ""));
-      const first = sorted[0];
-      return {
-        groupId,
-        first,
-        events: sorted,
-        count: sorted.length,
-        title: first.title,
-        description: first.description,
-        repeat_type: first.repeat_type,
-        repeat_rule: first.repeat_rule,
-        repeat_end_date: first.repeat_end_date,
-        event_type: first.event_type,
-        startDate: sorted[0]?.work_date,
-        endDate: sorted[sorted.length - 1]?.work_date,
-      };
-    });
+  // Các sự kiện tổ chức theo tuần hoặc cả tháng đang hoạt động trong tuần đang xem
+  const longEventsInWeek = useMemo(() => {
+    return weekEvents.filter((e) => e.duration_type === "week" || e.duration_type === "month" || (e.end_date && e.end_date !== e.work_date));
+  }, [weekEvents]);
+
+  // Tất cả các sự kiện kéo dài (trong 1 tuần, cả tháng, khoảng ngày)
+  const multiDayEvents = useMemo(() => {
+    return events.filter((e) => e.duration_type === "week" || e.duration_type === "month" || (e.end_date && e.end_date !== e.work_date));
   }, [events]);
 
   const getEventTypeBadge = (type) => {
@@ -1743,7 +1734,104 @@ export function SchedulePage() {
         </div>
       </div>
 
+      {/* Banner hiển thị sự kiện tổ chức theo tuần hoặc cả tháng đang diễn ra */}
+      {longEventsInWeek.length > 0 && (
+        <div
+          style={{
+            background: "linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%)",
+            border: "1.5px solid #ddd6fe",
+            borderRadius: 14,
+            padding: "12px 18px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.06)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: 1 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+                color: "#ffffff",
+                padding: "5px 12px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 800,
+                boxShadow: "0 2px 6px rgba(124, 58, 237, 0.25)",
+              }}
+            >
+              <Sparkles size={14} />
+              <span>SỰ KIỆN TUẦN / THÁNG</span>
+            </div>
 
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {longEventsInWeek.map((ev) => {
+                const isMonth = ev.duration_type === "month";
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => setAllEventsModal({ open: true, tab: "multiday" })}
+                    style={{
+                      background: "#ffffff",
+                      border: isMonth ? "1.5px solid #93c5fd" : "1.5px solid #c4b5fd",
+                      borderRadius: 10,
+                      padding: "6px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        background: isMonth ? "#eff6ff" : "#f5f3ff",
+                        color: isMonth ? "#1d4ed8" : "#7c3aed",
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {isMonth ? "📅 Cả tháng" : "🗓️ Trong 1 tuần"}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+                      {ev.title}
+                    </span>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      ({ev.work_date?.slice(5).replace("-", "/")} → {ev.end_date?.slice(5).replace("-", "/")})
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAllEventsModal({ open: true, tab: "multiday" })}
+            style={{
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#475569",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Xem tất cả ›
+          </button>
+        </div>
+      )}
 
       {/* ================= VIEW 1: LỊCH 1 TUẦN TỔNG THỂ (9 CA MATRIX) ================= */}
       {viewMode === "week" && (
@@ -2006,7 +2094,7 @@ export function SchedulePage() {
                       const eventsInThisSlot = events.filter(
                         (e) =>
                           (!e.shift_id || e.shift_id === 0 || e.shift_id === shift.id) &&
-                          (!e.work_date || e.work_date === day.dateStr)
+                          isEventActiveOnDate(e, day.dateStr)
                       );
 
                       return (
@@ -2309,9 +2397,9 @@ export function SchedulePage() {
                                               CẢ NGÀY
                                             </span>
                                           )}
-                                          {ev.repeat_type && ev.repeat_type !== "none" && (
+                                          {ev.duration_type === "week" ? (
                                             <span
-                                              title={ev.repeat_rule || (ev.repeat_type === "weekly" ? "Lặp hàng tuần" : "Lặp hàng tháng")}
+                                              title={ev.repeat_rule || "Sự kiện tổ chức trong 1 tuần"}
                                               style={{
                                                 fontSize: 8,
                                                 fontWeight: 800,
@@ -2323,9 +2411,41 @@ export function SchedulePage() {
                                                 flexShrink: 0,
                                               }}
                                             >
-                                              🔁 {ev.repeat_type === "weekly" ? "Tuần" : "Tháng"}
+                                              🗓️ 1 tuần
                                             </span>
-                                          )}
+                                          ) : ev.duration_type === "month" ? (
+                                            <span
+                                              title={ev.repeat_rule || "Sự kiện tổ chức cả tháng"}
+                                              style={{
+                                                fontSize: 8,
+                                                fontWeight: 800,
+                                                padding: "1px 4px",
+                                                borderRadius: 3,
+                                                background: "#dbeafe",
+                                                color: "#1d4ed8",
+                                                border: "1px solid #bfdbfe",
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              📅 Cả tháng
+                                            </span>
+                                          ) : ev.duration_type === "custom" ? (
+                                            <span
+                                              title={ev.repeat_rule || `Từ ${ev.work_date} đến ${ev.end_date}`}
+                                              style={{
+                                                fontSize: 8,
+                                                fontWeight: 800,
+                                                padding: "1px 4px",
+                                                borderRadius: 3,
+                                                background: "#fef3c7",
+                                                color: "#b45309",
+                                                border: "1px solid #fde68a",
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              ⏳ Đợt
+                                            </span>
+                                          ) : null}
                                           <span
                                             style={{
                                               overflow: "hidden",
@@ -2455,7 +2575,8 @@ export function SchedulePage() {
               );
               const eventsInShift = events.filter(
                 (e) =>
-                  e.shift_id === shift.id && (!e.work_date || e.work_date === currentDate)
+                  (!e.shift_id || e.shift_id === 0 || e.shift_id === shift.id) &&
+                  isEventActiveOnDate(e, currentDate)
               );
 
               const targetDayReg = activeUserId
@@ -3713,7 +3834,7 @@ export function SchedulePage() {
                             >
                               {badge.label}
                             </span>
-                            {ev.repeat_type && ev.repeat_type !== "none" && (
+                            {ev.duration_type === "week" ? (
                               <span
                                 style={{
                                   fontSize: 10,
@@ -3728,9 +3849,43 @@ export function SchedulePage() {
                                   gap: 3,
                                 }}
                               >
-                                🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                                🗓️ {ev.repeat_rule || "Trong 1 tuần"}
                               </span>
-                            )}
+                            ) : ev.duration_type === "month" ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  padding: "2px 6px",
+                                  borderRadius: 4,
+                                  background: "#dbeafe",
+                                  color: "#1d4ed8",
+                                  border: "1px solid #bfdbfe",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                }}
+                              >
+                                📅 {ev.repeat_rule || "Cả tháng"}
+                              </span>
+                            ) : ev.duration_type === "custom" ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  padding: "2px 6px",
+                                  borderRadius: 4,
+                                  background: "#fef3c7",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                }}
+                              >
+                                ⏳ {ev.repeat_rule || `${ev.work_date} → ${ev.end_date}`}
+                              </span>
+                            ) : null}
                           </div>
                           {isAdmin && (
                             <button
@@ -4401,7 +4556,7 @@ export function SchedulePage() {
                 </div>
               </div>
 
-              {/* ================= PHẦN 3: CHU KỲ LẶP LẠI (HÀNG TUẦN / HÀNG THÁNG) ================= */}
+              {/* ================= PHẦN 3: THỜI GIAN & THỜI LƯỢNG TỔ CHỨC SỰ KIỆN ================= */}
               <div
                 style={{
                   background: "#f8fafc",
@@ -4417,40 +4572,70 @@ export function SchedulePage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      🔁 3. Chu kỳ lặp lại sự kiện
+                      ⏱️ 3. Thời gian & Thời lượng tổ chức
                     </div>
                     <span style={{ fontSize: 11, background: "#ede9fe", color: "#6d28d9", padding: "1px 7px", borderRadius: 10, fontWeight: 700 }}>
-                      Hàng tuần / Hàng tháng
+                      1 ngày / 1 tuần / Cả tháng
                     </span>
                   </div>
                   <span style={{ fontSize: 11, color: "#64748b" }}>
-                    Tự động tạo sự kiện định kỳ cho các ca làm việc
+                    Tổ chức sự kiện trong 1 tuần hoặc diễn ra cả tháng
                   </span>
                 </div>
 
-                {/* 3 Tabs Lựa Chọn Chu Kỳ */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {/* 4 Tabs Lựa Chọn Thời Lượng */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                   {[
-                    { id: "none", label: "📌 Không lặp", desc: "Chỉ diễn ra 1 lần vào ngày đã chọn" },
-                    { id: "weekly", label: "🔁 Hàng tuần", desc: "Lặp lại vào các thứ trong tuần" },
-                    { id: "monthly", label: "📅 Hàng tháng", desc: "Lặp lại vào cùng ngày hàng tháng" },
+                    { id: "day", label: "📌 1 Ngày", desc: "1 ngày cụ thể" },
+                    { id: "week", label: "🗓️ Trong 1 tuần", desc: "Xuyên suốt 1 tuần (T2 - CN)" },
+                    { id: "month", label: "📅 Cả tháng", desc: "Xuyên suốt cả tháng (01 - cuối tháng)" },
+                    { id: "custom", label: "⏳ Khoảng ngày", desc: "Từ ngày... đến ngày..." },
                   ].map((tab) => {
-                    const active = (createEventModal.repeat_type || "none") === tab.id;
+                    const active = (createEventModal.duration_type || "day") === tab.id;
                     return (
                       <button
                         key={tab.id}
                         type="button"
                         onClick={() => {
-                          const dateObj = parseLocalDate(createEventModal.work_date || new Date());
-                          const dow = isNaN(dateObj.getTime()) ? 1 : dateObj.getDay();
-                          setCreateEventModal((prev) => ({
-                            ...prev,
-                            repeat_type: tab.id,
-                            repeat_days_of_week: prev.repeat_days_of_week?.length ? prev.repeat_days_of_week : [dow],
-                          }));
+                          const base = createEventModal.work_date || formatLocalDate(new Date());
+                          if (tab.id === "week") {
+                            const mon = formatLocalDate(getMonday(base));
+                            const sunObj = parseLocalDate(mon);
+                            sunObj.setDate(sunObj.getDate() + 6);
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              duration_type: tab.id,
+                              work_date: mon,
+                              end_date: formatLocalDate(sunObj),
+                            }));
+                          } else if (tab.id === "month") {
+                            const d = parseLocalDate(base);
+                            const y = d.getFullYear();
+                            const m = d.getMonth() + 1;
+                            const lastDay = new Date(y, m, 0).getDate();
+                            const startM = `${y}-${String(m).padStart(2, "0")}-01`;
+                            const endM = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              duration_type: tab.id,
+                              work_date: startM,
+                              end_date: endM,
+                            }));
+                          } else if (tab.id === "day") {
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              duration_type: tab.id,
+                              end_date: "",
+                            }));
+                          } else {
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              duration_type: tab.id,
+                            }));
+                          }
                         }}
                         style={{
-                          padding: "10px 12px",
+                          padding: "10px 10px",
                           borderRadius: 10,
                           border: active ? "2px solid #7c3aed" : "1px solid #cbd5e1",
                           background: active ? "#f5f3ff" : "#ffffff",
@@ -4460,10 +4645,10 @@ export function SchedulePage() {
                           transition: "all 0.15s ease",
                         }}
                       >
-                        <div style={{ fontSize: 13, fontWeight: active ? 800 : 700, color: active ? "#6d28d9" : "#1e293b" }}>
+                        <div style={{ fontSize: 12.5, fontWeight: active ? 800 : 700, color: active ? "#6d28d9" : "#1e293b" }}>
                           {tab.label}
                         </div>
-                        <div style={{ fontSize: 11, color: active ? "#7c3aed" : "#64748b", marginTop: 2 }}>
+                        <div style={{ fontSize: 10.5, color: active ? "#7c3aed" : "#64748b", marginTop: 2 }}>
                           {tab.desc}
                         </div>
                       </button>
@@ -4471,213 +4656,382 @@ export function SchedulePage() {
                   })}
                 </div>
 
-                {/* TÙY CHỌN HÀNG TUẦN */}
-                {createEventModal.repeat_type === "weekly" && (
+                {/* TÙY CHỌN 1 NGÀY */}
+                {createEventModal.duration_type === "day" && (
                   <div
                     style={{
                       background: "#ffffff",
-                      border: "1px solid #ddd6fe",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <label style={{ fontSize: 13, fontWeight: 700, color: "#475569", whiteSpace: "nowrap" }}>
+                      📅 Chọn ngày diễn ra:
+                    </label>
+                    <input
+                      type="date"
+                      value={createEventModal.work_date || ""}
+                      onChange={(e) => setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))}
+                      style={{
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: "#ffffff",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* TÙY CHỌN TRONG 1 TUẦN */}
+                {createEventModal.duration_type === "week" && (
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1.5px solid #ddd6fe",
                       borderRadius: 10,
                       padding: "14px 16px",
                       display: "flex",
                       flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ fontSize: 13, color: "#334155", fontWeight: 700 }}>
+                        🗓️ Chọn tuần tổ chức sự kiện:
+                      </span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nowMon = formatLocalDate(getMonday(new Date()));
+                            const sunObj = parseLocalDate(nowMon);
+                            sunObj.setDate(sunObj.getDate() + 6);
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              work_date: nowMon,
+                              end_date: formatLocalDate(sunObj),
+                            }));
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #c4b5fd",
+                            background: "#f5f3ff",
+                            color: "#6d28d9",
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⚡ Tuần này
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nowMon = getMonday(new Date());
+                            const nextMonObj = parseLocalDate(nowMon);
+                            nextMonObj.setDate(nextMonObj.getDate() + 7);
+                            const nextMon = formatLocalDate(nextMonObj);
+                            const sunObj = parseLocalDate(nextMon);
+                            sunObj.setDate(sunObj.getDate() + 6);
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              work_date: nextMon,
+                              end_date: formatLocalDate(sunObj),
+                            }));
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            background: "#ffffff",
+                            color: "#475569",
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⚡ Tuần sau
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Từ Thứ Hai (Ngày bắt đầu):
+                        </label>
+                        <input
+                          type="date"
+                          value={createEventModal.work_date || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const mon = formatLocalDate(getMonday(val));
+                              const sunObj = parseLocalDate(mon);
+                              sunObj.setDate(sunObj.getDate() + 6);
+                              setCreateEventModal((prev) => ({
+                                ...prev,
+                                work_date: mon,
+                                end_date: formatLocalDate(sunObj),
+                              }));
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1.5px solid #c4b5fd",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Đến Chủ Nhật (Ngày kết thúc):
+                        </label>
+                        <input
+                          type="date"
+                          value={createEventModal.end_date || ""}
+                          onChange={(e) => setCreateEventModal((prev) => ({ ...prev, end_date: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1.5px solid #cbd5e1",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            background: "#f8fafc",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TÙY CHỌN CẢ THÁNG */}
+                {createEventModal.duration_type === "month" && (
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1.5px solid #93c5fd",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ fontSize: 13, color: "#1e3a8a", fontWeight: 700 }}>
+                        📅 Chọn tháng tổ chức sự kiện:
+                      </span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const now = new Date();
+                            const y = now.getFullYear();
+                            const m = now.getMonth() + 1;
+                            const lastDay = new Date(y, m, 0).getDate();
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              work_date: `${y}-${String(m).padStart(2, "0")}-01`,
+                              end_date: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+                            }));
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #93c5fd",
+                            background: "#eff6ff",
+                            color: "#1d4ed8",
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⚡ Tháng này
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const now = new Date();
+                            const nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                            const y = nextDate.getFullYear();
+                            const m = nextDate.getMonth() + 1;
+                            const lastDay = new Date(y, m, 0).getDate();
+                            setCreateEventModal((prev) => ({
+                              ...prev,
+                              work_date: `${y}-${String(m).padStart(2, "0")}-01`,
+                              end_date: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+                            }));
+                          }}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            background: "#ffffff",
+                            color: "#475569",
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⚡ Tháng sau
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Từ ngày đầu tháng (01):
+                        </label>
+                        <input
+                          type="date"
+                          value={createEventModal.work_date || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const d = parseLocalDate(val);
+                              const y = d.getFullYear();
+                              const m = d.getMonth() + 1;
+                              const lastDay = new Date(y, m, 0).getDate();
+                              setCreateEventModal((prev) => ({
+                                ...prev,
+                                work_date: `${y}-${String(m).padStart(2, "0")}-01`,
+                                end_date: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+                              }));
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1.5px solid #93c5fd",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            background: "#ffffff",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Đến ngày cuối tháng:
+                        </label>
+                        <input
+                          type="date"
+                          value={createEventModal.end_date || ""}
+                          onChange={(e) => setCreateEventModal((prev) => ({ ...prev, end_date: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1.5px solid #cbd5e1",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            background: "#f8fafc",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TÙY CHỌN KHOẢNG NGÀY */}
+                {createEventModal.duration_type === "custom" && (
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
                       gap: 12,
                     }}
                   >
                     <div>
-                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
-                        1. Chọn các thứ lặp lại trong tuần: <span style={{ color: "#ef4444" }}>*</span>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Từ ngày: <span style={{ color: "#ef4444" }}>*</span>
                       </label>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {[
-                          { id: 1, label: "T2", name: "Thứ Hai" },
-                          { id: 2, label: "T3", name: "Thứ Ba" },
-                          { id: 3, label: "T4", name: "Thứ Tư" },
-                          { id: 4, label: "T5", name: "Thứ Năm" },
-                          { id: 5, label: "T6", name: "Thứ Sáu" },
-                          { id: 6, label: "T7", name: "Thứ Bảy" },
-                          { id: 0, label: "CN", name: "Chủ Nhật" },
-                        ].map((d) => {
-                          const selected = (createEventModal.repeat_days_of_week || []).includes(d.id);
-                          return (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => {
-                                setCreateEventModal((prev) => {
-                                  const cur = prev.repeat_days_of_week || [];
-                                  const next = cur.includes(d.id)
-                                    ? cur.filter((x) => x !== d.id)
-                                    : [...cur, d.id];
-                                  return {
-                                    ...prev,
-                                    repeat_days_of_week: next.length > 0 ? next : [d.id],
-                                  };
-                                });
-                              }}
-                              title={d.name}
-                              style={{
-                                width: 44,
-                                height: 38,
-                                borderRadius: 8,
-                                border: selected ? "2px solid #7c3aed" : "1px solid #cbd5e1",
-                                background: selected ? "linear-gradient(135deg, #7c3aed, #6366f1)" : "#f8fafc",
-                                color: selected ? "#ffffff" : "#475569",
-                                fontWeight: 800,
-                                fontSize: 13,
-                                cursor: "pointer",
-                                boxShadow: selected ? "0 2px 6px rgba(124, 58, 237, 0.25)" : "none",
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              {d.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <input
+                        type="date"
+                        value={createEventModal.work_date || ""}
+                        onChange={(e) => setCreateEventModal((prev) => ({ ...prev, work_date: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          background: "#ffffff",
+                        }}
+                      />
                     </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                      <div>
-                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
-                          2. Lặp lại trong số tuần:
-                        </label>
-                        <div style={{ display: "flex", gap: 5 }}>
-                          {[2, 4, 8, 12].map((cnt) => (
-                            <button
-                              key={cnt}
-                              type="button"
-                              onClick={() => setCreateEventModal((prev) => ({ ...prev, repeat_count: cnt, repeat_duration_type: "count" }))}
-                              style={{
-                                flex: 1,
-                                padding: "7px 0",
-                                borderRadius: 8,
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                                background: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "#eff6ff" : "#ffffff",
-                                color: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "#1d4ed8" : "#475569",
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              {cnt} tuần
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
-                          Hoặc đến ngày kết thúc:
-                        </label>
-                        <input
-                          type="date"
-                          value={createEventModal.repeat_end_date || ""}
-                          onChange={(e) => setCreateEventModal((prev) => ({ ...prev, repeat_end_date: e.target.value, repeat_duration_type: "date" }))}
-                          style={{
-                            width: "100%",
-                            padding: "7px 10px",
-                            borderRadius: 8,
-                            border: createEventModal.repeat_duration_type === "date" ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            background: "#ffffff",
-                          }}
-                        />
-                      </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Đến ngày: <span style={{ color: "#ef4444" }}>*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={createEventModal.end_date || ""}
+                        onChange={(e) => setCreateEventModal((prev) => ({ ...prev, end_date: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          background: "#ffffff",
+                        }}
+                      />
                     </div>
                   </div>
                 )}
 
-                {/* TÙY CHỌN HÀNG THÁNG */}
-                {createEventModal.repeat_type === "monthly" && (
+                {/* Banner Xem Trước Thời Lượng */}
+                {getDurationEventPreview(createEventModal) && (
                   <div
                     style={{
-                      background: "#ffffff",
-                      border: "1px solid #ddd6fe",
-                      borderRadius: 10,
-                      padding: "14px 16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12,
-                    }}
-                  >
-                    <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>
-                      🗓️ Sự kiện sẽ tự động lặp lại vào <strong>Ngày {parseLocalDate(createEventModal.work_date || new Date()).getDate()}</strong> hàng tháng.
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                      <div>
-                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
-                          Lặp trong số tháng:
-                        </label>
-                        <div style={{ display: "flex", gap: 5 }}>
-                          {[1, 3, 6, 12].map((cnt) => (
-                            <button
-                              key={cnt}
-                              type="button"
-                              onClick={() => setCreateEventModal((prev) => ({ ...prev, repeat_count: cnt, repeat_duration_type: "count" }))}
-                              style={{
-                                flex: 1,
-                                padding: "7px 0",
-                                borderRadius: 8,
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                                background: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "#eff6ff" : "#ffffff",
-                                color: createEventModal.repeat_duration_type === "count" && Number(createEventModal.repeat_count) === cnt ? "#1d4ed8" : "#475569",
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              {cnt} tháng
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
-                          Hoặc đến ngày kết thúc:
-                        </label>
-                        <input
-                          type="date"
-                          value={createEventModal.repeat_end_date || ""}
-                          onChange={(e) => setCreateEventModal((prev) => ({ ...prev, repeat_end_date: e.target.value, repeat_duration_type: "date" }))}
-                          style={{
-                            width: "100%",
-                            padding: "7px 10px",
-                            borderRadius: 8,
-                            border: createEventModal.repeat_duration_type === "date" ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            background: "#ffffff",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Banner Xem Trước Chu Kỳ Lặp */}
-                {createEventModal.repeat_type !== "none" && getRecurringEventPreview(createEventModal) && (
-                  <div
-                    style={{
-                      background: "#f0fdf4",
-                      border: "1px solid #86efac",
+                      background: createEventModal.duration_type === "month"
+                        ? "#eff6ff"
+                        : createEventModal.duration_type === "week"
+                        ? "#f5f3ff"
+                        : "#f0fdf4",
+                      border: "1px solid",
+                      borderColor: createEventModal.duration_type === "month"
+                        ? "#bfdbfe"
+                        : createEventModal.duration_type === "week"
+                        ? "#ddd6fe"
+                        : "#86efac",
                       borderRadius: 10,
                       padding: "10px 14px",
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
                       fontSize: 12.5,
-                      color: "#166534",
+                      color: createEventModal.duration_type === "month"
+                        ? "#1d4ed8"
+                        : createEventModal.duration_type === "week"
+                        ? "#6d28d9"
+                        : "#166534",
                       fontWeight: 600,
                     }}
                   >
-                    <CheckCircle2 size={16} color="#16a34a" style={{ flexShrink: 0 }} />
-                    <span>{getRecurringEventPreview(createEventModal)}</span>
+                    <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                    <span>{getDurationEventPreview(createEventModal)}</span>
                   </div>
                 )}
               </div>
@@ -5041,13 +5395,13 @@ export function SchedulePage() {
 
               <button
                 type="button"
-                onClick={() => setAllEventsModal((prev) => ({ ...prev, tab: "recurring" }))}
+                onClick={() => setAllEventsModal((prev) => ({ ...prev, tab: "multiday" }))}
                 style={{
                   padding: "12px 18px",
                   fontSize: 13,
-                  fontWeight: allEventsModal.tab === "recurring" ? 800 : 600,
-                  color: allEventsModal.tab === "recurring" ? "#7c3aed" : "#64748b",
-                  borderBottom: allEventsModal.tab === "recurring" ? "2px solid #7c3aed" : "2px solid transparent",
+                  fontWeight: allEventsModal.tab === "multiday" ? 800 : 600,
+                  color: allEventsModal.tab === "multiday" ? "#7c3aed" : "#64748b",
+                  borderBottom: allEventsModal.tab === "multiday" ? "2px solid #7c3aed" : "2px solid transparent",
                   background: "transparent",
                   borderTop: "none",
                   borderLeft: "none",
@@ -5058,18 +5412,18 @@ export function SchedulePage() {
                   gap: 6,
                 }}
               >
-                <span>🔁 Chuỗi sự kiện định kỳ</span>
+                <span>🗓️ Sự kiện 1 tuần & cả tháng</span>
                 <span
                   style={{
-                    background: allEventsModal.tab === "recurring" ? "#ede9fe" : "#e2e8f0",
-                    color: allEventsModal.tab === "recurring" ? "#6d28d9" : "#64748b",
+                    background: allEventsModal.tab === "multiday" ? "#ede9fe" : "#e2e8f0",
+                    color: allEventsModal.tab === "multiday" ? "#6d28d9" : "#64748b",
                     padding: "1px 7px",
                     borderRadius: 10,
                     fontSize: 11,
                     fontWeight: 700,
                   }}
                 >
-                  {recurringEventGroups.length}
+                  {multiDayEvents.length}
                 </span>
               </button>
             </div>
@@ -5136,7 +5490,7 @@ export function SchedulePage() {
                                 📅 {ev.work_date || "Toàn tuần"} • {shiftName}
                               </span>
 
-                              {ev.repeat_type && ev.repeat_type !== "none" && (
+                              {ev.duration_type === "week" ? (
                                 <span
                                   style={{
                                     background: "#ede9fe",
@@ -5150,9 +5504,41 @@ export function SchedulePage() {
                                     gap: 4,
                                   }}
                                 >
-                                  🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                                  🗓️ Trong 1 tuần
                                 </span>
-                              )}
+                              ) : ev.duration_type === "month" ? (
+                                <span
+                                  style={{
+                                    background: "#dbeafe",
+                                    color: "#1d4ed8",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  📅 Cả tháng
+                                </span>
+                              ) : ev.duration_type === "custom" ? (
+                                <span
+                                  style={{
+                                    background: "#fef3c7",
+                                    color: "#b45309",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  ⏳ Khoảng ngày
+                                </span>
+                              ) : null}
                             </div>
 
                             <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
@@ -5198,43 +5584,45 @@ export function SchedulePage() {
                 </>
               )}
 
-              {allEventsModal.tab === "recurring" && (
+              {allEventsModal.tab === "multiday" && (
                 <>
-                  {recurringEventGroups.length === 0 ? (
+                  {multiDayEvents.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
-                      <Repeat size={40} color="#cbd5e1" style={{ margin: "0 auto 12px" }} />
+                      <Calendar size={40} color="#cbd5e1" style={{ margin: "0 auto 12px" }} />
                       <div style={{ fontSize: 15, fontWeight: 700, color: "#334155" }}>
-                        Chưa có chuỗi sự kiện định kỳ nào
+                        Chưa có sự kiện nào diễn ra trong 1 tuần hoặc cả tháng
                       </div>
                       <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-                        Khi tạo sự kiện mới, bạn có thể chọn tab "Hàng tuần" hoặc "Hàng tháng" để tự động lặp lại
+                        Khi tạo sự kiện mới, bạn có thể chọn tab "Trong 1 tuần" hoặc "Cả tháng"
                       </div>
                     </div>
                   ) : (
-                    recurringEventGroups.map((grp) => {
-                      const badge = getEventTypeBadge(grp.event_type);
+                    multiDayEvents.map((ev) => {
+                      const badge = getEventTypeBadge(ev.event_type);
+                      const isMonth = ev.duration_type === "month";
+                      const isWeek = ev.duration_type === "week";
                       return (
                         <div
-                          key={grp.groupId}
+                          key={ev.id}
                           style={{
                             background: "#ffffff",
-                            border: "1.5px solid #e0e7ff",
+                            border: isMonth ? "1.5px solid #bfdbfe" : "1.5px solid #ddd6fe",
                             borderRadius: 12,
                             padding: "16px 18px",
                             display: "flex",
                             alignItems: "flex-start",
                             justifyContent: "space-between",
                             gap: 14,
-                            boxShadow: "0 2px 4px rgba(99, 102, 241, 0.04)",
+                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.03)",
                           }}
                         >
                           <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span
                                 style={{
-                                  background: "#ede9fe",
-                                  color: "#6d28d9",
-                                  border: "1px solid #ddd6fe",
+                                  background: isMonth ? "#eff6ff" : "#f5f3ff",
+                                  color: isMonth ? "#1d4ed8" : "#6d28d9",
+                                  border: `1px solid ${isMonth ? "#bfdbfe" : "#ddd6fe"}`,
                                   padding: "3px 9px",
                                   borderRadius: 8,
                                   fontSize: 11.5,
@@ -5244,7 +5632,7 @@ export function SchedulePage() {
                                   gap: 4,
                                 }}
                               >
-                                🔁 {grp.repeat_rule || (grp.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                                {isMonth ? "📅 Cả tháng" : isWeek ? "🗓️ Trong 1 tuần" : "⏳ Khoảng ngày"}
                               </span>
 
                               <span
@@ -5262,41 +5650,37 @@ export function SchedulePage() {
 
                               <span
                                 style={{
-                                  background: "#ecfdf5",
-                                  color: "#059669",
+                                  background: "#f1f5f9",
+                                  color: "#475569",
                                   padding: "2px 8px",
                                   borderRadius: 6,
                                   fontSize: 11,
-                                  fontWeight: 700,
+                                  fontWeight: 600,
                                 }}
                               >
-                                {grp.count} sự kiện được tạo
+                                {ev.shift_id === 0 ? "🌟 Áp dụng cả ngày" : `Ca ${ev.shift_id}`}
                               </span>
                             </div>
 
                             <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}>
-                              {grp.title}
+                              {ev.title}
                             </div>
 
-                            {grp.description && (
+                            {ev.description && (
                               <div style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.4 }}>
-                                {grp.description}
+                                {ev.description}
                               </div>
                             )}
 
-                            <div style={{ fontSize: 11.5, color: "#6366f1", marginTop: 4, fontWeight: 600 }}>
-                              🗓️ Thời gian diễn ra: Từ {grp.startDate} đến {grp.endDate || "vô thời hạn"}
+                            <div style={{ fontSize: 12, color: isMonth ? "#2563eb" : "#7c3aed", marginTop: 4, fontWeight: 600 }}>
+                              🗓️ Thời gian diễn ra: Từ {ev.work_date} đến {ev.end_date || ev.work_date}
                             </div>
                           </div>
 
                           {isAdmin && (
                             <button
                               type="button"
-                              onClick={() => {
-                                if (window.confirm(`Bạn có chắc chắn muốn xóa toàn bộ chuỗi sự kiện định kỳ "${grp.title}"? (${grp.count} sự kiện sẽ bị xóa)`)) {
-                                  handleDeleteEvent(grp.first, true);
-                                }
-                              }}
+                              onClick={() => handleDeleteEvent(ev)}
                               style={{
                                 background: "#fef2f2",
                                 color: "#dc2626",
@@ -5314,7 +5698,7 @@ export function SchedulePage() {
                               }}
                             >
                               <Trash2 size={14} />
-                              Xóa chuỗi
+                              Xóa sự kiện
                             </button>
                           )}
                         </div>

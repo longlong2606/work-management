@@ -773,7 +773,7 @@ export function TvDisplayPage({ onNavigateToManagement }) {
                           {isTask ? <Zap size={11} /> : <BarChart2 size={11} />}
                           {isTask ? "NHIỆM VỤ CA" : isMeeting ? "GIAO BAN" : "SỰ KIỆN"}
                         </span>
-                        {ev.repeat_type && ev.repeat_type !== "none" && (
+                        {ev.duration_type === "week" ? (
                           <span
                             style={{
                               background: "#ede9fe",
@@ -784,9 +784,48 @@ export function TvDisplayPage({ onNavigateToManagement }) {
                               fontWeight: 700,
                             }}
                           >
-                            🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                            🗓️ TRONG 1 TUẦN
                           </span>
-                        )}
+                        ) : ev.duration_type === "month" ? (
+                          <span
+                            style={{
+                              background: "#dbeafe",
+                              color: "#1d4ed8",
+                              padding: "2px 7px",
+                              borderRadius: 6,
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                            }}
+                          >
+                            📅 CẢ THÁNG
+                          </span>
+                        ) : ev.duration_type === "custom" ? (
+                          <span
+                            style={{
+                              background: "#fef3c7",
+                              color: "#b45309",
+                              padding: "2px 7px",
+                              borderRadius: 6,
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                            }}
+                          >
+                            ⏳ ĐỢT SỰ KIỆN
+                          </span>
+                        ) : ev.repeat_rule ? (
+                          <span
+                            style={{
+                              background: "#ede9fe",
+                              color: "#6d28d9",
+                              padding: "2px 7px",
+                              borderRadius: 6,
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {ev.repeat_rule}
+                          </span>
+                        ) : null}
                       </div>
 
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>

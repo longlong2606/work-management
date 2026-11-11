@@ -85,6 +85,8 @@ public class ShiftEventEntity
     public long id { get; set; }
     public int? shift_id { get; set; }
     public string? work_date { get; set; }
+    public string? end_date { get; set; }
+    public string duration_type { get; set; } = "day";
     public string title { get; set; } = "";
     public string? description { get; set; }
     public string event_type { get; set; } = "general";
@@ -100,6 +102,8 @@ public record CreateShiftEventRequest(
     string title,
     string? description,
     string? work_date = null,
+    string? end_date = null,
+    string? duration_type = "day",
     string? event_type = "general",
     List<int>? shift_ids = null,
     string? repeat_type = "none",
