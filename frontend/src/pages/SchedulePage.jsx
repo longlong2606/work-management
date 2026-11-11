@@ -4565,7 +4565,7 @@ export function SchedulePage() {
                         cursor: "pointer",
                       }}
                     >
-                      📅 Cả tháng (Tháng ${createEventModal.work_date ? parseLocalDate(createEventModal.work_date).getMonth() + 1 : new Date().getMonth() + 1})
+                      📅 Cả tháng
                     </button>
                   </div>
                 </div>
