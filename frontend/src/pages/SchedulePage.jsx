@@ -2911,16 +2911,16 @@ export function SchedulePage() {
                         Ngày làm: <strong>{shift.work_date}</strong> • Ghi chú:{" "}
                         {shift.note || "Không có"}
                       </div>
-                      {isPending && shift.absence_reason && (
+                      {(isAbsent || isPending) && shift.absence_reason && (
                         <div
                           style={{
                             fontSize: 12,
-                            color: "#b45309",
+                            color: isAbsent ? "#991b1b" : "#b45309",
                             fontStyle: "italic",
                             marginTop: 3,
                           }}
                         >
-                          Lý do xin vắng (Chờ duyệt): "{shift.absence_reason}"
+                          {isPending ? "Lý do xin vắng (Chờ duyệt):" : "Lý do vắng:"} "{shift.absence_reason}"
                         </div>
                       )}
                     </div>
@@ -3225,7 +3225,7 @@ export function SchedulePage() {
                               )}
 
                               {/* 2. Badge Trạng thái Có Mặt */}
-                              {(isTkb || isPresent) && (
+                              {isPresent && (
                                 <span
                                   style={{
                                     fontSize: 11,
@@ -3243,7 +3243,7 @@ export function SchedulePage() {
                                 </span>
                               )}
 
-                              {!isTkb && isPending && (
+                              {isPending && (
                                 <span
                                   style={{
                                     fontSize: 10,
@@ -3257,7 +3257,7 @@ export function SchedulePage() {
                                   🟡 ĐƠN CHỜ QUẢN LÝ DUYỆT
                                 </span>
                               )}
-                              {!isTkb && isAbsent && (
+                              {isAbsent && (
                                 <>
                                   <span
                                     style={{
@@ -3543,6 +3543,47 @@ export function SchedulePage() {
                           }}
                         >
                           <strong>📝 Đơn xin nghỉ vắng gửi Quản lý:</strong> "{m.absence_reason}"
+                        </div>
+                      )}
+
+                      {/* Display Approved Absence Reason Box in Red */}
+                      {isAbsent && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            background: "#ffffff",
+                            border: "1px dashed #ef4444",
+                            borderLeft: "4px solid #ef4444",
+                            fontSize: 12,
+                            color: "#991b1b",
+                          }}
+                        >
+                          <strong>📝 Lý do vắng:</strong> "{m.absence_reason || (tkbLabel ? `Trùng lịch học (${tkbLabel.replace("🎓 ", "")})` : (m.time_note || "Vắng mặt"))}"
+                          {m.approved_by_name && (
+                            <span style={{ marginLeft: 8, color: "#64748b", fontWeight: 600 }}>
+                              • Đã duyệt bởi: <strong>{m.approved_by_name}</strong>
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Display Absence Reason if neither pending nor absent but reason exists */}
+                      {!isPending && !isAbsent && m.absence_reason && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            background: "#ffffff",
+                            border: "1px dashed #64748b",
+                            borderLeft: "4px solid #64748b",
+                            fontSize: 12,
+                            color: "#334155",
+                          }}
+                        >
+                          <strong>📝 Lý do vắng:</strong> "{m.absence_reason}"
                         </div>
                       )}
 
