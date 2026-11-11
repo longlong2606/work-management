@@ -343,8 +343,9 @@ app.MapPut("/api/tasks/{id:long}", (long id, UpdateTaskRequest req, HttpContext 
         return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành và lưu trữ, chỉ có thể xem chi tiết chứ không thể chỉnh sửa!" });
 
     long? existingLeaderId = existing.leader_id != null ? Convert.ToInt64(existing.leader_id) : (long?)null;
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && (!existingLeaderId.HasValue || existingLeaderId.Value != currentUser.id))
-        return Results.StatusCode(403);
+    bool isTaskLeader = existingLeaderId.HasValue && existingLeaderId.Value == currentUser.id;
+    if (currentUser.role != "admin" && !isTaskLeader)
+        return Results.Json(new { detail = "Chỉ người phụ trách được giao nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền chỉnh sửa nhiệm vụ!" }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề nhiệm vụ không được để trống!" });
@@ -427,7 +428,8 @@ app.MapPost("/api/tasks/{id:long}/postpone", (long id, PostponeTaskRequest req, 
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
-    if (currentUser.role != "admin" && !isTaskLeader && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !isTaskLeader)
+        return Results.Json(new { detail = "Chỉ người phụ trách được giao nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền tạm hoãn nhiệm vụ!" }, statusCode: 403);
 
     if ((string)task.status == "FINISHED")
         return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể tạm hoãn!" });
@@ -453,7 +455,8 @@ app.MapPost("/api/tasks/{id:long}/resume", (long id, ResumeTaskRequest? req, Htt
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
-    if (currentUser.role != "admin" && !isTaskLeader && !currentUser.can_manage_tasks) return Results.StatusCode(403);
+    if (currentUser.role != "admin" && !isTaskLeader)
+        return Results.Json(new { detail = "Chỉ người phụ trách được giao nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền tạm hoãn nhiệm vụ!" }, statusCode: 403);
 
     if ((string)task.status != "POSTPONED")
         return Results.BadRequest(new { detail = "Nhiệm vụ không ở trạng thái Tạm hoãn!" });
@@ -489,12 +492,10 @@ app.MapPost("/api/tasks/{id:long}/finish", (long id, HttpContext ctx) =>
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
     bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
-    bool canFinishTask = currentUser.role == "admin" 
-        || isTaskLeader 
-        || currentUser.can_manage_tasks;
+    bool canFinishTask = currentUser.role == "admin" || isTaskLeader;
 
     if (!canFinishTask)
-        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này hoặc Quản trị viên mới có quyền nghiệm thu hoàn thành toàn bộ nhiệm vụ!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ người phụ trách được giao nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền nghiệm thu hoàn thành toàn bộ nhiệm vụ!" }, statusCode: 403);
 
     var subtaskStats = conn.QueryFirstOrDefault<dynamic>(@"
         SELECT 
@@ -538,11 +539,11 @@ app.MapDelete("/api/tasks/{id:long}", (long id, HttpContext ctx) =>
     long? createdBy = task.created_by != null ? Convert.ToInt64(task.created_by) : (long?)null;
 
     bool isAuthorized = currentUser.role == "admin" 
-        || currentUser.can_manage_tasks 
         || (leaderId.HasValue && leaderId.Value == currentUser.id)
         || (createdBy.HasValue && createdBy.Value == currentUser.id);
 
-    if (!isAuthorized) return Results.StatusCode(403);
+    if (!isAuthorized)
+        return Results.Json(new { detail = "Chỉ người phụ trách được giao nhiệm vụ này hoặc Quản trị viên mới có quyền xóa nhiệm vụ!" }, statusCode: 403);
 
     using var tx = conn.BeginTransaction();
     try
@@ -586,13 +587,11 @@ app.MapPost("/api/tasks/{taskId:long}/subtasks", (long taskId, CreateSubtaskRequ
         return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, không thể thêm mục việc mới!" });
 
     long? leaderId = task.leader_id != null ? Convert.ToInt64(task.leader_id) : (long?)null;
-    bool canCreateSubtask = currentUser.role == "admin" 
-        || currentUser.role == "leader" 
-        || (leaderId.HasValue && leaderId.Value == currentUser.id)
-        || currentUser.can_manage_tasks;
+    bool isTaskLeader = leaderId.HasValue && leaderId.Value == currentUser.id;
+    bool canCreateSubtask = currentUser.role == "admin" || isTaskLeader;
 
     if (!canCreateSubtask)
-        return Results.Json(new { detail = "Bạn không có quyền giao subtask cho nhiệm vụ này!" }, statusCode: 403);
+        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền giao mục việc mới!" }, statusCode: 403);
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề mục việc checklist không được để trống!" });
@@ -705,10 +704,10 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
-    bool isLeaderOrAdmin = currentUser.role == "admin" || currentUser.can_manage_tasks || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id);
+    bool isLeaderOrAdmin = currentUser.role == "admin" || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id);
 
-    if (!isLeaderOrAdmin && !currentUser.can_manage_cp)
-        return Results.StatusCode(403);
+    if (!isLeaderOrAdmin)
+        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền chỉnh sửa mục việc và điều chỉnh điểm CP!" }, statusCode: 403);
 
     if ((string)subtask.task_status == "FINISHED" && !isLeaderOrAdmin)
         return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, chỉ có Người phụ trách hoặc Quản trị viên mới có thể điều chỉnh mục việc!" });
@@ -1241,12 +1240,11 @@ app.MapDelete("/api/subtasks/{id:long}", (long id, HttpContext ctx) =>
     long? createdBy = subtask.created_by != null ? Convert.ToInt64(subtask.created_by) : (long?)null;
 
     bool isAuthorized = currentUser.role == "admin" 
-        || currentUser.can_manage_tasks 
         || (leaderId.HasValue && leaderId.Value == currentUser.id)
         || (createdBy.HasValue && createdBy.Value == currentUser.id);
 
     if (!isAuthorized)
-        return Results.StatusCode(403);
+        return Results.Json(new { detail = "Chỉ người phụ trách nhiệm vụ này (Leader) hoặc Quản trị viên mới có quyền xóa mục việc!" }, statusCode: 403);
 
     using var tx = conn.BeginTransaction();
     try

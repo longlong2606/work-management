@@ -134,7 +134,7 @@ export function TasksPage() {
   const canEditTask = (t) => {
     if (!t) return false;
     if (t.status === "FINISHED") return false;
-    return hasAdminRights || Boolean(user?.can_manage_tasks) || Number(t.leader_id) === Number(user?.id);
+    return hasAdminRights || Number(t.leader_id) === Number(user?.id);
   };
 
   const showToast = (text, type = "success") => {
@@ -1112,9 +1112,9 @@ export function TasksPage() {
               const percent = totalSub === 0 ? 0 : Math.round((finishedSub / totalSub) * 100);
               const isTaskFinished = taskDetail.task.status === "FINISHED";
               const isTaskLeader = Number(taskDetail.task.leader_id) === Number(user?.id);
-              // Người phụ trách nhiệm vụ (Leader phụ trách hoặc Admin) - chỉ khi nhiệm vụ chưa hoàn thành:
-              const isPersonInCharge = !isTaskFinished && (isAdmin || isTaskLeader);
-              const canManageTaskSubtasks = !isTaskFinished && (isPersonInCharge || Boolean(user?.can_manage_tasks));
+              // Người phụ trách nhiệm vụ (Leader phụ trách hoặc Admin):
+              const isPersonInCharge = isAdmin || isTaskLeader;
+              const canManageTaskSubtasks = !isTaskFinished && isPersonInCharge;
               const taskTotalCp = Number(taskDetail.task.total_cp) || 0;
               const allocatedCp = subtasks.reduce((sum, s) => sum + (Number(s.cp_points) || 0), 0);
               const remainingCp = taskTotalCp - allocatedCp;
@@ -1434,7 +1434,7 @@ export function TasksPage() {
                           </button>
                         )}
 
-                        {isAdmin && taskDetail.task.status !== "FINISHED" && (
+                        {(isAdmin || isTaskLeader) && taskDetail.task.status !== "FINISHED" && (
                           <button
                             onClick={() => handleDeleteTask(taskDetail.task.id)}
                             className="task-action-btn"
@@ -1930,7 +1930,7 @@ export function TasksPage() {
                                   )}
 
                                   {/* Edit subtask button */}
-                                  {(isPersonInCharge || isAdmin || isTaskLeader || Boolean(user?.can_manage_tasks)) && sub.status !== "REJECTED" && (
+                                  {isPersonInCharge && sub.status !== "REJECTED" && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
@@ -2474,7 +2474,7 @@ export function TasksPage() {
       )}
 
       {/* ================= MODAL: EDIT / REASSIGN SUBTASK ================= */}
-      {editingSubtask && (taskDetail?.task?.status !== "FINISHED" || hasAdminRights || Number(taskDetail?.task?.leader_id) === Number(user?.id) || Boolean(user?.can_manage_tasks)) && (
+      {editingSubtask && (isAdmin || Number(taskDetail?.task?.leader_id) === Number(user?.id)) && (
         <EditSubtaskModal
           isOpen={!!editingSubtask}
           onClose={() => setEditingSubtask(null)}
