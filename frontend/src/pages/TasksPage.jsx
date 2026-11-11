@@ -284,8 +284,9 @@ export function TasksPage() {
     }
   };
 
-  const handleFinishTask = async (taskId) => {
-    if (taskDetail?.task?.status === "POSTPONED") {
+  const handleFinishTask = async (taskId, taskObj = null) => {
+    const currentTask = taskObj || (taskDetail?.task?.id === taskId ? taskDetail.task : null);
+    if (currentTask?.status === "POSTPONED") {
       showToast("Nhiệm vụ đang bị tạm hoãn, không thể hoàn thành! Vui lòng dừng tạm hoãn và cập nhật lịch trước khi nghiệm thu.", "danger");
       return;
     }
@@ -914,6 +915,33 @@ export function TasksPage() {
                   </button>
 
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {canEditTask(task) && task.status !== "POSTPONED" && task.status !== "FINISHED" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFinishTask(task.id, task);
+                        }}
+                        style={{
+                          background: percent === 100 ? "#10b981" : "#f0fdf4",
+                          border: `1.5px solid ${percent === 100 ? "#059669" : "#86efac"}`,
+                          color: percent === 100 ? "#ffffff" : "#166534",
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          boxShadow: percent === 100 ? "0 2px 6px rgba(16, 185, 129, 0.35)" : "none",
+                        }}
+                        title={percent === 100 ? "Tiến độ đã đạt 100%! Bấm để nghiệm thu và kết thúc nhiệm vụ lớn" : "Nghiệm thu hoàn thành nhiệm vụ"}
+                      >
+                        <Award size={12} />
+                        <span>Hoàn thành</span>
+                      </button>
+                    )}
+
                     {canEditTask(task) && task.status !== "FINISHED" && (
                       <button
                         onClick={(e) => {
@@ -1335,6 +1363,30 @@ export function TasksPage() {
                       )}
                     </div>
 
+                    {/* BANNER KHI CHECKLIST ĐẠT 100% NHƯNG NHIỆM VỤ CHƯA BẤM HOÀN THÀNH */}
+                    {percent === 100 && totalSub > 0 && taskDetail.task.status !== "FINISHED" && (
+                      <div
+                        style={{
+                          marginBottom: 12,
+                          padding: "10px 14px",
+                          borderRadius: 8,
+                          background: "#ecfdf5",
+                          border: "1.5px solid #6ee7b7",
+                          color: "#047857",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
+                        <span>
+                          🎉 <strong>Tiến độ đạt 100%!</strong> Toàn bộ checklist đã được xử lý xong. Người phụ trách vui lòng kiểm tra lại kết quả và nhấn nút <strong>[Nghiệm Thu Hoàn Thành]</strong> bên dưới để chính thức kết thúc nhiệm vụ lớn.
+                        </span>
+                      </div>
+                    )}
+
                     {/* ACTION BUTTONS (FINISH & POSTPONE & EDIT) */}
                     {canManageTaskSubtasks && (
                       <div className="task-action-buttons-group">
@@ -1395,14 +1447,16 @@ export function TasksPage() {
                             onClick={() => handleFinishTask(taskDetail.task.id)}
                             className="task-action-btn"
                             style={{
-                              background: "#10b981",
+                              background: percent === 100 ? "#059669" : "#10b981",
                               color: "#ffffff",
                               border: "none",
-                              boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
+                              boxShadow: percent === 100 ? "0 4px 14px rgba(5, 150, 105, 0.45)" : "0 2px 6px rgba(16, 185, 129, 0.25)",
+                              fontWeight: 800,
                             }}
+                            title="Nghiệm thu và kết thúc toàn bộ nhiệm vụ lớn"
                           >
                             <Award size={15} style={{ flexShrink: 0 }} />
-                            <span>Hoàn Thành</span>
+                            <span>{percent === 100 ? "Nghiệm Thu Hoàn Thành" : "Hoàn Thành"}</span>
                           </button>
                         )}
 

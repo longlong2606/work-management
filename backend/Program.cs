@@ -1099,18 +1099,13 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
         int resolvedSubtasks = Convert.ToInt32(subtaskStats?.resolved ?? 0);
         bool allResolved = totalSubtasks > 0 && totalSubtasks == resolvedSubtasks;
 
-        if (allResolved)
-        {
-            conn.Execute(@"
-                UPDATE tasks SET status = 'FINISHED', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE id = @taskId AND status != 'FINISHED'", new { taskId });
-        }
-
+        // Lưu ý: Không tự động chuyển nhiệm vụ lớn sang FINISHED khi hoàn thành checklist.
+        // Người phụ trách nhiệm vụ (Leader) hoặc Quản trị viên cần chủ động kiểm tra và nhấn nút 'Hoàn thành' để nghiệm thu nhiệm vụ lớn.
         string msg = allResolved
-            ? "Đã duyệt ĐẠT mục checklist và tự động nghiệm thu hoàn thành toàn bộ nhiệm vụ lớn!"
+            ? "Đã duyệt ĐẠT mục checklist! Toàn bộ checklist đã hoàn thành (100%). Người phụ trách có thể nhấn nút [Hoàn Thành] để nghiệm thu nhiệm vụ lớn."
             : "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!";
 
-        return Results.Ok(new { message = msg, task_finished = allResolved });
+        return Results.Ok(new { message = msg, task_finished = false, all_subtasks_resolved = allResolved });
     }
     // TRƯỜNG HỢP 3: Yêu cầu sửa lại (từ REVIEW) HOẶC Cho làm lại (từ FAILED)
     else
