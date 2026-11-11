@@ -4132,554 +4132,603 @@ export function SchedulePage() {
         </div>
       )}
 
-      {/* ================= MODAL: THÊM SỰ KIỆN MỚI (PHONG CÁCH APPLE IPHONE CALENDAR) ================= */}
+      {/* ================= MODAL: THÊM SỰ KIỆN / NHIỆM VỤ CHO CA (CHUẨN FORM & MÀU SẮC GỐC) ================= */}
       {createEventModal.open && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.4)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 10001,
-            padding: "16px 12px",
+            padding: 16,
           }}
           onClick={() => setCreateEventModal((prev) => ({ ...prev, open: false }))}
         >
           <div
             style={{
-              background: "#f2f2f7",
-              borderRadius: 22,
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-              maxWidth: 520,
+              background: "#ffffff",
+              borderRadius: 20,
+              border: "1px solid #e2e8f0",
+              maxWidth: 860,
               width: "100%",
               maxHeight: "92vh",
               overflowY: "auto",
-              boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset",
+              padding: "24px 28px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               display: "flex",
               flexDirection: "column",
-              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* iOS NAVIGATION BAR */}
+            {/* HEADER MODAL */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "14px 18px",
-                borderBottom: "0.5px solid rgba(60, 60, 67, 0.18)",
-                background: "rgba(242, 242, 247, 0.95)",
-                position: "sticky",
-                top: 0,
-                zIndex: 10,
-                backdropFilter: "blur(10px)",
+                borderBottom: "1px solid #f1f5f9",
+                paddingBottom: 16,
+                marginBottom: 20,
               }}
             >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#ffffff",
+                    boxShadow: "0 4px 10px rgba(124, 58, 237, 0.25)",
+                  }}
+                >
+                  <Calendar size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                    Thêm Sự Kiện / Nhiệm Vụ Cho Ca
+                  </h3>
+                  <p style={{ fontSize: 13, color: "#64748b", margin: "2px 0 0 0" }}>
+                    Gán công việc 1 ngày, trong 1 tuần hoặc cả tháng cho các ca làm việc
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setCreateEventModal((prev) => ({ ...prev, open: false }))}
                 style={{
-                  background: "transparent",
+                  background: "#f1f5f9",
                   border: "none",
-                  color: "#007aff",
-                  fontSize: 17,
-                  fontWeight: 400,
-                  cursor: "pointer",
-                  padding: 0,
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#64748b",
                 }}
               >
-                Hủy
-              </button>
-
-              <div style={{ textAlign: "center" }}>
-                <span style={{ fontSize: 17, fontWeight: 600, color: "#000000" }}>
-                  Sự kiện mới
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCreateEventSubmit}
-                disabled={!createEventModal.title.trim()}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: createEventModal.title.trim() ? "#007aff" : "#8e8e93",
-                  fontSize: 17,
-                  fontWeight: 600,
-                  cursor: createEventModal.title.trim() ? "pointer" : "default",
-                  padding: 0,
-                  opacity: createEventModal.title.trim() ? 1 : 0.45,
-                  transition: "color 0.15s, opacity 0.15s",
-                }}
-              >
-                Thêm
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateEventSubmit} style={{ padding: "16px 16px 24px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* GROUP 1: TIÊU ĐỀ & PHÂN LOẠI */}
-              <div
-                style={{
-                  background: "#ffffff",
-                  borderRadius: 12,
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Tiêu đề */}
-                <div style={{ padding: "12px 16px" }}>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Tiêu đề"
-                    value={createEventModal.title}
-                    onChange={(e) => setCreateEventModal((prev) => ({ ...prev, title: e.target.value }))}
-                    style={{
-                      width: "100%",
-                      border: "none",
-                      outline: "none",
-                      fontSize: 17,
-                      fontWeight: 500,
-                      color: "#000000",
-                      background: "transparent",
-                      boxSizing: "border-box",
-                    }}
-                    autoFocus
-                  />
-                </div>
-
-                <div style={{ height: "0.5px", background: "#e5e5ea", marginLeft: 16 }} />
-
-                {/* Phân loại sự kiện (iOS tag selector) */}
-                <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                  <span style={{ fontSize: 15, color: "#000000" }}>Phân loại</span>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {[
-                      { key: "meeting", label: "Họp", color: "#7c3aed", bg: "#f5f3ff" },
-                      { key: "task", label: "Nhiệm vụ", color: "#0284c7", bg: "#f0f9ff" },
-                      { key: "maintenance", label: "Bảo trì", color: "#ea580c", bg: "#fff7ed" },
-                      { key: "handover", label: "Bàn giao", color: "#059669", bg: "#ecfdf5" },
-                      { key: "general", label: "Chung", color: "#475569", bg: "#f8fafc" },
-                    ].map((type) => {
-                      const isSelected = createEventModal.event_type === type.key;
-                      return (
-                        <button
-                          key={type.key}
-                          type="button"
-                          onClick={() => setCreateEventModal((prev) => ({ ...prev, event_type: type.key }))}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 5,
-                            padding: "4px 9px",
-                            borderRadius: 16,
-                            fontSize: 13,
-                            fontWeight: isSelected ? 600 : 500,
-                            border: isSelected ? `1.5px solid ${type.color}` : "1.5px solid transparent",
-                            background: isSelected ? type.bg : "#f2f2f7",
-                            color: isSelected ? type.color : "#636366",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: "50%",
-                              background: type.color,
-                            }}
-                          />
-                          {type.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* GROUP 2: THỜI GIAN (CẢ NGÀY, BẮT ĐẦU, KẾT THÚC, GỢI Ý NHANH) */}
-              <div
-                style={{
-                  background: "#ffffff",
-                  borderRadius: 12,
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Hàng 1: Switch Cả ngày */}
+            <form onSubmit={handleCreateEventSubmit}>
+              {/* KHỐI 2 CỘT CHUẨN GIAO DIỆN GỐC */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 18, marginBottom: 18 }}>
+                {/* CỘT TRÁI: THÔNG TIN SỰ KIỆN */}
                 <div
                   style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    padding: "16px 18px",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 16px",
+                    flexDirection: "column",
+                    gap: 13,
                   }}
                 >
-                  <span style={{ fontSize: 16, color: "#000000" }}>Cả ngày</span>
-                  {/* Apple iOS Switch Toggle */}
-                  <div
-                    onClick={() => {
-                      setCreateEventModal((prev) => {
-                        const nextAll = !prev.all_shifts;
-                        return {
-                          ...prev,
-                          all_shifts: nextAll,
-                          selected_shifts: nextAll ? [0] : [1],
-                          shift_id: nextAll ? 0 : 1,
-                        };
-                      });
-                    }}
-                    style={{
-                      width: 50,
-                      height: 30,
-                      borderRadius: 30,
-                      background: createEventModal.all_shifts ? "#34c759" : "#e5e5ea",
-                      cursor: "pointer",
-                      position: "relative",
-                      transition: "background 0.25s ease",
-                      boxShadow: "inset 0 0 1px rgba(0,0,0,0.2)",
-                    }}
-                  >
-                    <div
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    📝 1. Nội dung sự kiện
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                      Tên sự kiện / công việc <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="VD: Họp giao ban, Kiểm tra server, Bảo trì thiết bị..."
+                      value={createEventModal.title}
+                      onChange={(e) => setCreateEventModal((prev) => ({ ...prev, title: e.target.value }))}
                       style={{
-                        position: "absolute",
-                        top: 2,
-                        left: createEventModal.all_shifts ? 22 : 2,
-                        width: 26,
-                        height: 26,
-                        borderRadius: "50%",
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: 14,
+                        boxSizing: "border-box",
                         background: "#ffffff",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.25)",
-                        transition: "left 0.25s ease",
+                        outline: "none",
+                        color: "#0f172a",
+                      }}
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* LOẠI SỰ KIỆN */}
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                      Loại sự kiện
+                    </label>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {[
+                        { id: "meeting", label: "Họp", icon: "📌", color: "#7c3aed", bg: "#f3e8ff", border: "#c084fc" },
+                        { id: "task", label: "Nhiệm vụ", icon: "⚡", color: "#2563eb", bg: "#eff6ff", border: "#93c5fd" },
+                        { id: "maintenance", label: "Bảo trì", icon: "🔧", color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
+                        { id: "handover", label: "Bàn giao", icon: "📋", color: "#059669", bg: "#ecfdf5", border: "#6ee7b7" },
+                        { id: "general", label: "Chung", icon: "📢", color: "#475569", bg: "#f8fafc", border: "#cbd5e1" },
+                      ].map((item) => {
+                        const isCur = (createEventModal.event_type || "meeting") === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setCreateEventModal((prev) => ({ ...prev, event_type: item.id }))}
+                            style={{
+                              padding: "6px 11px",
+                              borderRadius: 8,
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              border: isCur ? `1.5px solid ${item.border}` : "1px solid #cbd5e1",
+                              background: isCur ? item.bg : "#ffffff",
+                              color: isCur ? item.color : "#64748b",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 5,
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <span>{item.icon}</span>
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* GHI CHÚ THÊM */}
+                  <div>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                      Ghi chú thêm
+                    </label>
+                    <textarea
+                      placeholder="Chi tiết công việc hoặc nội dung cần lưu ý..."
+                      value={createEventModal.description}
+                      onChange={(e) => setCreateEventModal((prev) => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: 13,
+                        boxSizing: "border-box",
+                        background: "#ffffff",
+                        outline: "none",
+                        resize: "none",
+                        fontFamily: "inherit",
+                        color: "#0f172a",
                       }}
                     />
                   </div>
                 </div>
 
-                <div style={{ height: "0.5px", background: "#e5e5ea", marginLeft: 16 }} />
-
-                {/* Hàng 2: Bắt đầu */}
+                {/* CỘT PHẢI: PHẠM VI CA ÁP DỤNG */}
                 <div
                   style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    padding: "16px 18px",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 16px",
+                    flexDirection: "column",
+                    gap: 12,
                   }}
                 >
-                  <span style={{ fontSize: 16, color: "#000000" }}>Bắt đầu</span>
-                  <input
-                    type="date"
-                    value={createEventModal.work_date || ""}
-                    onChange={(e) => {
-                      const newStart = e.target.value;
-                      setCreateEventModal((prev) => {
-                        let newEnd = prev.end_date;
-                        if (!newEnd || newEnd < newStart) newEnd = newStart;
-                        return { ...prev, work_date: newStart, end_date: newEnd };
-                      });
-                    }}
-                    style={{
-                      border: "none",
-                      background: "rgba(118, 118, 128, 0.12)",
-                      color: "#007aff",
-                      padding: "5px 10px",
-                      borderRadius: 8,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      fontFamily: "inherit",
-                      cursor: "pointer",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div style={{ height: "0.5px", background: "#e5e5ea", marginLeft: 16 }} />
-
-                {/* Hàng 3: Kết thúc */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 16px",
-                  }}
-                >
-                  <span style={{ fontSize: 16, color: "#000000" }}>Kết thúc</span>
-                  <input
-                    type="date"
-                    value={createEventModal.end_date || createEventModal.work_date || ""}
-                    min={createEventModal.work_date || ""}
-                    onChange={(e) => {
-                      const newEnd = e.target.value;
-                      setCreateEventModal((prev) => ({
-                        ...prev,
-                        end_date: newEnd >= prev.work_date ? newEnd : prev.work_date,
-                      }));
-                    }}
-                    style={{
-                      border: "none",
-                      background: "rgba(118, 118, 128, 0.12)",
-                      color: "#007aff",
-                      padding: "5px 10px",
-                      borderRadius: 8,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      fontFamily: "inherit",
-                      cursor: "pointer",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div style={{ height: "0.5px", background: "#e5e5ea", marginLeft: 16 }} />
-
-                {/* Hàng 4: Gợi ý thời lượng (1 ngày, trong 1 tuần, cả tháng) */}
-                <div style={{ padding: "10px 16px", background: "rgba(242, 242, 247, 0.4)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#8e8e93", textTransform: "uppercase", marginBottom: 6, letterSpacing: 0.4 }}>
-                    Gợi ý thời lượng
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {/* Hôm nay */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const today = formatLocalDate(new Date());
-                        setCreateEventModal((prev) => ({
-                          ...prev,
-                          work_date: today,
-                          end_date: today,
-                          duration_type: "day",
-                        }));
-                      }}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        border: "1px solid rgba(0, 0, 0, 0.08)",
-                        background: (createEventModal.work_date === createEventModal.end_date) ? "#e8f2ff" : "#ffffff",
-                        color: (createEventModal.work_date === createEventModal.end_date) ? "#007aff" : "#1c1c1e",
-                        cursor: "pointer",
-                      }}
-                    >
-                      1 ngày (Hôm nay)
-                    </button>
-
-                    {/* Trong 1 tuần (Thứ 2 - Chủ nhật) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
-                        const mon = getMonday(base);
-                        const sunObj = parseLocalDate(mon);
-                        sunObj.setDate(sunObj.getDate() + 6);
-                        const sun = formatLocalDate(sunObj);
-                        setCreateEventModal((prev) => ({
-                          ...prev,
-                          work_date: mon,
-                          end_date: sun,
-                          duration_type: "week",
-                        }));
-                      }}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        border: "1px solid rgba(0, 0, 0, 0.08)",
-                        background: (createEventModal.duration_type === "week") ? "#e8f2ff" : "#ffffff",
-                        color: (createEventModal.duration_type === "week") ? "#007aff" : "#1c1c1e",
-                        cursor: "pointer",
-                      }}
-                    >
-                      🗓️ Trong 1 tuần (T2 - CN)
-                    </button>
-
-                    {/* Tuần tiếp theo */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
-                        const mon = parseLocalDate(getMonday(base));
-                        mon.setDate(mon.getDate() + 7);
-                        const nextMon = formatLocalDate(mon);
-                        const sunObj = parseLocalDate(nextMon);
-                        sunObj.setDate(sunObj.getDate() + 6);
-                        const nextSun = formatLocalDate(sunObj);
-                        setCreateEventModal((prev) => ({
-                          ...prev,
-                          work_date: nextMon,
-                          end_date: nextSun,
-                          duration_type: "week",
-                        }));
-                      }}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        border: "1px solid rgba(0, 0, 0, 0.08)",
-                        background: "#ffffff",
-                        color: "#1c1c1e",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Tuần sau
-                    </button>
-
-                    {/* Cả tháng này */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
-                        const y = base.getFullYear();
-                        const m = base.getMonth() + 1;
-                        const lastDay = new Date(y, m, 0).getDate();
-                        const mStart = `${y}-${String(m).padStart(2, "0")}-01`;
-                        const mEnd = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-                        setCreateEventModal((prev) => ({
-                          ...prev,
-                          work_date: mStart,
-                          end_date: mEnd,
-                          duration_type: "month",
-                        }));
-                      }}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        border: "1px solid rgba(0, 0, 0, 0.08)",
-                        background: (createEventModal.duration_type === "month") ? "#e8f2ff" : "#ffffff",
-                        color: (createEventModal.duration_type === "month") ? "#007aff" : "#1c1c1e",
-                        cursor: "pointer",
-                      }}
-                    >
-                      📅 Cả tháng
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* GROUP 3: PHẠM VI CA LÀM VIỆC (NẾU KHÔNG PHẢI CẢ NGÀY) */}
-              {!createEventModal.all_shifts && (
-                <div
-                  style={{
-                    background: "#ffffff",
-                    borderRadius: 12,
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#000000" }}>Chọn các ca áp dụng</span>
-                    <div style={{ display: "flex", gap: 5 }}>
-                      {[
-                        { label: "Sáng (1-3)", shifts: [1, 2, 3] },
-                        { label: "Chiều (4-6)", shifts: [4, 5, 6] },
-                        { label: "Tối (7-9)", shifts: [7, 8, 9] },
-                      ].map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => handleSelectShiftPreset(preset.shifts)}
-                          style={{
-                            fontSize: 12,
-                            padding: "3px 8px",
-                            borderRadius: 6,
-                            border: "1px solid #d1d1d6",
-                            background: "#f2f2f7",
-                            color: "#007aff",
-                            cursor: "pointer",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      ⏱️ 2. Phạm vi ca áp dụng
                     </div>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>Chọn 1 hoặc nhiều ca</span>
                   </div>
 
-                  {/* Danh sách 9 ca */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                  {/* Phím chọn nhanh ca */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleShiftSelection(0)}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: createEventModal.all_shifts ? "1.5px solid #7e22ce" : "1px solid #cbd5e1",
+                        background: createEventModal.all_shifts ? "#f3e8ff" : "#ffffff",
+                        color: createEventModal.all_shifts ? "#6b21a8" : "#475569",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      🌟 Cả ngày (9 ca)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectShiftPreset([1, 2, 3])}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "1.5px solid #2563eb" : "1px solid #cbd5e1",
+                        background: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "#eff6ff" : "#ffffff",
+                        color: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([1, 2, 3]) ? "#1d4ed8" : "#475569",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      🌅 Sáng (1-3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectShiftPreset([4, 5, 6])}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "1.5px solid #ea580c" : "1px solid #cbd5e1",
+                        background: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "#fff7ed" : "#ffffff",
+                        color: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([4, 5, 6]) ? "#c2410c" : "#475569",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      ☀️ Chiều (4-6)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectShiftPreset([7, 8, 9])}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "1.5px solid #8b5cf6" : "1px solid #cbd5e1",
+                        background: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "#f5f3ff" : "#ffffff",
+                        color: !createEventModal.all_shifts && JSON.stringify(createEventModal.selected_shifts) === JSON.stringify([7, 8, 9]) ? "#6d28d9" : "#475569",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      🌙 Tối (7-9)
+                    </button>
+                  </div>
+
+                  {/* LƯỚI 9 CA LÀM VIỆC */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 7, marginTop: 4 }}>
                     {SHIFTS.map((s) => {
-                      const isSel = createEventModal.selected_shifts?.includes(s.id);
+                      const isSel = createEventModal.all_shifts || createEventModal.selected_shifts?.includes(s.id);
                       return (
                         <button
                           key={s.id}
                           type="button"
                           onClick={() => handleToggleShiftSelection(s.id)}
                           style={{
-                            padding: "6px 8px",
-                            borderRadius: 8,
-                            fontSize: 13,
-                            fontWeight: isSel ? 600 : 500,
-                            border: isSel ? "1.5px solid #007aff" : "1px solid #e5e5ea",
-                            background: isSel ? "#e8f2ff" : "#f9f9fb",
-                            color: isSel ? "#007aff" : "#1c1c1e",
+                            padding: "8px 6px",
+                            borderRadius: 9,
+                            fontSize: 12,
+                            fontWeight: isSel ? 700 : 500,
+                            border: isSel ? "1.5px solid #3b82f6" : "1px solid #cbd5e1",
+                            background: isSel ? "#eff6ff" : "#ffffff",
+                            color: isSel ? "#1d4ed8" : "#475569",
                             cursor: "pointer",
                             textAlign: "center",
                             transition: "all 0.15s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
                           }}
                         >
-                          {s.name}
+                          <span style={{ fontWeight: 800 }}>Ca {s.id}</span>
+                          <span style={{ fontSize: 9.5, opacity: 0.8 }}>{s.label || s.time || `${s.startTime}-${s.endTime}`}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              )}
-
-              {/* GROUP 4: GHI CHÚ */}
-              <div
-                style={{
-                  background: "#ffffff",
-                  borderRadius: 12,
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                  overflow: "hidden",
-                }}
-              >
-                <textarea
-                  placeholder="Ghi chú thêm..."
-                  value={createEventModal.description}
-                  onChange={(e) => setCreateEventModal((prev) => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    border: "none",
-                    outline: "none",
-                    padding: "12px 16px",
-                    fontSize: 16,
-                    color: "#000000",
-                    background: "transparent",
-                    resize: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
-                />
               </div>
 
-              {/* FOOTER PREVIEW SUMMARY */}
-              {getDurationEventPreview(createEventModal) && (
-                <div style={{ textAlign: "center", padding: "0 8px" }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#8e8e93", lineHeight: 1.4 }}>
-                    {getDurationEventPreview(createEventModal)}
-                    {createEventModal.all_shifts
-                      ? " • Toàn bộ ca trong ngày"
-                      : ` • Ca: ${createEventModal.selected_shifts?.join(", ") || "Chưa chọn"}`}
-                  </p>
+              {/* KHỐI 3: THỜI GIAN & THỜI LƯỢNG (1 NGÀY, TRONG 1 TUẦN, CẢ THÁNG) */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 14,
+                  padding: "16px 18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0284c7", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    📅 3. Thời gian tổ chức sự kiện
+                  </div>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>Tổ chức 1 ngày, trong 1 tuần hoặc cả tháng</span>
                 </div>
-              )}
+
+                {/* Các nút chọn nhanh thời lượng */}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {/* 1 ngày */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = formatLocalDate(new Date());
+                      setCreateEventModal((prev) => ({
+                        ...prev,
+                        work_date: today,
+                        end_date: today,
+                        duration_type: "day",
+                      }));
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: createEventModal.work_date === createEventModal.end_date ? "1.5px solid #2563eb" : "1px solid #cbd5e1",
+                      background: createEventModal.work_date === createEventModal.end_date ? "#eff6ff" : "#ffffff",
+                      color: createEventModal.work_date === createEventModal.end_date ? "#1d4ed8" : "#475569",
+                    }}
+                  >
+                    1 ngày (Hôm nay)
+                  </button>
+
+                  {/* Trong 1 tuần */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
+                      const mon = getMonday(base);
+                      const sunObj = parseLocalDate(mon);
+                      sunObj.setDate(sunObj.getDate() + 6);
+                      const sun = formatLocalDate(sunObj);
+                      setCreateEventModal((prev) => ({
+                        ...prev,
+                        work_date: mon,
+                        end_date: sun,
+                        duration_type: "week",
+                      }));
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: createEventModal.duration_type === "week" ? "1.5px solid #7c3aed" : "1px solid #cbd5e1",
+                      background: createEventModal.duration_type === "week" ? "#f3e8ff" : "#ffffff",
+                      color: createEventModal.duration_type === "week" ? "#6b21a8" : "#475569",
+                    }}
+                  >
+                    🗓️ Trong 1 tuần (T2 - CN)
+                  </button>
+
+                  {/* Tuần sau */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
+                      const mon = parseLocalDate(getMonday(base));
+                      mon.setDate(mon.getDate() + 7);
+                      const nextMon = formatLocalDate(mon);
+                      const sunObj = parseLocalDate(nextMon);
+                      sunObj.setDate(sunObj.getDate() + 6);
+                      const nextSun = formatLocalDate(sunObj);
+                      setCreateEventModal((prev) => ({
+                        ...prev,
+                        work_date: nextMon,
+                        end_date: nextSun,
+                        duration_type: "week",
+                      }));
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "1px solid #cbd5e1",
+                      background: "#ffffff",
+                      color: "#475569",
+                    }}
+                  >
+                    Tuần sau
+                  </button>
+
+                  {/* Cả tháng */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const base = createEventModal.work_date ? parseLocalDate(createEventModal.work_date) : new Date();
+                      const y = base.getFullYear();
+                      const m = base.getMonth() + 1;
+                      const lastDay = new Date(y, m, 0).getDate();
+                      const mStart = `${y}-${String(m).padStart(2, "0")}-01`;
+                      const mEnd = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+                      setCreateEventModal((prev) => ({
+                        ...prev,
+                        work_date: mStart,
+                        end_date: mEnd,
+                        duration_type: "month",
+                      }));
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: createEventModal.duration_type === "month" ? "1.5px solid #0284c7" : "1px solid #cbd5e1",
+                      background: createEventModal.duration_type === "month" ? "#e0f2fe" : "#ffffff",
+                      color: createEventModal.duration_type === "month" ? "#0369a1" : "#475569",
+                    }}
+                  >
+                    📅 Cả tháng
+                  </button>
+                </div>
+
+                {/* 2 ô chọn ngày bắt đầu & kết thúc */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 5 }}>
+                      Ngày bắt đầu
+                    </label>
+                    <input
+                      type="date"
+                      value={createEventModal.work_date || ""}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        setCreateEventModal((prev) => ({
+                          ...prev,
+                          work_date: newStart,
+                          end_date: prev.end_date < newStart ? newStart : prev.end_date,
+                        }));
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        border: "1.5px solid #cbd5e1",
+                        background: "#ffffff",
+                        fontSize: 13,
+                        boxSizing: "border-box",
+                        outline: "none",
+                        color: "#0f172a",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 5 }}>
+                      Ngày kết thúc
+                    </label>
+                    <input
+                      type="date"
+                      value={createEventModal.end_date || createEventModal.work_date || ""}
+                      min={createEventModal.work_date || ""}
+                      onChange={(e) => setCreateEventModal((prev) => ({ ...prev, end_date: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        border: "1.5px solid #cbd5e1",
+                        background: "#ffffff",
+                        fontSize: 13,
+                        boxSizing: "border-box",
+                        outline: "none",
+                        color: "#0f172a",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Dòng xem trước thời lượng */}
+                {getDurationEventPreview(createEventModal) && (
+                  <div
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      background: "#f1f5f9",
+                      fontSize: 12,
+                      color: "#475569",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{getDurationEventPreview(createEventModal)}</span>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      {createEventModal.all_shifts
+                        ? "• Cả ngày (9 ca)"
+                        : `• Ca: ${createEventModal.selected_shifts?.join(", ") || "Chưa chọn"}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* FOOTER NÚT BẤM */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 12,
+                  marginTop: 20,
+                  paddingTop: 16,
+                  borderTop: "1px solid #f1f5f9",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setCreateEventModal((prev) => ({ ...prev, open: false }))}
+                  style={{
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "1px solid #cbd5e1",
+                    padding: "9px 20px",
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "9px 22px",
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(124, 58, 237, 0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Calendar size={16} />
+                  Lưu Sự Kiện
+                </button>
+              </div>
             </form>
           </div>
         </div>
