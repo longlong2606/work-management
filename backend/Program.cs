@@ -698,17 +698,20 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
 
     using var conn = Database.GetConnection();
     var subtask = conn.QueryFirstOrDefault<dynamic>(@"
-        SELECT s.id, s.title, s.task_id, t.title AS task_title, t.leader_id, t.status AS task_status 
+        SELECT s.id, s.title, s.status AS subtask_status, s.quality_multiplier, s.task_id, t.title AS task_title, t.leader_id, t.status AS task_status 
         FROM subtasks s JOIN tasks t ON s.task_id = t.id 
         WHERE s.id = @id", new { id });
 
     if (subtask == null) return Results.NotFound(new { detail = "Mục checklist không tồn tại!" });
 
-    if ((string)subtask.task_status == "FINISHED")
-        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, chỉ có thể xem chứ không thể chỉnh sửa mục việc!" });
     long? subtaskLeaderId = subtask.leader_id != null ? Convert.ToInt64(subtask.leader_id) : (long?)null;
-    if (currentUser.role != "admin" && !currentUser.can_manage_tasks && !currentUser.can_manage_cp && (!subtaskLeaderId.HasValue || subtaskLeaderId.Value != currentUser.id))
+    bool isLeaderOrAdmin = currentUser.role == "admin" || currentUser.can_manage_tasks || (subtaskLeaderId.HasValue && subtaskLeaderId.Value == currentUser.id);
+
+    if (!isLeaderOrAdmin && !currentUser.can_manage_cp)
         return Results.StatusCode(403);
+
+    if ((string)subtask.task_status == "FINISHED" && !isLeaderOrAdmin)
+        return Results.BadRequest(new { detail = "Nhiệm vụ đã hoàn thành, chỉ có Người phụ trách hoặc Quản trị viên mới có thể điều chỉnh mục việc!" });
 
     if (string.IsNullOrWhiteSpace(req.title))
         return Results.BadRequest(new { detail = "Tiêu đề không được để trống!" });
@@ -738,6 +741,7 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 cpPoints
             });
 
+        bool isSubtaskFinished = (string)subtask.subtask_status == "FINISHED";
         var assigneesToNotify = new List<(long userId, int contributionPct)>();
 
         if (req.assignee_contributions != null && req.assignee_contributions.Any())
@@ -758,13 +762,16 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @pct) ON CONFLICT (subtask_id, user_id) DO UPDATE SET contribution_pct = EXCLUDED.contribution_pct",
                     new { id, uid = ac.user_id, pct = ac.contribution_pct });
 
-                bool isNew = !existingAssigneeIds.Contains(ac.user_id);
-                if (isNew || assigneesChanged)
+                if (!isSubtaskFinished)
                 {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
-                    
-                    assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
+                    bool isNew = !existingAssigneeIds.Contains(ac.user_id);
+                    if (isNew || assigneesChanged)
+                    {
+                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                            new { uid = ac.user_id, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                        
+                        assigneesToNotify.Add((ac.user_id, ac.contribution_pct));
+                    }
                 }
             }
         }
@@ -786,18 +793,69 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 conn.Execute("INSERT INTO subtask_assignees (subtask_id, user_id, contribution_pct) VALUES (@id, @uid, @defaultPct) ON CONFLICT (subtask_id, user_id) DO NOTHING",
                     new { id, uid, defaultPct });
 
-                bool isNew = !existingAssigneeIds.Contains(uid);
-                if (isNew || assigneesChanged)
+                if (!isSubtaskFinished)
                 {
-                    conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
-                        new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
+                    bool isNew = !existingAssigneeIds.Contains(uid);
+                    if (isNew || assigneesChanged)
+                    {
+                        conn.Execute("INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id) VALUES (@uid, @senderId, @title, @msg, 'task', @taskId)",
+                            new { uid, senderId = currentUser.id, title = "Mục việc mới cần tiếp nhận", msg = $"Bạn vừa được giao mục việc \"{req.title.Trim()}\" ({cpPoints} CP). Vui lòng xác nhận tiếp nhận hoặc từ chối.", taskId = (long)subtask.task_id });
 
-                    assigneesToNotify.Add((uid, defaultPct));
+                        assigneesToNotify.Add((uid, defaultPct));
+                    }
                 }
             }
         }
 
-        if (assigneesToNotify.Any())
+        // Tự động tính toán lại và cập nhật điểm CP nếu mục việc này đã hoàn thành
+        if (isSubtaskFinished)
+        {
+            double qMultiplier = subtask.quality_multiplier != null && Convert.ToDouble(subtask.quality_multiplier) > 0 
+                ? Convert.ToDouble(subtask.quality_multiplier) 
+                : 1.0;
+
+            // Xóa giao dịch điểm thưởng dương cũ để cập nhật lại theo điểm mới (giữ lại phạt cp_earned < 0 nếu có)
+            conn.Execute("DELETE FROM cp_transactions WHERE subtask_id = @id AND cp_earned > 0", new { id });
+
+            if (cpPoints > 0)
+            {
+                var assignees = conn.Query<dynamic>(@"
+                    SELECT sa.user_id, COALESCE(sa.contribution_pct, 100) AS contribution_pct, u.role
+                    FROM subtask_assignees sa
+                    JOIN users u ON sa.user_id = u.id
+                    WHERE sa.subtask_id = @id", new { id }).ToList();
+
+                foreach (var a in assignees)
+                {
+                    if ((string)a.role == "admin") continue; // Không tích lũy điểm CP cho Quản trị viên (Admin)
+
+                    long uId = Convert.ToInt64(a.user_id);
+                    int pct = Convert.ToInt32(a.contribution_pct);
+                    double cpEarned = Math.Round(cpPoints * (pct / 100.0) * qMultiplier, 1);
+                    conn.Execute(@"
+                        INSERT INTO cp_transactions (user_id, subtask_id, cp_earned, contribution_pct, cp_points_base, quality_multiplier, awarded_at)
+                        VALUES (@uId, @id, @cpEarned, @pct, @cpPoints, @qMultiplier, CURRENT_TIMESTAMP)",
+                        new { uId, id, cpEarned, pct, cpPoints, qMultiplier });
+
+                    if (uId != currentUser.id)
+                    {
+                        conn.Execute(@"
+                            INSERT INTO notifications (target_user_id, sender_id, title, message, type, related_id)
+                            VALUES (@uId, @senderId, @title, @msg, 'task', @taskId)",
+                            new
+                            {
+                                uId,
+                                senderId = currentUser.id,
+                                title = "Điều chỉnh điểm CP mục việc",
+                                msg = $"Người phụ trách đã cập nhật lại điểm mục việc \"{req.title.Trim()}\". Điểm CP ghi nhận mới: +{cpEarned} CP.",
+                                taskId = (long)subtask.task_id
+                            });
+                    }
+                }
+            }
+        }
+
+        if (!isSubtaskFinished && assigneesToNotify.Any())
         {
             string parentTitle = subtask?.task_title != null ? (string)subtask.task_title : "";
             EmailService.SendSubtaskAssignedNotification(
@@ -811,7 +869,11 @@ app.MapPut("/api/subtasks/{id:long}", (long id, UpdateSubtaskRequest req, HttpCo
                 currentUser.full_name);
         }
 
-        return Results.Ok(new { message = "Đã cập nhật mục checklist thành công!" });
+        string returnMsg = isSubtaskFinished
+            ? $"Đã cập nhật mục việc và tính toán lại điểm CP ({cpPoints} CP) cho người phụ trách!"
+            : "Đã cập nhật mục checklist thành công!";
+
+        return Results.Ok(new { message = returnMsg });
     }
     catch (Exception ex)
     {

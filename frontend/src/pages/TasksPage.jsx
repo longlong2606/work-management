@@ -1930,20 +1930,20 @@ export function TasksPage() {
                                   )}
 
                                   {/* Edit subtask button */}
-                                  {isPersonInCharge && sub.status !== "FINISHED" && sub.status !== "REJECTED" && (
+                                  {(isPersonInCharge || isAdmin || isTaskLeader || Boolean(user?.can_manage_tasks)) && sub.status !== "REJECTED" && (
                                     <button
                                       onClick={() => setEditingSubtask(sub)}
                                       style={{
-                                        background: "#f8fafc",
-                                        border: "1px solid #cbd5e1",
-                                        color: "#475569",
+                                        background: sub.status === "FINISHED" ? "#ecfdf5" : "#f8fafc",
+                                        border: `1px solid ${sub.status === "FINISHED" ? "#a7f3d0" : "#cbd5e1"}`,
+                                        color: sub.status === "FINISHED" ? "#047857" : "#475569",
                                         padding: "6px 10px",
                                         borderRadius: 8,
                                         fontSize: 12,
                                         fontWeight: 600,
                                         cursor: "pointer",
                                       }}
-                                      title="Sửa thông tin mục checklist"
+                                      title={sub.status === "FINISHED" ? "Sửa thông tin / điều chỉnh lại điểm CP mục việc đã hoàn thành" : "Sửa thông tin mục checklist"}
                                     >
                                       ✏️ Sửa
                                     </button>
@@ -2474,7 +2474,7 @@ export function TasksPage() {
       )}
 
       {/* ================= MODAL: EDIT / REASSIGN SUBTASK ================= */}
-      {editingSubtask && taskDetail?.task?.status !== "FINISHED" && (
+      {editingSubtask && (taskDetail?.task?.status !== "FINISHED" || hasAdminRights || Number(taskDetail?.task?.leader_id) === Number(user?.id) || Boolean(user?.can_manage_tasks)) && (
         <EditSubtaskModal
           isOpen={!!editingSubtask}
           onClose={() => setEditingSubtask(null)}
@@ -3706,10 +3706,14 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
         assignee_ids: selectedAssignees,
         cp_points: Math.max(0, parseInt(cpPoints) || 0),
       });
+      const isFinished = subtask.status === "FINISHED";
       const assigneeNames = selectedMemberList
         .map((m) => `${m.full_name}${m.email ? ` (${m.email})` : ' (chưa cấu hình email)'}`)
         .join(", ");
-      onSuccess(`Đã cập nhật mục việc "${title.trim()}" & gửi email thông báo tới: ${assigneeNames}!`);
+      const successMsg = isFinished
+        ? `Đã cập nhật mục việc "${title.trim()}" & điều chỉnh lại điểm CP (${cpPoints} CP) thành công!`
+        : `Đã cập nhật mục việc "${title.trim()}" & gửi email thông báo tới: ${assigneeNames}!`;
+      onSuccess(successMsg);
       onClose();
     } catch (err) {
       setError(err.message || "Lỗi khi cập nhật mục việc.");
@@ -3751,7 +3755,7 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <span>{wasRejected ? "🔄" : "✏️"}</span>
-            <span>{wasRejected ? "Giao Lại Mục Việc Bị Từ Chối" : "Chỉnh Sửa Mục Việc"}</span>
+            <span>{wasRejected ? "Giao Lại Mục Việc Bị Từ Chối" : subtask.status === "FINISHED" ? "Chỉnh Sửa Mục Việc (Đã Hoàn Thành)" : "Chỉnh Sửa Mục Việc"}</span>
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <X size={20} />
@@ -3764,6 +3768,15 @@ function EditSubtaskModal({ isOpen, onClose, subtask, taskDeadline, allMembers =
             <div style={{ fontStyle: "italic" }}>"{subtask.reject_reason || "Không ghi rõ lý do"}"</div>
             <div style={{ fontSize: 12, marginTop: 4, color: "#7f1d1d" }}>
               Khi bạn đổi người hoặc lưu lại, mục việc sẽ được chuyển về <strong>Chờ tiếp nhận</strong> để nhân sự mới xác nhận.
+            </div>
+          </div>
+        )}
+
+        {subtask.status === "FINISHED" && (
+          <div style={{ marginBottom: 14, padding: "10px 14px", background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0", fontSize: 13, color: "#166534" }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>🟢 Mục việc này đã hoàn thành:</div>
+            <div style={{ fontSize: 12 }}>
+              Bạn có thể điều chỉnh lại điểm CP hoặc thông tin giao việc. Sau khi lưu, hệ thống sẽ tự động cập nhật lại điểm CP được ghi nhận cho người phụ trách.
             </div>
           </div>
         )}
