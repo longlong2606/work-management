@@ -346,6 +346,8 @@ export const api = {
     const query = new URLSearchParams();
     if (params.work_date) query.append("work_date", params.work_date);
     if (params.shift_id) query.append("shift_id", params.shift_id);
+    if (params.start_date) query.append("start_date", params.start_date);
+    if (params.end_date) query.append("end_date", params.end_date);
     const qs = query.toString();
     return request(`/shifts/events${qs ? `?${qs}` : ""}`);
   },
@@ -354,8 +356,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  deleteShiftEvent: (id) =>
-    request(`/shifts/events/${id}`, {
+  deleteShiftEvent: (id, deleteSeries = false) =>
+    request(`/shifts/events/${id}${deleteSeries ? "?delete_series=true" : ""}`, {
       method: "DELETE",
     }),
   updateActualHours: (data) =>

@@ -238,8 +238,25 @@ export function RosterDetailModal({ shift, dateStr, members, events, onClose }) 
                       borderLeft: "4px solid #f59e0b"
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>
-                      {ev.title}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>
+                        {ev.title}
+                      </div>
+                      {ev.repeat_type && ev.repeat_type !== "none" && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#6d28d9",
+                            background: "#ede9fe",
+                            border: "1px solid #ddd6fe",
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                          }}
+                        >
+                          🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                        </span>
+                      )}
                     </div>
                     {ev.description && (
                       <div style={{ fontSize: 13, color: "#78350f", marginTop: 4 }}>

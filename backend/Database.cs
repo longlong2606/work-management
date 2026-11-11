@@ -339,6 +339,10 @@ public static class Database
                 title TEXT NOT NULL,
                 description TEXT,
                 event_type TEXT DEFAULT 'general',
+                recurring_group_id TEXT,
+                repeat_type TEXT DEFAULT 'none',
+                repeat_rule TEXT,
+                repeat_end_date TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (shift_id) REFERENCES shift_templates(id)
             );
@@ -384,6 +388,11 @@ public static class Database
             EnsureColumn(conn, "shift_notes", "admin_response", "TEXT");
             EnsureColumn(conn, "shift_notes", "status", "TEXT DEFAULT 'pending'");
             EnsureColumn(conn, "shift_notes", "note_type", "TEXT DEFAULT 'adjusted_hours'");
+
+            EnsureColumn(conn, "shift_events", "recurring_group_id", "TEXT");
+            EnsureColumn(conn, "shift_events", "repeat_type", "TEXT DEFAULT 'none'");
+            EnsureColumn(conn, "shift_events", "repeat_rule", "TEXT");
+            EnsureColumn(conn, "shift_events", "repeat_end_date", "TEXT");
 
             EnsureColumn(conn, "roles", "can_manage_schedule", "INTEGER DEFAULT 0");
             EnsureColumn(conn, "roles", "can_manage_tasks", "INTEGER DEFAULT 0");

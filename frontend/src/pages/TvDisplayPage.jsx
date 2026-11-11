@@ -755,23 +755,39 @@ export function TvDisplayPage({ onNavigateToManagement }) {
                       boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)"
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span
-                        style={{
-                          background: bgTag,
-                          color: themeColor,
-                          padding: "2px 8px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 800,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4
-                        }}
-                      >
-                        {isTask ? <Zap size={11} /> : <BarChart2 size={11} />}
-                        {isTask ? "NHIỆM VỤ CA" : isMeeting ? "GIAO BAN" : "SỰ KIỆN"}
-                      </span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            background: bgTag,
+                            color: themeColor,
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4
+                          }}
+                        >
+                          {isTask ? <Zap size={11} /> : <BarChart2 size={11} />}
+                          {isTask ? "NHIỆM VỤ CA" : isMeeting ? "GIAO BAN" : "SỰ KIỆN"}
+                        </span>
+                        {ev.repeat_type && ev.repeat_type !== "none" && (
+                          <span
+                            style={{
+                              background: "#ede9fe",
+                              color: "#6d28d9",
+                              padding: "2px 7px",
+                              borderRadius: 6,
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                            }}
+                          >
+                            🔁 {ev.repeat_rule || (ev.repeat_type === "weekly" ? "Hàng tuần" : "Hàng tháng")}
+                          </span>
+                        )}
+                      </div>
 
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
                         {ev.display_shift_label || (ev.shift_name ? `${ev.shift_name} (${ev.shift_label || ""})` : "Áp dụng cả ngày")}

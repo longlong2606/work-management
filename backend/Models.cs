@@ -88,6 +88,10 @@ public class ShiftEventEntity
     public string title { get; set; } = "";
     public string? description { get; set; }
     public string event_type { get; set; } = "general";
+    public string? recurring_group_id { get; set; }
+    public string repeat_type { get; set; } = "none";
+    public string? repeat_rule { get; set; }
+    public string? repeat_end_date { get; set; }
     public string created_at { get; set; } = "";
 }
 
@@ -97,7 +101,11 @@ public record CreateShiftEventRequest(
     string? description,
     string? work_date = null,
     string? event_type = "general",
-    List<int>? shift_ids = null
+    List<int>? shift_ids = null,
+    string? repeat_type = "none",
+    List<int>? repeat_days_of_week = null,
+    int? repeat_count = null,
+    string? repeat_end_date = null
 );
 
 public record UpdateAttendanceRequest(string attendance_status);
