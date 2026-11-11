@@ -1363,30 +1363,6 @@ export function TasksPage() {
                       )}
                     </div>
 
-                    {/* BANNER KHI CHECKLIST ĐẠT 100% NHƯNG NHIỆM VỤ CHƯA BẤM HOÀN THÀNH */}
-                    {percent === 100 && totalSub > 0 && taskDetail.task.status !== "FINISHED" && (
-                      <div
-                        style={{
-                          marginBottom: 12,
-                          padding: "10px 14px",
-                          borderRadius: 8,
-                          background: "#ecfdf5",
-                          border: "1.5px solid #6ee7b7",
-                          color: "#047857",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
-                        <span>
-                          🎉 <strong>Tiến độ đạt 100%!</strong> Toàn bộ checklist đã được xử lý xong. Người phụ trách vui lòng kiểm tra lại kết quả và nhấn nút <strong>[Nghiệm Thu Hoàn Thành]</strong> bên dưới để chính thức kết thúc nhiệm vụ lớn.
-                        </span>
-                      </div>
-                    )}
-
                     {/* ACTION BUTTONS (FINISH & POSTPONE & EDIT) */}
                     {canManageTaskSubtasks && (
                       <div className="task-action-buttons-group">
@@ -1447,16 +1423,14 @@ export function TasksPage() {
                             onClick={() => handleFinishTask(taskDetail.task.id)}
                             className="task-action-btn"
                             style={{
-                              background: percent === 100 ? "#059669" : "#10b981",
+                              background: "#10b981",
                               color: "#ffffff",
                               border: "none",
-                              boxShadow: percent === 100 ? "0 4px 14px rgba(5, 150, 105, 0.45)" : "0 2px 6px rgba(16, 185, 129, 0.25)",
-                              fontWeight: 800,
+                              boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
                             }}
-                            title="Nghiệm thu và kết thúc toàn bộ nhiệm vụ lớn"
                           >
                             <Award size={15} style={{ flexShrink: 0 }} />
-                            <span>{percent === 100 ? "Nghiệm Thu Hoàn Thành" : "Hoàn Thành"}</span>
+                            <span>Hoàn Thành</span>
                           </button>
                         )}
 

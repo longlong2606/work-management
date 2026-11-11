@@ -1100,10 +1100,8 @@ app.MapPost("/api/subtasks/{id:long}/review", (long id, ReviewSubtaskRequest req
         bool allResolved = totalSubtasks > 0 && totalSubtasks == resolvedSubtasks;
 
         // Lưu ý: Không tự động chuyển nhiệm vụ lớn sang FINISHED khi hoàn thành checklist.
-        // Người phụ trách nhiệm vụ (Leader) hoặc Quản trị viên cần chủ động kiểm tra và nhấn nút 'Hoàn thành' để nghiệm thu nhiệm vụ lớn.
-        string msg = allResolved
-            ? "Đã duyệt ĐẠT mục checklist! Toàn bộ checklist đã hoàn thành (100%). Người phụ trách có thể nhấn nút [Hoàn Thành] để nghiệm thu nhiệm vụ lớn."
-            : "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!";
+        // Người phụ trách nhiệm vụ (Leader) hoặc Quản trị viên cần chủ động nhấn nút 'Hoàn thành' để nghiệm thu nhiệm vụ lớn.
+        string msg = "Đã duyệt ĐẠT mục checklist và ghi nhận điểm CP đóng góp thành công!";
 
         return Results.Ok(new { message = msg, task_finished = false, all_subtasks_resolved = allResolved });
     }
